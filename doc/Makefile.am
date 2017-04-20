@@ -21,7 +21,3 @@ EXTRA_DIST = README.CRAY \
              pbs.script \
              cobalt.script
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-
-

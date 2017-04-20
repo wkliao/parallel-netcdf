@@ -41,6 +41,3 @@ $(M4_SRCS:.m4=.c): Makefile
 
 tests-local: all
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-

@@ -31,7 +31,6 @@ test: $(bin_PROGRAMS)
 tests-local: all
 
 dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
 	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpidump.1
 	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpidump.1
 	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpidump.1

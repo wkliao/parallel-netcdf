@@ -29,7 +29,6 @@ dist_man_MANS = pnetcdf_version.1
 tests-local: all
 
 dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
 	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/pnetcdf_version.c
 	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/pnetcdf_version.1
 	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/pnetcdf_version.1

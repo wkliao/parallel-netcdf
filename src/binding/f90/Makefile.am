@@ -60,5 +60,3 @@ DISTCLEANFILES = pnetcdf.f90 api.f90 nfmpi_constants.f90
 
 tests-local: all
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`

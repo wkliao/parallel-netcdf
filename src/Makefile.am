@@ -11,6 +11,3 @@
 # sub-libraries
 SUBDIRS = include dispatchers drivers binding . libs utils packaging
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-

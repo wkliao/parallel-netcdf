@@ -59,5 +59,3 @@ $(CXX_HEADER): $(HPP_FILES) Makefile
 
 tests-local: all
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`

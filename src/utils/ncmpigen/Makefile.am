@@ -68,7 +68,6 @@ CLEANFILES = c0.nc c1.cdl c1.nc c2.cdl f0.nc \
 tests-local: all
 
 dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
 	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpigen.1
 	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpigen.1
 	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpigen.1

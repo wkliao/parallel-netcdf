@@ -15,6 +15,5 @@ EXTRA_DIST = pnetcdf-config.in \
              check_install.in
 
 dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
 	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/" $(distdir)/pnetcdf-config.in
 

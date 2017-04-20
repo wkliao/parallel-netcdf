@@ -84,6 +84,6 @@ install-data-hook:
 .PHONY: ptest ptests tests
 
 dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
+	-rm -rf `find $(distdir) -type d -name .svn`
 
 

@@ -90,6 +90,3 @@ EXTRA_DIST = $(M4_HFILES) \
 
 tests-local: all
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-

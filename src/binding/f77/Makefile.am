@@ -41,5 +41,3 @@ mpifnetcdf.h: defs buildiface $(PNETCDF_HEADER)
 
 tests-local: all
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`

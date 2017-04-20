@@ -14,6 +14,3 @@ if HAS_FORTRAN
 SUBDIRS += f77 f90
 endif
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-

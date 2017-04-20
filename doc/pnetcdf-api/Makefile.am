@@ -36,9 +36,6 @@ EXTRA_DIST = c_api.tex \
 
 CLEANFILES = *.dvi *.log *.aux *.ps $(API_GUIDE)
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-
 # Turn off parallel builds in this directory.
 .NOTPARALLEL:
 

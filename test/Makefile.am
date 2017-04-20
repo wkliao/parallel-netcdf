@@ -69,6 +69,3 @@ ptests:
 
 .NOTPARALLEL:
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-

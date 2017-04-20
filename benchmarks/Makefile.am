@@ -36,8 +36,5 @@ ptest ptests:
 		$(MAKE) $(MFLAGS) -C $$d ptest4 $$* ; \
 	done ) ;
 
-dist-hook:
-	-rm -rf `find $(distdir) -name .svn`
-
 .PHONY: ptest ptests tests
 
