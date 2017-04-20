@@ -7,12 +7,10 @@
 # @configure_input@
 
 bin_PROGRAMS = pnetcdf_version
-EXTRA_DIST = pnetcdf_version.c
 
 XDEFS = -DMPICC="\"$(MPICC)\""   -DCFLAGS="\"$(CFLAGS)\""
 XDEFS += -DCONFIGURE_ARGS_CLEAN="\"$(CONFIGURE_ARGS_CLEAN)\""
 XDEFS += -DPNETCDF_VERSION="\"$(PNETCDF_VERSION)\""
-XDEFS += -DPNETCDF_RELEASE_DATE="\"$(PNETCDF_RELEASE_DATE)\""
 
 if HAS_MPICXX
 XDEFS += -DMPICXX="\"$(MPICXX)\"" -DCXXFLAGS="\"$(CXXFLAGS)\""
@@ -32,4 +30,8 @@ tests-local: all
 
 dist-hook:
 	-rm -rf `find $(distdir) -name .svn`
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/pnetcdf_version.c
+	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/pnetcdf_version.1
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/pnetcdf_version.1
+	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/pnetcdf_version.1
 

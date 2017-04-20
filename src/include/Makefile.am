@@ -12,4 +12,5 @@ EXTRA_DIST = pnetcdf.h.in ncconfig.h.in nctypes.h dispatch.h
 
 dist-hook:
 	-rm -rf `find $(distdir) -name .svn`
+	sed -i "s/DIST_DATE/`date '+%e %b %Y'`/" $(distdir)/pnetcdf.h.in
 

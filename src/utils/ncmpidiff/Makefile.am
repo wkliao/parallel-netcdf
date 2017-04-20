@@ -16,6 +16,9 @@ CLEANFILES = *.gcno
 
 dist-hook:
 	-rm -rf `find $(distdir) -name .svn`
+	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpidiff.1
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpidiff.1
+	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpidiff.1
 
 tests-local: all
 

@@ -20,5 +20,8 @@ tests-local: all
 
 dist-hook:
 	-rm -rf `find $(distdir) -name .svn`
+	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpivalid.1
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpivalid.1
+	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpivalid.1
 
 .PHONY: $(top_builddir)/src/libs/libpnetcdf.la

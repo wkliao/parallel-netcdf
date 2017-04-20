@@ -72,7 +72,7 @@ int main( int argc, char *argv[] )
         printf( "PnetCDF Version:    \t%s\n", PNETCDF_VERSION);
     }
     if (flags[Date]) {
-        printf( "PnetCDF Release date:\t%s\n", PNETCDF_RELEASE_DATE);
+        printf( "PnetCDF Release date:\tPNETCDF_RELEASE_DATE\n");
     }
     if (flags[Configure_args]) {
         printf( "PnetCDF configure: \t%s\n", CONFIGURE_ARGS_CLEAN);

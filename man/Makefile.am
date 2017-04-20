@@ -15,18 +15,19 @@ CLEANFILES = $(man_MANS)
 
 EXTRA_DIST = pnetcdf.m4 pnetcdf_f90.m4
 
-RELEASE_DATE = $(PNETCDF_RELEASE_DATE2)
-RELEASE_STR  = "$(PNETCDF_VERSION) of $(PNETCDF_RELEASE_DATE)"
-
 pnetcdf.3: pnetcdf.m4
-	$(M4) $(M4FLAGS) -DAPI=C -DRELEASE_STR=$(RELEASE_STR) -DRELEASE_DATE=$(RELEASE_DATE) $? > $@  || $(RM) -f $@
+	$(M4) $(M4FLAGS) -DAPI=C -DPNETCDF_VERSION=$(PNETCDF_VERSION) $? > $@  || $(RM) -f $@
 
 pnetcdf_f77.3: pnetcdf.m4
-	$(M4) $(M4FLAGS) -DAPI=F -DRELEASE_STR=$(RELEASE_STR) -DRELEASE_DATE=$(RELEASE_DATE) $? > $@  || $(RM) -f $@
+	$(M4) $(M4FLAGS) -DAPI=F -DPNETCDF_VERSION=$(PNETCDF_VERSION) $? > $@  || $(RM) -f $@
 
 pnetcdf_f90.3: pnetcdf_f90.m4
-	$(M4) $(M4FLAGS) -DRELEASE_STR=$(RELEASE_STR) -DRELEASE_DATE=$(RELEASE_DATE) $? > $@  || $(RM) -f $@
+	$(M4) $(M4FLAGS) -DPNETCDF_VERSION=$(PNETCDF_VERSION) $? > $@  || $(RM) -f $@
 
 dist-hook:
 	-rm -rf `find $(distdir) -name .svn`
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%Y-%m-%d'`/"  $(distdir)/pnetcdf.m4
+	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%e %b %Y'`/" $(distdir)/pnetcdf.m4
+	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%Y-%m-%d'`/"  $(distdir)/pnetcdf_f90.m4
+	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%e %b %Y'`/" $(distdir)/pnetcdf_f90.m4
 

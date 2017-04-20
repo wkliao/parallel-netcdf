@@ -38,8 +38,8 @@ exec_prefix=@exec_prefix@
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
-Name: Parallel-NetCDF
-Description: Parallel-NetCDF (pnetcdf) provides parallel access to NetCDF files
+Name: PnetCDF
+Description: Parallel-NetCDF (PnetCDF) provides parallel access to classic NetCDF files
 URL: http://cucis.ece.northwestern.edu/projects/PnetCDF/
 Version: @PNETCDF_VERSION@
 Cflags: -I${includedir}

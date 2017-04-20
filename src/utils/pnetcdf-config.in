@@ -57,7 +57,7 @@ has_fortran="@has_fortran@"
 has_cxx="@has_mpicxx@"
 
 config_date="@CONFIG_DATE@"
-release_date="@PNETCDF_RELEASE_DATE@"
+release_date="PNETCDF_RELEASE_DATE"
 
 usage()
 {

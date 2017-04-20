@@ -52,6 +52,7 @@ Tasks immediately before a new release (must run in the following order)
     Clear up file "sneak_peek" (reset all items to none)
 
  4. Update the release date.
+    (See below "Setting PnetCDF software release date")
     Run command "svn commit" to get the svn property \$LastChangedDate\$
     updated in file "configure.in". That string will be used as the official
     release date.
@@ -598,4 +599,22 @@ For get att APIs:
 For put/get variable APIs:
     NC_EBADID, NC_EPERM, NC_EINDEFINE, NC_ENOTVAR, NC_ECHAR, NC_EINVALCOORDS,
     NC_EEDGE, NC_ESTRIDE, NC_EINVAL, NC_ERANGE
+
+==============================================================================
+Setting PnetCDF software release date
+==============================================================================
+Prior to version 1.8.1, the release date was obtained from the SVN keyword
+LastChangedDate set in file configure.in. It is used to produce two variables:
+PNETCDF_RELEASE_DATE and PNETCDF_RELEASE_DATE2.  These two variables are used
+by all man pages, pnetcdf.h, pnetcdf_version, and pnetcdf-config.  We used the
+keyword value set by SVN as the release date. The assumption is that updating
+PACKAGE_VERSION in configure.in is the last step before making a release, i.e.
+the last modification date of file configure.in is the latest among all files.
+This approach can cause a problem when using git-svn to clone the source codes,
+as one must set git smudge/clean filter to produce the effect of SVN keywords.
+In addition, it makes more sense to use the date when running command "make
+dist" to create the tar ball. Thus, staring from 1.9.0, the release date will
+be set when running "make dist". See the makefile target "dist-hook" in
+Makefile.am files for an implementation that uses sed command to do string
+substitution.
 
