@@ -24,6 +24,20 @@ libpnetcdf_la_LIBADD += ../binding/f77/libpnetcdff.la ../binding/f90/libpnetcdff
 # nodist_EXTRA_libpnetcdf_la_SOURCES += dummyf90.f90
 endif
 
+../dispatchers/libdispatchers.la:
+	set -e; cd ../dispatchers && $(MAKE) $(MFLAGS)
+
+../drivers/ncmpi/libpnetcdfc.la:
+	set -e; cd ../drivers/ncmpi && $(MAKE) $(MFLAGS)
+
+../binding/cxx/libpnetcdfcxx.la:
+	set -e; cd ../binding/cxx && $(MAKE) $(MFLAGS)
+
+../binding/f77/libpnetcdff.la:
+	set -e; cd ../binding/f77 && $(MAKE) $(MFLAGS)
+
+../binding/f90/libpnetcdff90.la:
+	set -e; cd ../binding/f90 && $(MAKE) $(MFLAGS)
+
 tests-local: all
 
-.PHONY: $(libpnetcdf_la_LIBADD)

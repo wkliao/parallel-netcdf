@@ -54,7 +54,7 @@ endif
 
 CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
 
-TESTMPIRUN4  = `echo $(TESTMPIRUN) | sed -e 's/NP/4/g'`
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
 
 ptest ptest4: $(check_PROGRAMS)
 	@for i in $(check_PROGRAMS); do { \

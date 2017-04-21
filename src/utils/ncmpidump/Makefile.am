@@ -12,6 +12,9 @@ bin_PROGRAMS = ncmpidump
 ncmpidump_SOURCES = ncmpidump.c vardata.c dumplib.c
 ncmpidump_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
+$(top_builddir)/src/libs/libpnetcdf.la:
+	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
+
 dist_man_MANS = ncmpidump.1
 
 HFILES = ncmpidump.h vardata.h dumplib.h
@@ -31,8 +34,7 @@ test: $(bin_PROGRAMS)
 tests-local: all
 
 dist-hook:
-	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpidump.1
-	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpidump.1
-	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpidump.1
+	$(SED) -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpidump.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpidump.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpidump.1
 
-.PHONY: $(top_builddir)/src/libs/libpnetcdf.la

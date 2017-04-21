@@ -11,5 +11,5 @@ nodist_include_HEADERS = pnetcdf.h
 EXTRA_DIST = pnetcdf.h.in nctypes.h dispatch.h
 
 dist-hook:
-	sed -i "s/DIST_DATE/`date '+%e %b %Y'`/" $(distdir)/pnetcdf.h.in
+	$(SED) -i "s/DIST_DATE/`date '+%e %b %Y'`/" $(distdir)/pnetcdf.h.in
 

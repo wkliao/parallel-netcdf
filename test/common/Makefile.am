@@ -33,7 +33,7 @@ endif
 
 # overwrite PPFCCOMPILE and LTPPFCCOMPILE to avoid using DEFS
 # IBM xlf compiler uses -WF,-D not -D
-# FCDEFS=`echo $(DEFS) | sed 's/-D/-WF,-D/g'`
+# FCDEFS=`echo $(DEFS) | $(SED) 's/-D/-WF,-D/g'`
 # PPFCCOMPILE = $(FC) $(FCDEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 #         $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_FCFLAGS) $(FCFLAGS)
 # LTPPFCCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \

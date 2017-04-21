@@ -15,6 +15,9 @@ bin_PROGRAMS = ncmpigen
 ncmpigen_SOURCES = main.c load.c escapes.c getfill.c init.c genlib.c ncmpigentab.c
 ncmpigen_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
+$(top_builddir)/src/libs/libpnetcdf.la:
+	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
+
 NCMPIDUMP = ../ncmpidump/ncmpidump
 dist_man_MANS = ncmpigen.1
 
@@ -68,8 +71,7 @@ CLEANFILES = c0.nc c1.cdl c1.nc c2.cdl f0.nc \
 tests-local: all
 
 dist-hook:
-	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpigen.1
-	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpigen.1
-	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpigen.1
+	$(SED) -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpigen.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpigen.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpigen.1
 
-.PHONY: $(top_builddir)/src/libs/libpnetcdf.la

@@ -54,7 +54,7 @@ CLEANFILES = $(CXX_HEADER) *.gcno
 $(CXX_HEADER): $(HPP_FILES) Makefile
 	cat $(srcdir)/pnetcdf.in >$@
 	set -e; for i in $(HPP_FILES); do ( \
-	sed -e '/#ifndef/d' -e '/#define/d' -e '/#endif/d' -e '/#include/d' $(srcdir)/$$i >> $@ ; \
+	$(SED) -e '/#ifndef/d' -e '/#define/d' -e '/#endif/d' -e '/#include/d' $(srcdir)/$$i >> $@ ; \
 	) ; done
 
 tests-local: all

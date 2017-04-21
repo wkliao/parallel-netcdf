@@ -12,6 +12,9 @@ bin_PROGRAMS = ncmpivalid
 ncmpivalid_SOURCES = ncmpivalid.c
 ncmpivalid_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
+$(top_builddir)/src/libs/libpnetcdf.la:
+	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
+
 dist_man_MANS = ncmpivalid.1
 
 CLEANFILES = *.gcno
@@ -19,8 +22,7 @@ CLEANFILES = *.gcno
 tests-local: all
 
 dist-hook:
-	sed -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpivalid.1
-	sed -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpivalid.1
-	sed -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpivalid.1
+	$(SED) -i "s/PNETCDF_RELEASE_VERSION/$(PNETCDF_VERSION)/" $(distdir)/ncmpivalid.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE/`date '+%e %b %Y'`/"    $(distdir)/ncmpivalid.1
+	$(SED) -i "s/PNETCDF_RELEASE_DATE2/`date '+%Y-%m-%d'`/"   $(distdir)/ncmpivalid.1
 
-.PHONY: $(top_builddir)/src/libs/libpnetcdf.la
