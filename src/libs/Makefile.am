@@ -7,6 +7,7 @@
 # @configure_input@
 
 lib_LTLIBRARIES = libpnetcdf.la
+libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 
 libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD = ../dispatchers/libdispatchers.la ../drivers/ncmpi/libpnetcdfc.la

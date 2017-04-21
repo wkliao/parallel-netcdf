@@ -232,7 +232,7 @@ dnl UD_PROG_CC_MAKEDEPEND
 dnl AC_HEADER_STDC
 dnl AC_CHECK_HEADERS([malloc.h])
 
-# check if MPICC works for basic MPI call: MPI_Comm_rank()
+dnl check if MPICC works for basic MPI call: MPI_Comm_rank()
 AC_CHECK_FUNC([MPI_Comm_rank], [],
    dnl maybe -lmpi is needed at link stage
    [AC_SEARCH_LIBS([MPI_Comm_rank], [mpi mpich], [],
@@ -559,21 +559,21 @@ if test "x${enable_fortran}" = xyes ; then
    UD_MSG_DEBUG([FC=$FC FFIXEDFORMFLAG=$FFIXEDFORMFLAG])
    AC_SUBST(FFIXEDFORMFLAG)
 
-   # Checking for Fortran types also determines the Fortran name mangling
-   # and places the value into FCALLSCSUB as the C name corresponding
-   # to the Fortran name SUB 
+   dnl Checking for Fortran types also determines the Fortran name mangling
+   dnl and places the value into FCALLSCSUB as the C name corresponding
+   dnl to the Fortran name SUB 
    AC_FC_FUNC(sub, [FCALLSCSUB])
 
-   # determine the correct name mapping
+   dnl determine the correct name mapping
    case $FCALLSCSUB in
        SUB)
            AC_DEFINE(F77_NAME_UPPER,,[Define if Fortran names are uppercase])
            ;;
        sub_)
-           # This is the hard case.  Gcc uses one _ unless the name includes
-           # an underscore, in which case it gets two trailing underscores.
-           # Use essentially the same configure code that the original configure
-           # used to determine SUB
+           dnl This is the hard case.  Gcc uses one _ unless the name includes
+           dnl an underscore, in which case it gets two trailing underscores.
+           dnl Use essentially the same configure code that the original configure
+           dnl used to determine SUB
            AC_MSG_CHECKING([for C-equivalent to Fortran routine "SUB_A"]) 
                    dnl "
            AC_FC_FUNC(sub_a, [FCALLSCSUBA])
@@ -648,7 +648,7 @@ if test "x${enable_fortran}" = xyes ; then
    AC_SUBST(MPIF90)
 fi
 
-# compute canonical system types
+dnl compute canonical system types
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 
@@ -1261,12 +1261,29 @@ dnl find if gcc is available for compiling ncoffsets to run in sequential
 AC_PATH_PROG([SEQ_CC], [gcc], [$MPICC])
 AC_SUBST(SEQ_CC)
 
-# Configuration Date
+dnl Configuration Date
 if test "x$SOURCE_DATE_EPOCH" != "x" ; then
     AC_SUBST([CONFIG_DATE]) CONFIG_DATE="`date -u -d "${SOURCE_DATE_EPOCH}"`"
 else
     AC_SUBST([CONFIG_DATE]) CONFIG_DATE="`date`"
 fi
+
+dnl Enable creation of libtool-style versioning or no versioning
+AC_ARG_ENABLE(versioning,
+        [AC_HELP_STRING([--enable-versioning],[Enable library versioning])],,
+        [enable_versioning=yes])
+
+dnl For libtool ABI versioning rules see:
+dnl http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
+dnl Update the version information only immediately before a public release
+ABIVERSION="0:0:0"
+AC_SUBST(ABIVERSION)
+if test "$enable_versioning" = "yes" ; then
+   ABIVERSIONFLAGS="-version-info \$(ABIVERSION)"
+else
+   ABIVERSIONFLAGS="-avoid-version"
+fi
+AC_SUBST(ABIVERSIONFLAGS)
 
 dnl AC_CONFIG_HEADERS([src/binding/f77/nfconfig_inc])
 AC_CONFIG_FILES(Makefile \
@@ -1325,9 +1342,9 @@ AC_CONFIG_FILES(Makefile \
                 test/F90/Makefile \
 )
 
-# The following dependency is for configure.in and configure
-# See autoconf manual 2.69, Section 4.8.5 Automatic Remaking
-# AC_CONFIG_FILES([stamp-h], [echo timestamp > stamp-h])
+dnl The following dependency is for configure.in and configure
+dnl See autoconf manual 2.69, Section 4.8.5 Automatic Remaking
+dnl AC_CONFIG_FILES([stamp-h], [echo timestamp > stamp-h])
 
 dnl add executable permission to pnetcdf-config and check_install
 AC_CONFIG_FILES([src/utils/pnetcdf-config], [chmod u+x src/utils/pnetcdf-config])
