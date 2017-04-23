@@ -7,6 +7,10 @@
 #ifndef NCTYPES_H
 #define NCTYPES_H
 
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
 #ifndef HAVE_PTRDIFF_T
 typedef int ptrdiff_t;
 #endif
