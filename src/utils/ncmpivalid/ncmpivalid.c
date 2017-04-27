@@ -48,12 +48,6 @@ static int val_get_NC(NC *ncp);
 #define X_SIZEOF_INT 4
 static int x_sizeof_NON_NEG;
 
-#define ABORT(e) { \
-    printf("Abort at line %d: %s\n",__LINE__,ncmpi_strerror(e)); \
-    MPI_Finalize(); \
-    return 1; \
-}
-
 
 /*
  * Fetch the next header chunk.
@@ -1010,14 +1004,14 @@ int main(int argc, char **argv)
     ncp = ncmpii_new_NC(NULL);
     if (ncp == NULL) {
         status = NC_ENOMEM;
-        ABORT(status)
+        printf("Error at line %d when calling ncmpii_new_NC()\n",__LINE__);
         goto prog_exit;
     }
 
     ncp->nciop = ncmpiio_new(filename, NC_NOWRITE);
     if (ncp->nciop == NULL) {
         status = NC_ENOMEM;
-        ABORT(status)
+        printf("Error at line %d when calling ncmpiio_new()\n",__LINE__);
         goto prog_exit;
     }
 
