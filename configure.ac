@@ -276,13 +276,28 @@ AC_ARG_ENABLE(cxx,
 )
 UD_MSG_DEBUG(enable_cxx=$enable_cxx)
 
-if test "x${enable_cxx}" != xno ; then
-   dnl if MPICXX or CXX has not been set by users, then search from
-   dnl CANDIDATE_MPICXX
-   if test "x${MPICXX}" = x ; then
-      UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
-   fi
+dnl Must check MPI C++ compiler, because AC_PROG_CXX cannot be called
+dnl conditionally in Automake. If MPICXX or CXX has not been set by users, then
+dnl search from CANDIDATE_MPICXX
+if test "x${MPICXX}" = x ; then
+   UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
+fi
 
+dnl must invoke AC_PROG_CXX here otherwise got "error: conditional
+dnl "am__fastdepCXX" was never defined."
+if test "x${MPICXX}" = x ; then
+   dnl MPICXX is not defined, check g++
+   AC_PROG_CXX
+   AC_PROG_CXX_C_O
+else
+   CXX=${MPICXX}
+   AC_PROG_CXX(${MPICXX})
+   dnl autoconf 2.59 has not yet implemented AC_PROG_CXX_C_O
+   AC_PROG_CXX_C_O
+fi
+
+has_mpicxx=no
+if test "x${enable_cxx}" != xno ; then
    if test "x${MPICXX}" = x ; then
       AC_MSG_ERROR([
          ------------------------------------------------------------
@@ -290,17 +305,8 @@ if test "x${enable_cxx}" != xno ; then
            locations of the compiler either with the MPICXX
            environment variable or the --with-mpi configure flag.
          ------------------------------------------------------------])
-      has_mpicxx=no
    else
-      CXX=${MPICXX}
-      AC_SUBST(MPICXX)
       has_mpicxx=yes
-
-      dnl UD_PROG_CXX
-      AC_PROG_CXX(${MPICXX})
-      dnl autoconf 2.5.9 has not yet implemented AC_PROG_CXX_C_O
-      dnl AC_PROG_CXX_C_O
-
       dnl test if MPICXX can compile an MPI-IO program
       if test "x${enable_mpi_io_test}" = xyes ; then
           AC_LANG_PUSH(C++)
@@ -322,12 +328,7 @@ if test "x${enable_cxx}" != xno ; then
       UD_CHECK_MPI_CPP_SEEK_SET
       UD_MSG_DEBUG(ac_cv_CHECK_MPI_CPP_SEEK_SET=$ac_cv_CHECK_MPI_CPP_SEEK_SET)
    fi
-else
-   dnl must invoke AC_PROG_CXX here otherwise got "error: conditional "am__fastdepCXX" was never defined."
-   AC_PROG_CXX
-   has_mpicxx=no
 fi
-AC_SUBST(has_mpicxx)
 UD_MSG_DEBUG(has_mpicxx=$has_mpicxx)
 AM_CONDITIONAL(HAS_MPICXX, [test x$has_mpicxx = xyes])
 
