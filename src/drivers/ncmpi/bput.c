@@ -132,7 +132,7 @@ ncmpii_bput_var(void             *ncdp,
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
     err = ncmpii_sanity_check(ncp, varid, start, count, stride,
-                              bufcount, buftype, api, (itype=NC_NAT),
+                              bufcount, buftype, api, (itype==NC_NAT),
                               0, WRITE_REQ, NONBLOCKING_IO, &varp);
     if (err != NC_NOERR) return err;
 
