@@ -499,7 +499,6 @@ ncmpii_inq_var_fill(NC_var *varp,
         case NC_UINT64: return ncmpix_getn_NC_UINT64_ulonglong(&xp, 1, (unsigned long long*)fill_value);
         default: return NC_EBADTYPE;
     }
-    return NC_NOERR;
 }
 
 #ifdef FILL_ONE_VAR_AT_A_TIME
