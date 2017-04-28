@@ -2342,7 +2342,10 @@ if test yes = "$GCC"; then
     mingw* | cegcc*) lt_sed_strip_eq='s|=\([[A-Za-z]]:\)|\1|g' ;;
     *) lt_sed_strip_eq='s|=/|/|g' ;;
   esac
-  lt_search_path_spec=`$CC -print-search-dirs | awk $lt_awk_arg | $SED -e "s/^libraries://" -e $lt_sed_strip_eq`
+  case $cc_basename in
+    fccpx*) lt_search_path_spec=`$CC --showme:libdirs` ;;
+    *) lt_search_path_spec=`$CC -print-search-dirs | awk $lt_awk_arg | $SED -e "s/^libraries://" -e $lt_sed_strip_eq` ;;
+  esac
   case $lt_search_path_spec in
   *\;*)
     # if the path contains ";" then we assume it to be the separator
@@ -3303,9 +3306,9 @@ if test yes = "$GCC"; then
   case $host in
   *-*-mingw*)
     # gcc leaves a trailing carriage return, which upsets mingw
-    ac_prog=`($CC -print-prog-name=ld) 2>&5 | tr -d '\015'` ;;
+    ac_prog=`($CC $CFLAGS -print-prog-name=ld) 2>&5 | tr -d '\015'` ;;
   *)
-    ac_prog=`($CC -print-prog-name=ld) 2>&5` ;;
+    ac_prog=`($CC $CFLAGS -print-prog-name=ld) 2>&5` ;;
   esac
   case $ac_prog in
     # Accept absolute paths.
@@ -4750,8 +4753,8 @@ m4_if([$1], [CXX], [
 	_LT_TAGVAR(lt_prog_compiler_pic, $1)='--shared'
 	_LT_TAGVAR(lt_prog_compiler_static, $1)='--static'
 	;;
-      frtpx*)
-	# NAG Fortran compiler
+      frtpx* | fccpx* | FCCpx* )
+	# Fujitsu compiler
 	_LT_TAGVAR(lt_prog_compiler_wl, $1)='-Wl,'
 	_LT_TAGVAR(lt_prog_compiler_pic, $1)='-KPIC'
 	_LT_TAGVAR(lt_prog_compiler_static, $1)='-Kstatic_fjlib'
@@ -6450,7 +6453,7 @@ if test yes != "$_lt_caught_CXX_error"; then
         wlarc='$wl'
 
         # ancient GNU ld didn't support --whole-archive et. al.
-        if eval "`$CC -print-prog-name=ld` --help 2>&1" |
+        if eval "`$CC $CFLAGS -print-prog-name=ld` --help 2>&1" |
 	  $GREP 'no-whole-archive' > /dev/null; then
           _LT_TAGVAR(whole_archive_flag_spec, $1)=$wlarc'--whole-archive$convenience '$wlarc'--no-whole-archive'
         else
