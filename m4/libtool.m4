@@ -114,7 +114,7 @@ func_cc_basename ()
         compile | *[[\\/]]compile | ccache | *[[\\/]]ccache ) ;;
         distcc | *[[\\/]]distcc | purify | *[[\\/]]purify ) ;;
         \-*) ;;
-        *[[\\/]]mpicc | *[[\\/]]mpicxx | *[[\\/]]mpif77 | *[[\\/]]mpif90 )
+        mpicc | mpicxx | mpif77 | mpif90 | *[[\\/]]mpicc | *[[\\/]]mpicxx | *[[\\/]]mpif77 | *[[\\/]]mpif90 )
            # func_cc_basename_result=`$cc_temp -show | cut -d' ' -f1`
            eval "$cc_temp -show" </dev/null >& conftest.ver
            func_cc_basename_result=`head -n1 conftest.ver |cut -d' ' -f1`
@@ -122,17 +122,13 @@ func_cc_basename ()
 echo "cc_temp=$cc_temp func_cc_basename_result=$func_cc_basename_result"
            return
            ;;
-        *[[\\/]]mpifccpx | *[[\\/]]mpiFCCpx | *[[\\/]]mpifrtpx )
+        mpifccpx | mpiFCCpx | mpifrtpx | *[[\\/]]mpifccpx | *[[\\/]]mpiFCCpx | *[[\\/]]mpifrtpx )
            # Fujitsu compilers: fccpx, FCCpx, frtpx
-           # func_cc_basename_result=`$cc_temp -show | cut -d' ' -f1`
-           eval "$cc_temp -show" </dev/null >& conftest.ver
-           cc_fullname=`head -n1 conftest.ver |cut -d' ' -f1`
-           func_cc_basename_result=`basename $cc_fullname`
-           ${RM} -f conftest.ver
+           func_cc_basename_result=`$cc_temp -showme | cut -d' ' -f1 | xargs basename`
 echo "cc_temp=$cc_temp func_cc_basename_result=$func_cc_basename_result"
            return
            ;;
-        *[[\\/]]cc | *[[\\/]]CC | *[[\\/]]ftn )
+        cc | CC | ftn | *[[\\/]]cc | *[[\\/]]CC | *[[\\/]]ftn )
            # For Cray PrgEnv-intel, cc is a wrapper of icc
            # For Cray PrgEnv-gnu, cc is a wrapper of gcc
            # func_cc_basename_result=`$cc_temp --version | cut -d' ' -f1`
@@ -4753,6 +4749,12 @@ m4_if([$1], [CXX], [
 	_LT_TAGVAR(lt_prog_compiler_wl, $1)='-Wl,'
 	_LT_TAGVAR(lt_prog_compiler_pic, $1)='--shared'
 	_LT_TAGVAR(lt_prog_compiler_static, $1)='--static'
+	;;
+      frtpx*)
+	# NAG Fortran compiler
+	_LT_TAGVAR(lt_prog_compiler_wl, $1)='-Wl,'
+	_LT_TAGVAR(lt_prog_compiler_pic, $1)='-KPIC'
+	_LT_TAGVAR(lt_prog_compiler_static, $1)='-Kstatic_fjlib'
 	;;
       nagfor*)
 	# NAG Fortran compiler

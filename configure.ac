@@ -214,11 +214,9 @@ if test "x${MPICC}" = x ; then
    -----------------------------------------------------------------------])
 fi
 
-CC=${MPICC}
-AC_SUBST(MPICC)
-
 dnl Now MPICC is configured, do some basic compiler tests
-AC_PROG_CC([${MPICC}])
+CC=${MPICC}
+AC_PROG_CC
 AM_PROG_CC_C_O
 
 dnl this call needs at least autoconf version 2.60
@@ -285,16 +283,10 @@ fi
 
 dnl must invoke AC_PROG_CXX here otherwise got "error: conditional
 dnl "am__fastdepCXX" was never defined."
-if test "x${MPICXX}" = x ; then
-   dnl MPICXX is not defined, check g++
-   AC_PROG_CXX
-   AC_PROG_CXX_C_O
-else
-   CXX=${MPICXX}
-   AC_PROG_CXX(${MPICXX})
-   dnl autoconf 2.59 has not yet implemented AC_PROG_CXX_C_O
-   AC_PROG_CXX_C_O
-fi
+CXX=${MPICXX}
+AC_PROG_CXX
+dnl autoconf 2.59 has not yet implemented AC_PROG_CXX_C_O
+dnl AC_PROG_CXX_C_O
 
 has_mpicxx=no
 if test "x${enable_cxx}" != xno ; then
@@ -331,6 +323,17 @@ if test "x${enable_cxx}" != xno ; then
 fi
 UD_MSG_DEBUG(has_mpicxx=$has_mpicxx)
 AM_CONDITIONAL(HAS_MPICXX, [test x$has_mpicxx = xyes])
+
+dnl compute canonical system types
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+
+dnl libtool v2.4.6 was released in 2015-02-15
+dnl Travis CI only has v2.4.2
+LT_PREREQ([2.4.2])
+dnl LT_INIT([dlopen disable-shared])
+dnl LT_INIT([dlopen])
+LT_INIT([disable-shared])
 
 dnl I took the "-ansi" off the CFLAGS for the strict case, as it was
 dnl preventing PATH_MAX from being defined for some of the test files,
@@ -649,16 +652,7 @@ if test "x${enable_fortran}" = xyes ; then
    AC_SUBST(MPIF90)
 fi
 
-dnl compute canonical system types
-AC_CANONICAL_BUILD
-AC_CANONICAL_HOST
 
-dnl libtool v2.4.6 was released in 2015-02-15
-dnl Travis CI only has v2.4.2
-LT_PREREQ([2.4.2])
-dnl LT_INIT([dlopen disable-shared])
-dnl LT_INIT([dlopen])
-LT_INIT([disable-shared])
 
 AC_PROG_INSTALL
 

@@ -25,7 +25,7 @@ configure command that was used to build PnetCDF successfully on K.
 ./configure --prefix=/path/to/install \
             --host=sparc64-unknown-linux-gnu \
             --build=x86_64-redhat-linux \
-            MPICC="mpifccpx -Xg" \
+            MPICC=mpifccpx \
             MPICXX=mpiFCCpx \
             MPIF77=mpifrtpx \
             MPIF90=mpifrtpx \
@@ -46,6 +46,11 @@ permission issue) the autoconf utility, please add LDFLAGS="-L." to the
 configure command line.  Adding LDFLAGS="-L." is necessary as the Fujitsu
 Fortran compiler requires no "-L" for its internal library files.  Without
 this, configure command may fail.
+
+To build shared library, add configure command-line option "--enable-shared"
+and set the MPICC and MPICXX environment variables to the followings.
+            MPICC="mpifccpx -Xg"
+            MPICXX="mpifccpx -Xg"
 
 ----------------
 Testing PnetCDF:
