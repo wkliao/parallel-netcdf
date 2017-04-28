@@ -12,12 +12,6 @@ bin_PROGRAMS = ncmpivalid
 ncmpivalid_SOURCES = ncmpivalid.c
 ncmpivalid_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
-# According Automake Manual, Section 8.3.5 Libtool Convenience Libraries,
-# using nodist_EXTRA to trick automake to use C++ compiler as the linker
-if HAS_MPICXX
-nodist_EXTRA_ncmpivalid_SOURCES = dummycxx.cxx
-endif
-
 $(top_builddir)/src/libs/libpnetcdf.la:
 	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
 

@@ -15,12 +15,6 @@ bin_PROGRAMS = ncmpigen
 ncmpigen_SOURCES = main.c load.c escapes.c getfill.c init.c genlib.c ncmpigentab.c
 ncmpigen_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
-# According Automake Manual, Section 8.3.5 Libtool Convenience Libraries,
-# using nodist_EXTRA to trick automake to use C++ compiler as the linker
-if HAS_MPICXX
-nodist_EXTRA_ncmpigen_SOURCES = dummycxx.cxx
-endif
-
 $(top_builddir)/src/libs/libpnetcdf.la:
 	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
 

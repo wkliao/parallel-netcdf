@@ -12,12 +12,6 @@ bin_PROGRAMS = ncmpidump
 ncmpidump_SOURCES = ncmpidump.c vardata.c dumplib.c
 ncmpidump_LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
-# According Automake Manual, Section 8.3.5 Libtool Convenience Libraries,
-# using nodist_EXTRA to trick automake to use C++ compiler as the linker
-if HAS_MPICXX
-nodist_EXTRA_ncmpidump_SOURCES = dummycxx.cxx
-endif
-
 $(top_builddir)/src/libs/libpnetcdf.la:
 	set -e; cd $(top_builddir)/src/libs && $(MAKE) $(MFLAGS)
 
