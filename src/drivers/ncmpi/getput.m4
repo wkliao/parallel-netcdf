@@ -164,7 +164,7 @@ ncmpii_create_imaptype(NC_var           *varp,
 
     /* We have a true varm call, as imap gives non-contiguous layout.
      * User buffer will be packed (write case) or unpacked (read case)
-     * to/from a contiguous buffer based on imap[], before MPI-IO.
+     * to/from a contiguous buffer based on imap[], before/after MPI-IO.
      * First, we construct a derived data type, imaptype, based on
      * imap[], and use it to pack lbuf to cbuf (for write), or unpack
      * cbuf to lbuf (for read).

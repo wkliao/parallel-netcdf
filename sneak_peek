@@ -3,7 +3,8 @@ This is essentially a placeholder for the next release note ...
 ------------------------------------------------------------------------------
 
   o New features
-    * The configure environment has been migrated to use automake.
+    * The configure environment has been migrated to use GNU automake and
+      libtool.
     * Building shared libraries is now supported with configure option
       --enable-shared. The default is building static library only. Note
       linking shared libraries is not recommended due to the likely performance

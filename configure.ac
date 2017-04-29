@@ -375,7 +375,7 @@ if test "x${enable_fortran}" != xno ; then
 fi
 if test "x${enable_fortran}" = xyes ; then
    dnl user explicitly requests to build Fortran APIs
-   if test "x${MPIF77}" = x && test "x${MPIF90}" = x ; then
+   if test "x${MPIF77}" = x || test "x${MPIF90}" = x ; then
       AC_MSG_ERROR([
          ------------------------------------------------------------
            Fortran support is explicitly requested, but configure
@@ -386,131 +386,136 @@ if test "x${enable_fortran}" = xyes ; then
          ------------------------------------------------------------])
    fi
 fi
+dnl enable_fortran can be yes or auto
 UD_MSG_DEBUG(enable_fortran=${enable_fortran})
 
-dnl Check if MPIF90 is a valid MPI compiler
 mpi_mod=no
-if test "x${MPIF90}" != x ; then
-   FC=${MPIF90}
-   AC_PROG_FC
-   dnl FCFLAGS is set in AC_PROG_FC
+if test "x${enable_fortran}" != xno ; then
+   dnl Check if MPIF90 is a valid MPI compiler
+   if test "x${MPIF90}" != x ; then
+      FC=${MPIF90}
+      AC_PROG_FC
+      dnl FCFLAGS is set in AC_PROG_FC
 
-   FCLIBS_save="$FCLIBS"
-   FCLIBS=""
-   AC_FC_LIBRARY_LDFLAGS
-   UD_MSG_DEBUG([before FCLIBS=$FCLIBS])
-   dnl The autoconf macro for finding FCLIBS sometimes makes mistakes
-   dnl (particularly with the Fujitsu frt compiler).  This next step
-   dnl first sees if the FCLIBS is valid with the Fortran compiler
-   dnl This also happens to Solaris Studio Fortran compilers
-   dnl AC_PROG_FC_FCLIBS_VALID
-   dnl Now see if FCLIBS works with the C compiler (remove invalid ones)
-   PAC_PROG_FC_CHECK_FCLIBS
+      FCLIBS_save="$FCLIBS"
+      FCLIBS=""
+      AC_FC_LIBRARY_LDFLAGS
+      UD_MSG_DEBUG([before FCLIBS=$FCLIBS])
+      dnl The autoconf macro for finding FCLIBS sometimes makes mistakes
+      dnl (particularly with the Fujitsu frt compiler).  This next step
+      dnl first sees if the FCLIBS is valid with the Fortran compiler
+      dnl This also happens to Solaris Studio Fortran compilers
+      dnl AC_PROG_FC_FCLIBS_VALID
+      dnl Now see if FCLIBS works with the C compiler (remove invalid ones)
+      PAC_PROG_FC_CHECK_FCLIBS
 
-   dnl replace FLIBS and F90LIBS with FCLIBS
-   UD_MSG_DEBUG([after FCLIBS=$FCLIBS])
-   FLIBS="$FCLIBS"
-   dnl F90LIBS="$FCLIBS"
+      dnl replace FLIBS and F90LIBS with FCLIBS
+      UD_MSG_DEBUG([after FCLIBS=$FCLIBS])
+      FLIBS="$FCLIBS"
+      dnl F90LIBS="$FCLIBS"
 
-   AC_LANG_PUSH([Fortran])
-   AC_MSG_CHECKING([if mpi.mod is available])
-   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        use mpi]])],
-                     [mpi_mod=yes], [mpi_mod=no]
-   )
-   AC_MSG_RESULT($mpi_mod)
-   AC_MSG_CHECKING([if MPIF90 is valid])
-   if test "x${mpi_mod}" = xyes ; then
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        use mpi
-        integer err, rank
-        call MPI_Comm_rank(MPI_COMM_WORLD, rank, err)]])],
-                           [valid_mpif90=yes],[valid_mpif90=no]
+      AC_LANG_PUSH([Fortran])
+      AC_MSG_CHECKING([if mpi.mod is available])
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        use mpi]])],
+                        [mpi_mod=yes], [mpi_mod=no]
       )
-   else
-      dnl mpi.mod is not available, check if can use mpif.h
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        include "mpif.h"
-        integer err, rank
-        call MPI_Comm_rank(MPI_COMM_WORLD, rank, err)]])],
-                           [valid_mpif90=yes],[valid_mpif90=no]
-      )
-   fi
-   AC_MSG_RESULT($valid_mpif90)
-   AC_LANG_POP([Fortran])
-   if test "x${valid_mpif90}" = xno ; then
-      if test "x${enable_fortran}" = xyes ; then
-         AC_MSG_ERROR([
-            ------------------------------------------------------------
-              Invalid MPI Fortran 90 compiler specified: "${MPIF90}"
-              A working MPI compiler is required. Please specify the
-              location of one either with the MPIF90 environment
-              variable or the --with-mpi configure flag.
-            ------------------------------------------------------------])
-      fi
-      AC_MSG_WARN([
-         ------------------------------------------------------------
-           Invalid MPI Fortran 90 compiler: "${MPIF90}"
-           Fortran feature is disabled
-         ------------------------------------------------------------])
-      enable_fortran=no
-   else
+      AC_MSG_RESULT($mpi_mod)
+      AC_MSG_CHECKING([if MPIF90 is valid])
       if test "x${mpi_mod}" = xyes ; then
-         USE_MPIF_HEADER="use mpi, only: MPI_OFFSET_KIND"
+         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        use mpi
+           integer err, rank
+           call MPI_Comm_rank(MPI_COMM_WORLD, rank, err)]])],
+                              [valid_mpif90=yes],[valid_mpif90=no]
+         )
       else
-         USE_MPIF_HEADER="include \"mpif.h\""
+         dnl mpi.mod is not available, check if can use mpif.h
+         AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        include "mpif.h"
+           integer err, rank
+           call MPI_Comm_rank(MPI_COMM_WORLD, rank, err)]])],
+                              [valid_mpif90=yes],[valid_mpif90=no]
+         )
       fi
-      AC_SUBST(USE_MPIF_HEADER)
+      AC_MSG_RESULT($valid_mpif90)
+      AC_LANG_POP([Fortran])
+      if test "x${valid_mpif90}" = xno ; then
+         if test "x${enable_fortran}" = xyes ; then
+            AC_MSG_ERROR([
+               ------------------------------------------------------------
+                 Invalid MPI Fortran 90 compiler specified: "${MPIF90}"
+                 A working MPI compiler is required. Please specify the
+                 location of one either with the MPIF90 environment
+                 variable or the --with-mpi configure flag.
+               ------------------------------------------------------------])
+         fi
+         AC_MSG_WARN([
+            ------------------------------------------------------------
+              Invalid MPI Fortran 90 compiler: "${MPIF90}"
+              Fortran feature is disabled
+            ------------------------------------------------------------])
+         enable_fortran=no
+      else
+         if test "x${mpi_mod}" = xyes ; then
+            USE_MPIF_HEADER="use mpi, only: MPI_OFFSET_KIND"
+         else
+            USE_MPIF_HEADER="include \"mpif.h\""
+         fi
+         AC_SUBST(USE_MPIF_HEADER)
+      fi
    fi
 fi
 AM_CONDITIONAL(HAVE_MPI_MOD, [test x$mpi_mod = xyes])
 
-dnl Check if MPIF77 is a valid MPI compiler
 ac_f77_support_freeform=no
-if test "x${enable_fortran}" != xno && test "x${MPIF77}" != xno ; then
-   F77=${MPIF77}
-   AC_PROG_F77
-   dnl FFLAGS is set in AC_PROG_F77
+if test "x${enable_fortran}" != xno ; then
+   dnl Check if MPIF77 is a valid MPI compiler
+   if test "x${enable_fortran}" != xno && test "x${MPIF77}" != xno ; then
+      F77=${MPIF77}
+      AC_PROG_F77
+      dnl FFLAGS is set in AC_PROG_F77
 
-   AC_F77_LIBRARY_LDFLAGS
+      AC_F77_LIBRARY_LDFLAGS
 
-   FC_saved=${FC}
-   FC=${F77}
-   dnl customized AC_FC_FREEFORM: to just get ac_cv_fc_freeform without
-   dnl appending ac_cv_fc_freeform to FCFLAGS
-   dnl ac_cv_fc_freeform is the flag for enabling Fortran free form
-   dnl we use this flag only in testing programs
-   UD_FC_FREEFORM
-   if test "x${ac_cv_fc_freeform}" != xunknown ; then
-      ac_f77_support_freeform=yes
-      FFREEFORMFLAG=${ac_cv_fc_freeform}
-   fi
-   UD_MSG_DEBUG([FC=$FC FFREEFORMFLAG=$FFREEFORMFLAG])
-   AC_SUBST(FFREEFORMFLAG)
-   FC=${FC_saved}
-
-   AC_LANG_PUSH([Fortran 77])
-   AC_MSG_CHECKING([if MPIF77 is valid])
-   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        include "mpif.h"
-        integer comm
-        comm = MPI_COMM_WORLD]])],
-                     [valid_mpif77=yes], [valid_mpif77=no]
-   )
-   AC_MSG_RESULT($valid_mpif77)
-   AC_LANG_POP([Fortran 77])
-   if test "x${valid_mpif77}" = xno ; then
-      if test "x${enable_fortran}" = xyes ; then
-         AC_MSG_ERROR([
-            ------------------------------------------------------------
-              Invalid MPI Fortran 77 compiler specified: "${MPIF77}"
-              A working MPI compiler is required. Please specify the
-              location of one either with the MPIF77 environment
-              variable or the --with-mpi configure flag
-            ------------------------------------------------------------])
+      FC_saved=${FC}
+      FC=${F77}
+      dnl customized AC_FC_FREEFORM: to just get ac_cv_fc_freeform without
+      dnl appending ac_cv_fc_freeform to FCFLAGS
+      dnl ac_cv_fc_freeform is the flag for enabling Fortran free form
+      dnl we use this flag only in testing programs
+      UD_FC_FREEFORM
+      if test "x${ac_cv_fc_freeform}" != xunknown ; then
+         ac_f77_support_freeform=yes
+         FFREEFORMFLAG=${ac_cv_fc_freeform}
       fi
-      AC_MSG_WARN([
-         ------------------------------------------------------------
-           MPI Fortran header file mpif.h is not valid:
-           Fortran feature is disabled
-         ------------------------------------------------------------])
-      enable_fortran=no
+      UD_MSG_DEBUG([FC=$FC FFREEFORMFLAG=$FFREEFORMFLAG])
+      AC_SUBST(FFREEFORMFLAG)
+      FC=${FC_saved}
+
+      AC_LANG_PUSH([Fortran 77])
+      AC_MSG_CHECKING([if MPIF77 is valid])
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[        include "mpif.h"
+           integer comm
+           comm = MPI_COMM_WORLD]])],
+                        [valid_mpif77=yes], [valid_mpif77=no]
+      )
+      AC_MSG_RESULT($valid_mpif77)
+      AC_LANG_POP([Fortran 77])
+      if test "x${valid_mpif77}" = xno ; then
+         if test "x${enable_fortran}" = xyes ; then
+            AC_MSG_ERROR([
+               ------------------------------------------------------------
+                 Invalid MPI Fortran 77 compiler specified: "${MPIF77}"
+                 A working MPI compiler is required. Please specify the
+                 location of one either with the MPIF77 environment
+                 variable or the --with-mpi configure flag
+               ------------------------------------------------------------])
+         fi
+         AC_MSG_WARN([
+            ------------------------------------------------------------
+              MPI Fortran header file mpif.h is not valid:
+              Fortran feature is disabled
+            ------------------------------------------------------------])
+         enable_fortran=no
+      fi
    fi
 fi
 AM_CONDITIONAL(HAVE_F77_SUPPORT_FREEFORM, [test x$ac_f77_support_freeform = xyes])
