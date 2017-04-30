@@ -12,12 +12,20 @@ libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD = ../dispatchers/libdispatchers.la ../drivers/ncmpi/libpnetcdfc.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
+
 if HAS_MPICXX
 libpnetcdf_la_LIBADD += ../binding/cxx/libpnetcdfcxx.la
 # According Automake Manual, Section 8.3.5 Libtool Convenience Libraries,
 # using nodist_EXTRA to trick automake to use C++ compiler
 nodist_EXTRA_libpnetcdf_la_SOURCES += dummycxx.cxx
+libpnetcdf_la_LINK = $(CXXLINK)
+else
+# From automake manual Section 8.14.3.1, "... if Fortran 77, C and C++ source
+# code is compiled into a program, then the C++ linker will be used." and "A
+# per-target _LINK variable will override the above selection"
+libpnetcdf_la_LINK = $(LINK)
 endif
+
 if HAS_FORTRAN
 # According to Automake Manual, Section 8.14.3 Mixing Fortran 77 With C and
 # C++, adding $(FLIBS) is necessary
