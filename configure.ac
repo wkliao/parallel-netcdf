@@ -321,6 +321,7 @@ if test "x${enable_cxx}" != xno ; then
       UD_MSG_DEBUG(ac_cv_CHECK_MPI_CPP_SEEK_SET=$ac_cv_CHECK_MPI_CPP_SEEK_SET)
    fi
 fi
+AC_SUBST(has_mpicxx)
 UD_MSG_DEBUG(has_mpicxx=$has_mpicxx)
 AM_CONDITIONAL(HAS_MPICXX, [test x$has_mpicxx = xyes])
 
