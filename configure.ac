@@ -166,10 +166,10 @@ if test "x$MPIF77" = x && test "x$FC"  != x ; then MPIF77=$FC  ; fi
 if test "x$MPIF90" = x && test "x$F90" != x ; then MPIF90=$F90 ; fi
 if test "x$MPIF90" = x && test "x$FC"  != x ; then MPIF90=$FC  ; fi
 
-CANDIDATE_MPICC+=" mpicc"
-CANDIDATE_MPICXX+=" mpicxx mpic++ mpiCC"
-CANDIDATE_MPIF77+=" mpif77"
-CANDIDATE_MPIF90+=" mpif90"
+CANDIDATE_MPICC="${MPICC} mpicc" 
+CANDIDATE_MPICXX="${MPICXX} mpicxx mpic++ mpiCC" 
+CANDIDATE_MPIF77="${MPIF77} mpif77" 
+CANDIDATE_MPIF90="${MPIF90} mpif90" 
 
 dnl add IBM MPI compilers
 CANDIDATE_MPICC+=" mpcc_r mpcc mpixlc_r mpixlc"
