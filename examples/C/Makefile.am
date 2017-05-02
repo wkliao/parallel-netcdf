@@ -11,11 +11,6 @@ AM_DEFAULT_SOURCE_EXT = .c
 
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
-AM_CPPFLAGS =
-if DECL_MPI_OFFSET
-AM_CPPFLAGS += -DHAVE_DECL_MPI_OFFSET
-endif
-
 check_PROGRAMS = collective_write \
                  nonblocking_write \
                  nonblocking_write_in_def \

@@ -14,14 +14,6 @@ AM_FFLAGS = -I$(top_builddir)/src/binding/f77
 AM_FCFLAGS = $(FC_MODINC)$(top_builddir)/src/binding/f90
 LDADD = ${top_builddir}/src/libs/libpnetcdf.la
 
-if DECL_MPI_OFFSET
-   # Do not add to AM_CPPFLAGS, as it will also be used by Fortran programs
-   # AM_CPPFLAGS += -DHAVE_DECL_MPI_OFFSET
-   AM_CFLAGS  = -DHAVE_DECL_MPI_OFFSET
-   AM_FFLAGS  += $(FC_DEFINE)HAVE_DECL_MPI_OFFSET
-   AM_FCFLAGS += $(FC_DEFINE)HAVE_DECL_MPI_OFFSET
-endif
-
 check_PROGRAMS = pnetcdf-write-from-master \
                  pnetcdf-read-from-master \
                  pnetcdf-write-nfiles \

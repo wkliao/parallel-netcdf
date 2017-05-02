@@ -30,10 +30,6 @@ using namespace std;
 using namespace PnetCDF;
 using namespace PnetCDF::exceptions;
 
-#ifndef HAVE_DECL_MPI_OFFSET
-#define MPI_OFFSET MPI_LONG_LONG_INT
-#endif
-
 // We are writing 2D data, a 6 x 12 grid. 
 static const int NX = 6;
 static const int NY = 12;

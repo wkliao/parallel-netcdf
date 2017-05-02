@@ -11,10 +11,6 @@ SUFFIXES = .o .c
 AM_CPPFLAGS =
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
-if DECL_MPI_OFFSET
-AM_CPPFLAGS += -DHAVE_DECL_MPI_OFFSET
-endif
-
 check_PROGRAMS = aggregation \
                  write_block_read_column
 

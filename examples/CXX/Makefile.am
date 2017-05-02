@@ -13,10 +13,6 @@ AM_DEFAULT_SOURCE_EXT = .cpp
 AM_CPPFLAGS = -I$(top_builddir)/src/binding/cxx
 LDADD = ${top_builddir}/src/libs/libpnetcdf.la
 
-if DECL_MPI_OFFSET
-AM_CPPFLAGS += -DHAVE_DECL_MPI_OFFSET
-endif
-
 check_PROGRAMS = collective_write \
                  nonblocking_write \
                  column_wise \

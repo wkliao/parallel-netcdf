@@ -35,10 +35,6 @@
 #include <mpi.h>
 #include <pnetcdf.h>
 
-#ifndef HAVE_DECL_MPI_OFFSET
-#define MPI_OFFSET MPI_LONG_LONG_INT
-#endif
-
 #define NZ 5
 #define NY 5
 #define NX 5
