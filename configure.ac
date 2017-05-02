@@ -166,40 +166,40 @@ if test "x$MPIF77" = x && test "x$FC"  != x ; then MPIF77=$FC  ; fi
 if test "x$MPIF90" = x && test "x$F90" != x ; then MPIF90=$F90 ; fi
 if test "x$MPIF90" = x && test "x$FC"  != x ; then MPIF90=$FC  ; fi
 
-CANDIDATE_MPICC="${MPICC} mpicc"
-CANDIDATE_MPICXX="${MPICXX} mpicxx mpic++ mpiCC"
-CANDIDATE_MPIF77="${MPIF77} mpif77"
-CANDIDATE_MPIF90="${MPIF90} mpif90"
+CANDIDATE_MPICC+=" mpicc"
+CANDIDATE_MPICXX+=" mpicxx mpic++ mpiCC"
+CANDIDATE_MPIF77+=" mpif77"
+CANDIDATE_MPIF90+=" mpif90"
 
 dnl add IBM MPI compilers
-CANDIDATE_MPICC="${CANDIDATE_MPICC} mpcc_r mpcc mpixlc_r mpixlc"
-CANDIDATE_MPICXX="${CANDIDATE_MPICXX} mpCC_r mpCC mpixlcxx_r mpixlcxx mpixlC_r mpixlC"
-CANDIDATE_MPIF77="${CANDIDATE_MPIF77} mpixlf77_r mpixlf77"
-CANDIDATE_MPIF90="${CANDIDATE_MPIF90} mpixlf90_r mpixlf90"
+CANDIDATE_MPICC+=" mpcc_r mpcc mpixlc_r mpixlc"
+CANDIDATE_MPICXX+=" mpCC_r mpCC mpixlcxx_r mpixlcxx mpixlC_r mpixlC"
+CANDIDATE_MPIF77+=" mpixlf77_r mpixlf77"
+CANDIDATE_MPIF90+=" mpixlf90_r mpixlf90"
 
 dnl add IBM BGL MPI compilers
-CANDIDATE_MPICC="${CANDIDATE_MPICC} blrts_xlc mpxlc_r mpxlc"
-CANDIDATE_MPICXX="${CANDIDATE_MPICXX} blrts_xlC mpxlC_r mpxlC"
-CANDIDATE_MPIF77="${CANDIDATE_MPIF77} blrts_xlf mpxlf_r mpxlf"
-CANDIDATE_MPIF90="${CANDIDATE_MPIF90} blrts_xlf90 mpxlf90_r mpxlf90 mpxlf95_r mpxlf95"
+CANDIDATE_MPICC+=" blrts_xlc mpxlc_r mpxlc"
+CANDIDATE_MPICXX+=" blrts_xlC mpxlC_r mpxlC"
+CANDIDATE_MPIF77+=" blrts_xlf mpxlf_r mpxlf"
+CANDIDATE_MPIF90+=" blrts_xlf90 mpxlf90_r mpxlf90 mpxlf95_r mpxlf95"
 
 dnl add Fujitsu MPI compilers
-CANDIDATE_MPICC="${CANDIDATE_MPICC} mpifccpx"
-CANDIDATE_MPICXX="${CANDIDATE_MPICXX} mpiFCCpx"
-CANDIDATE_MPIF77="${CANDIDATE_MPIF77} mpifrtpx"
-CANDIDATE_MPIF90="${CANDIDATE_MPIF90} mpifrtpx"
+CANDIDATE_MPICC+=" mpifccpx"
+CANDIDATE_MPICXX+=" mpiFCCpx"
+CANDIDATE_MPIF77+=" mpifrtpx"
+CANDIDATE_MPIF90+=" mpifrtpx"
 
 dnl add Cray MPI compiler wrappers
-CANDIDATE_MPICC="${CANDIDATE_MPICC} cc"
-CANDIDATE_MPICXX="${CANDIDATE_MPICXX} CC"
-CANDIDATE_MPIF77="${CANDIDATE_MPIF77} ftn"
-CANDIDATE_MPIF90="${CANDIDATE_MPIF90} ftn"
+CANDIDATE_MPICC+=" cc"
+CANDIDATE_MPICXX+=" CC"
+CANDIDATE_MPIF77+=" ftn"
+CANDIDATE_MPIF90+=" ftn"
 
 dnl add Intel MPI compiler wrappers
-CANDIDATE_MPICC="${CANDIDATE_MPICC} mpiicc icc"
-CANDIDATE_MPICXX="${CANDIDATE_MPICXX} mpiicpc icpc"
-CANDIDATE_MPIF77="${CANDIDATE_MPIF77} mpiifort mpiifc ifort"
-CANDIDATE_MPIF90="${CANDIDATE_MPIF90} mpiifort mpiifc ifort"
+CANDIDATE_MPICC+=" mpiicc icc"
+CANDIDATE_MPICXX+=" mpiicpc icpc"
+CANDIDATE_MPIF77+=" mpiifort mpiifc ifort"
+CANDIDATE_MPIF90+=" mpiifort mpiifc ifort"
 
 dnl if MPICC or CC has not been set by users, then search from CANDIDATE_MPICC
 if test "x${MPICC}" = x ; then
@@ -348,7 +348,7 @@ AC_ARG_ENABLE(strict,
 
 if test "x${enable_strict}" = xyes; then
    if test "x${GCC}" = xyes; then
-      CFLAGS="${CFLAGS} -Wall -Wstrict-prototypes -Wmissing-prototypes -Wundef -Wpointer-arith -Wbad-function-cast"
+      CFLAGS+=" -Wall -Wstrict-prototypes -Wmissing-prototypes -Wundef -Wpointer-arith -Wbad-function-cast"
    else
       AC_MSG_WARN([--enable-strict is for GNU compiler only])
       enable_strict=no
@@ -616,8 +616,8 @@ if test "x${enable_fortran}" = xyes ; then
    dnl Check if the Fortran compiler is an NAG
    UD_CHECK_FC_NAG
    if test "x${ac_cv_fc_compiler_nag}" = xyes ; then
-       FFLAGS="${FFLAGS}  -DNAGFortran -mismatch"
-      FCFLAGS="${FCFLAGS} -DNAGFortran -mismatch"
+       FFLAGS+=" -DNAGFortran -mismatch"
+      FCFLAGS+=" -DNAGFortran -mismatch"
    fi
 
    dnl check Fortran parameter modifier for 8-byte integer type
@@ -711,8 +711,8 @@ dnl     AC_MSG_ERROR([could not find flex/lex required by PnetCDF])
 dnl fi
 
 UD_PROG_M4
-M4FLAGS="$M4FLAGS -DPNETCDF"
-M4FFLAGS="$M4FFLAGS -DPNETCDF"
+M4FLAGS+=" -DPNETCDF"
+M4FFLAGS+=" -DPNETCDF"
 
 dnl AM_PROG_AR is first recognized/traced in autoconf 2.68
 dnl Use it only if we want support for unusual archivers such as Microsoft
@@ -1059,8 +1059,8 @@ AM_CONDITIONAL(UPPER_CASE_MOD, [test x$ac_cv_prog_f90_uppercase_mod = xyes])
 if test "x${enable_fortran}" = xyes ; then
    if test "x${enable_strict}" = xyes && test "x${GFC}" = xyes; then
       dnl not all Fortran compilers recognize -Wall
-      FFLAGS="${FFLAGS} -Wall"
-      FCFLAGS="${FCFLAGS} -Wall"
+      FFLAGS+=" -Wall"
+      FCFLAGS+=" -Wall"
    fi
    AC_SUBST(FLIBS)
    AC_SUBST(FCLIBS)
@@ -1111,31 +1111,31 @@ if test "x${debug}" = xyes; then
    dnl remove all -O and -fast flags
    dnl add -O0 to all flags
    if ! echo "${CFLAGS}" | ${EGREP} -q -- "-g" ; then
-      CFLAGS="${CFLAGS} -g"
+      CFLAGS+=" -g"
    fi
    CFLAGS=`echo $CFLAGS | sed 's/-O. *//g' | sed 's/-fast *//g'`
-   CFLAGS="${CFLAGS} -O0"
+   CFLAGS+=" -O0"
 
    if test "x${has_mpicxx}" = xyes ; then
       if ! echo "${CXXFLAGS}" | ${EGREP} -q -- "-g" ; then
-         CXXFLAGS="${CXXFLAGS} -g"
+         CXXFLAGS+=" -g"
       fi
       CXXFLAGS=`echo $CXXFLAGS | sed 's/-O. *//g' | sed 's/-fast *//g'`
-      CXXFLAGS="${CXXFLAGS} -O0"
+      CXXFLAGS+=" -O0"
    fi
 
    if test "x${enable_fortran}" = xyes ; then
       if ! echo "${FFLAGS}" | ${EGREP} -q -- "-g" ; then
-         FFLAGS="${FFLAGS} -g"
+         FFLAGS+=" -g"
       fi
       if ! echo "${FCFLAGS}" | ${EGREP} -q -- "-g" ; then
-         FCFLAGS="${FCFLAGS} -g"
+         FCFLAGS+=" -g"
       fi
 
        FFLAGS=`echo $FFLAGS  | sed 's/-O. *//g' | sed 's/-fast *//g'`
       FCFLAGS=`echo $FCFLAGS | sed 's/-O. *//g' | sed 's/-fast *//g'`
-       FFLAGS="${FFLAGS}  -O0"
-      FCFLAGS="${FCFLAGS} -O0"
+       FFLAGS+=" -O0"
+      FCFLAGS+=" -O0"
    fi
 fi
 
@@ -1236,7 +1236,7 @@ AC_ARG_VAR(TESTMPIRUN, [MPI run command for "make ptest", @<:@default: mpiexec -
 if test "x${TESTMPIRUN}" = x ; then
    dnl set default to "mpiexec -n NP"
    UD_MPI_PATH_PROGS([TESTMPIRUN], [mpiexec mpirun])
-   TESTMPIRUN="${TESTMPIRUN} -n NP"
+   TESTMPIRUN+=" -n NP"
 fi
 TESTMPIRUN2=`echo $TESTMPIRUN | sed 's/ NP/ 2/g'`
 TESTMPIRUN3=`echo $TESTMPIRUN | sed 's/ NP/ 3/g'`
