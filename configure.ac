@@ -305,15 +305,23 @@ if test "x${enable_cxx}" != xno ; then
           AC_CHECK_FUNC([MPI_File_close], [],
              dnl maybe -lmpi++ is needed at link stage
              [AC_SEARCH_LIBS([MPI_File_close], [mpi++ mpichcxx mpi_cxx], [],
-                 [has_mpicxx=no
-                  MPICXX=
-                  AC_MSG_WARN([
-                  ----------------------------------------------------------
-                   MPI C++ implementation does not support MPI-IO
-                   Disabling C++ testing programs
-                  ----------------------------------------------------------])]
-          )])
+                             [has_mpicxx=no])])
           AC_LANG_POP(C++)
+      fi
+      if test "x$has_mpicxx" = xno ; then
+         if test "x${enable_cxx}" = xyes ; then
+            AC_MSG_ERROR([
+            ----------------------------------------------------------
+               Explicitly requesting C++ support, but the MPI C++ library
+               does not support MPI-IO. Abort.
+            ----------------------------------------------------------])
+         else dnl in case enable_cxx is auto
+            AC_MSG_WARN([
+            ----------------------------------------------------------
+               MPI C++ library does not support MPI-IO.
+               C++ feature is disabled.
+            ----------------------------------------------------------])
+         fi
       fi
    fi
    if test "x${has_mpicxx}" = xyes ; then
