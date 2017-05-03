@@ -7,22 +7,35 @@
 Building PnetCDF on the Cray XC30 (tested on Edison @ NERSC)
 http://www.nersc.gov/systems/edison-cray-xc30/
 
-The configure options are the same as Cray XE6, except when using the Intel
-compiler (the default on Edison) with optimization flag "-fast". According
-to the NERSC URL below, the flag "-no-ipo" must be used together with flag
-"-fast" to build a library.
-http://www.nersc.gov/users/software/compilers/intel-fortran-c-and-c/
+    ./configure --prefix=/path/to/install \
+                CFLAGS="-fast -no-ipo" CXXFLAGS="-fast -no-ipo" \
+                FFLAGS="-fast -no-ipo"  FCFLAGS="-fast -no-ipo"
+                TESTMPIRUN="srun -n NP" TESTSEQRUN="srun -n 1" \
+                TESTOUTDIR="$SCRATCH"
 
-./configure --prefix=/path/to/install \
-            --with-mpi=/path/to/mpi/implementation \
-            CFLAGS="-fast -no-ipo" CXXFLAGS="-fast -no-ipo" \
-            FFLAGS="-fast -no-ipo" FCFLAGS="-fast -no-ipo"
+(The default is to build static libraries only.)
 
+To also build shared libraries, add "--enable-shared LDFLAGS=-dynamic" and use
+the following configure command.
 
-Note on building shared library of PnetCDF. Please add LDFLAGS=-dynamic to the
-configure command line. See further information at the following NERSC web site:
+    ./configure --prefix=/path/to/install \
+                CFLAGS="-O2" CXXFLAGS="-O2" \
+                FFLAGS="-O2"  FCFLAGS="-O2" \
+                TESTMPIRUN="srun -n NP" TESTSEQRUN="srun -n 1" \
+                TESTOUTDIR="$SCRATCH" \
+                --enable-shared LDFLAGS=-dynamic
+
+See further information about Shared and Dynamic Libraries from the following
+NERSC web site:
 http://www.nersc.gov/users/computational-systems/edison/running-jobs/shared-and-dynamic-libraries/
 
+Note on using command-line option "-fast".
+    According to the NERSC URL below, the flag "-no-ipo" must be used together
+    with flag "-fast" to build an application.
+    http://www.nersc.gov/users/software/compilers/intel-fortran-c-and-c/
+
+    Option "-fast" implies "-static". Thus please use "-O2" flags when building
+    PnetCDF shared libraries.
 
 ===============================================================================
     Cray XE6

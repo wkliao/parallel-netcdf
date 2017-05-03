@@ -1243,7 +1243,7 @@ AC_SUBST(TESTSEQRUN)
 AC_ARG_VAR(TESTMPIRUN, [MPI run command for "make ptest", @<:@default: mpiexec -n NP@:>@])
 if test "x${TESTMPIRUN}" = x ; then
    dnl set default to "mpiexec -n NP"
-   UD_MPI_PATH_PROGS([TESTMPIRUN], [mpiexec mpirun])
+   UD_MPI_PATH_PROGS([TESTMPIRUN], [mpiexec mpirun srun])
    TESTMPIRUN+=" -n NP"
 fi
 TESTMPIRUN2=`echo $TESTMPIRUN | sed 's/ NP/ 2/g'`
