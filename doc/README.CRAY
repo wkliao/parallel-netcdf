@@ -8,21 +8,19 @@ Building PnetCDF on the Cray XC30 (tested on Edison @ NERSC)
 http://www.nersc.gov/systems/edison-cray-xc30/
 
     ./configure --prefix=/path/to/install \
+                cross_compiling="yes" \
                 CFLAGS="-fast -no-ipo" CXXFLAGS="-fast -no-ipo" \
                 FFLAGS="-fast -no-ipo"  FCFLAGS="-fast -no-ipo"
-                TESTMPIRUN="srun -n NP" TESTSEQRUN="srun -n 1" \
-                TESTOUTDIR="$SCRATCH"
 
 (The default is to build static libraries only.)
 
-To also build shared libraries, add "--enable-shared LDFLAGS=-dynamic" and use
-the following configure command.
+To also build shared libraries, add "--enable-shared LDFLAGS=-dynamic" to the
+configure command and change the compile flags to "-O2".
 
     ./configure --prefix=/path/to/install \
+                cross_compiling="yes" \
                 CFLAGS="-O2" CXXFLAGS="-O2" \
                 FFLAGS="-O2"  FCFLAGS="-O2" \
-                TESTMPIRUN="srun -n NP" TESTSEQRUN="srun -n 1" \
-                TESTOUTDIR="$SCRATCH" \
                 --enable-shared LDFLAGS=-dynamic
 
 See further information about Shared and Dynamic Libraries from the following
@@ -34,8 +32,31 @@ Note on using command-line option "-fast".
     with flag "-fast" to build an application.
     http://www.nersc.gov/users/software/compilers/intel-fortran-c-and-c/
 
-    Option "-fast" implies "-static". Thus please use "-O2" flags when building
-    PnetCDF shared libraries.
+    In addition, option "-fast" implies "-static". Thus please use "-O2" flags
+    when building PnetCDF shared libraries.
+
+Note on running "make check" or "make ptest".
+    Edison is a cross-compile environment. Jobs must be run through a batch
+    scheduler. At the time of this writing, the schedule is Slurm. Below
+    configure command line adds 3 variables in preparation for job submission.
+
+    ./configure --prefix=/path/to/install \
+                cross_compiling="yes" \
+                CFLAGS="-fast -no-ipo" CXXFLAGS="-fast -no-ipo" \
+                FFLAGS="-fast -no-ipo"  FCFLAGS="-fast -no-ipo" \
+                TESTMPIRUN="srun -n NP" TESTSEQRUN="srun -n 1" \
+                TESTOUTDIR="$SCRATCH"
+
+    A sample batch script shown below allocates 4 compute nodes. "make ptest"
+    requires at least 4 MPI processes. The number can be changed to use less
+    number of nodes. Variable TESTOUTDIR should be set to the file directory
+    for storing the test output files.
+    #!/bin/bash -l
+    #SBATCH -p debug
+    #SBATCH -N 4
+    #SBATCH -t 00:20:00
+    #SBATCH -L SCRATCH
+    make ptest
 
 ===============================================================================
     Cray XE6
