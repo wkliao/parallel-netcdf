@@ -1309,8 +1309,8 @@ AC_CONFIG_FILES(Makefile \
                 src/binding/f77/pnetcdf.inc \
                 src/binding/f90/Makefile \
                 src/binding/f90/pnetcdf.f90 \
-                src/binding/f90/api.f90 \
-                src/binding/f90/nfmpi_constants.f90 \
+                src/binding/f90/api.fh \
+                src/binding/f90/nfmpi_constants.fh \
                 src/utils/Makefile \
                 src/utils/ncoffsets/Makefile \
                 src/utils/pnetcdf_version/Makefile \

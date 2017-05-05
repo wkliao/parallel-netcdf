@@ -6,7 +6,7 @@
 #
 # @configure_input@
 
-SUFFIXES = .a .o .mod .f90 .m4
+SUFFIXES = .a .o .mod .f90 .m4 .fh
 
 AM_DEFAULT_SOURCE_EXT = .f90
 
@@ -25,38 +25,33 @@ M4_SRCS = getput_text.m4 \
           getput_varn.m4 \
           getput_vard.m4
 
-F90_SRCS = nf90_constants.f90 \
-           overloads.f90 \
-           visibility.f90 \
-           file.f90 \
-           dims.f90 \
-           attributes.f90 \
-           variables.f90
+F90_SRCS = nf90_constants.fh \
+           overloads.fh \
+           visibility.fh \
+           file.fh \
+           dims.fh \
+           attributes.fh \
+           variables.fh
+
+SRCS = $(F90_SRCS) \
+       $(M4_SRCS:.m4=.fh) \
+       api.fh \
+       nfmpi_constants.fh
 
 nodist_include_HEADERS = $(PNETCDF_MOD)
 noinst_LTLIBRARIES = libpnetcdff90.la
-nodist_libpnetcdff90_la_SOURCES = pnetcdf.f90
+libpnetcdff90_la_SOURCES = pnetcdf.f90 $(SRCS)
 
-BUILT_SOURCES = $(M4_SRCS:.m4=.f90)
+BUILT_SOURCES = $(M4_SRCS:.m4=.fh)
 
-SRCS = $(F90_SRCS) $(M4_SRCS:.m4=.f90) \
-       api.f90 nfmpi_constants.f90
-
-.m4.f90:
+.m4.fh:
 	$(M4) $(AM_M4FLAGS) $(M4FFLAGS) $< >$@
 
-pnetcdf.o: $(SRCS) pnetcdf.90
+pnetcdf.lo: pnetcdf.f90 $(SRCS)
 
-$(PNETCDF_MOD): pnetcdf.f90
+EXTRA_DIST = $(M4_SRCS)
 
-EXTRA_DIST = $(F90_SRCS) \
-             $(M4_SRCS) \
-             Makefile.in \
-             api.f90.in \
-             nfmpi_constants.f90.in
-
-CLEANFILES = $(PNETCDF_MOD) $(M4_SRCS:.m4=.f90) *.gcno
-DISTCLEANFILES = pnetcdf.f90 api.f90 nfmpi_constants.f90
+CLEANFILES = $(PNETCDF_MOD) $(M4_SRCS:.m4=.fh) *.gcno
 
 tests-local: all
 

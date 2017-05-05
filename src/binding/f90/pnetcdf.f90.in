@@ -21,19 +21,19 @@
                         FourByteReal = selected_real_kind(P =  6, R =  37), &
                        EightByteReal = selected_real_kind(P = 13, R = 307)
 
-  include "nfmpi_constants.f90"
-  include "nf90_constants.f90"
-  include "api.f90"
-  include "overloads.f90"
-  include "visibility.f90"
+  include "nfmpi_constants.fh"
+  include "nf90_constants.fh"
+  include "api.fh"
+  include "overloads.fh"
+  include "visibility.fh"
 
 contains
-  include "file.f90"
-  include "dims.f90"
-  include "attributes.f90"
-  include "variables.f90"
-  include "getput_text.f90"
-  include "getput_var.f90"
-  include "getput_varn.f90"
-  include "getput_vard.f90"
+  include "file.fh"
+  include "dims.fh"
+  include "attributes.fh"
+  include "variables.fh"
+  include "getput_text.fh"
+  include "getput_var.fh"
+  include "getput_varn.fh"
+  include "getput_vard.fh"
 end module pnetcdf

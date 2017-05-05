@@ -27,29 +27,36 @@ define(`TEXTVAR1',dnl
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer                                     :: numDims, nelms
+     integer                                     :: numDims
 
-     ! allocate local arrays
+     ! inquire variable dimensionality
      nf90mpi_$1_var_text$3 = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_text$3 .NE. NF_NOERR) return
 
-     nelms = numDims + 1
-     if (present(start)  .AND. nelms .LT. SIZE(start))  nelms = SIZE(start)
-     if (present(count)  .AND. nelms .LT. SIZE(count))  nelms = SIZE(count)
-     if (present(stride) .AND. nelms .LT. SIZE(stride)) nelms = SIZE(stride)
-     allocate(localStart(nelms))
-     allocate(localCount(nelms))
-     allocate(localStride(nelms))
+     ! allocate local arrays
+     allocate(localStart(numDims))
+     allocate(localCount(numDims))
+     allocate(localStride(numDims))
+     if (present(start)) then
+         localStart(:numDims) = start(:numDims)
+     else
+         ! Set local arguments to default values
+         localStart(:) = 1
+     endif
+     if (present(count)) then
+         localCount(:numDims) = count(:numDims)
+     else
+         ! Set local arguments to default values
+         localCount (1) = LEN(values)
+         localCount (2:) = 1
+     endif
+     if (present(stride)) then
+         localStride(:numDims) = stride(:numDims)
+     else
+         ! Set local arguments to default values
+         localStride(:) = 1
+     endif
 
-     ! Set local arguments to default values
-     localStart (:) = 1
-     localCount (1) = LEN(values)
-     localCount (2:) = 1
-     localStride(:) = 1
-
-     if (present(start))  localStart (:size(start) ) = start(:)
-     if (present(count))  localCount (:size(count) ) = count(:)
-     if (present(stride)) localStride(:size(stride)) = stride(:)
      if (present(map)) then
        nf90mpi_$1_var_text$3 = nfmpi_$1_varm_text$3(ncid, varid, localStart, localCount, localStride, map, values)
      else
@@ -94,40 +101,50 @@ define(`TEXTVAR',dnl
      integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localMap(:)
-     integer                                     :: numDims, nelms
+     integer                                     :: numDims
      ifelse(`$2', `1', ,`integer :: counter')
 
-     ! allocate local arrays
+     ! inquire variable dimensionality
      nf90mpi_$1_var_$2D_text$6 = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_$2D_text$6 .NE. NF_NOERR) return
 
-     nelms = numDims + 1
-     if (present(start)  .AND. nelms .LT. SIZE(start))  nelms = SIZE(start)
-     if (present(count)  .AND. nelms .LT. SIZE(count))  nelms = SIZE(count)
-     if (present(stride) .AND. nelms .LT. SIZE(stride)) nelms = SIZE(stride)
-     if (present(map)    .AND. nelms .LT. SIZE(map))    nelms = SIZE(map)
-     allocate(localStart(nelms))
-     allocate(localCount(nelms))
-     allocate(localStride(nelms))
-     allocate(localMap(nelms))
-
-     ! Set local arguments to default values
-     localStart (:) = 1
-     localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
-     localCount ($2+2:) = 0
-     localStride(:) = 1
-     ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
-     localMap(1) = 1
-     ifelse(`$2', `1', ,`
-     do counter = 1, $2 - 1
-        localMap(counter+1) = localMap(counter) * localCount(counter)
-     enddo')
-
-     if (present(start))  localStart (:SIZE(start) ) =  start(:)
-     if (present(count))  localCount (:SIZE(count) ) =  count(:)
-     if (present(stride)) localStride(:SIZE(stride)) = stride(:)
+     ! allocate local arrays
+     allocate(localStart(numDims))
+     allocate(localCount(numDims))
+     allocate(localStride(numDims))
+     allocate(localMap(numDims))
+     if (present(start)) then
+         localStart(:numDims) = start(:numDims)
+     else
+         ! Set local arguments to default values
+         localStart(:) = 1
+     endif
+     if (present(count)) then
+         localCount(:numDims) = count(:numDims)
+     else
+         ! Set local arguments to default values
+         localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
+         localCount ($2+2:) = 0
+     endif
+     if (present(stride)) then
+         localStride(:numDims) = stride(:numDims)
+     else
+         ! Set local arguments to default values
+         localStride(:) = 1
+     endif
      if (present(map)) then
-       localMap(:SIZE(map)) = map(:)
+         localMap(:numDims) = map(:numDims)
+     else
+         ! Set local arguments to default values
+         ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
+         localMap(1) = 1
+         ifelse(`$2', `1', ,`
+         do counter = 1, $2 - 1
+            localMap(counter+1) = localMap(counter) * localCount(counter)
+         enddo')
+     endif
+
+     if (present(map)) then
        nf90mpi_$1_var_$2D_text$6 = &
           nfmpi_$1_varm_text$6(ncid, varid, localStart, localCount, localStride, localMap, values($4))
      else
@@ -199,29 +216,36 @@ define(`NBTEXTVAR1',dnl
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer                                     :: numDims, nelms
+     integer                                     :: numDims
 
-     ! allocate local arrays
+     ! inquire variable dimensionality
      nf90mpi_$1_var_text = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_text .NE. NF_NOERR) return
 
-     nelms = numDims + 1
-     if (present(start)  .AND. nelms .LT. SIZE(start))  nelms = SIZE(start)
-     if (present(count)  .AND. nelms .LT. SIZE(count))  nelms = SIZE(count)
-     if (present(stride) .AND. nelms .LT. SIZE(stride)) nelms = SIZE(stride)
-     allocate(localStart(nelms))
-     allocate(localCount(nelms))
-     allocate(localStride(nelms))
+     ! allocate local arrays
+     allocate(localStart(numDims))
+     allocate(localCount(numDims))
+     allocate(localStride(numDims))
+     if (present(start)) then
+         localStart(:numDims) = start(:numDims)
+     else
+         ! Set local arguments to default values
+         localStart(:) = 1
+     endif
+     if (present(count)) then
+         localCount(:numDims) = count(:numDims)
+     else
+         ! Set local arguments to default values
+         localCount (1) = LEN(values)
+         localCount (2:) = 1
+     endif
+     if (present(stride)) then
+         localStride(:numDims) = stride(:numDims)
+     else
+         ! Set local arguments to default values
+         localStride(:) = 1
+     endif
 
-     ! Set local arguments to default values
-     localStart (:) = 1
-     localCount (1) = LEN(values)
-     localCount (2:) = 1
-     localStride(:) = 1
-
-     if (present(start))  localStart (:size(start) ) = start(:)
-     if (present(count))  localCount (:size(count) ) = count(:)
-     if (present(stride)) localStride(:size(stride)) = stride(:)
      if (present(map)) then
        nf90mpi_$1_var_text = nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, map, values, req)
      else
@@ -266,40 +290,50 @@ define(`NBTEXTVAR',dnl
      integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
      integer (kind=MPI_OFFSET_KIND), allocatable :: localMap(:)
-     integer                                     :: numDims, nelms
+     integer                                     :: numDims
      ifelse(`$2', `1', ,`integer :: counter')
 
-     ! allocate local arrays
+     ! inquire variable dimensionality
      nf90mpi_$1_var_$2D_text = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_$2D_text .NE. NF_NOERR) return
 
-     nelms = numDims + 1
-     if (present(start)  .AND. nelms .LT. SIZE(start))  nelms = SIZE(start)
-     if (present(count)  .AND. nelms .LT. SIZE(count))  nelms = SIZE(count)
-     if (present(stride) .AND. nelms .LT. SIZE(stride)) nelms = SIZE(stride)
-     if (present(map)    .AND. nelms .LT. SIZE(map))    nelms = SIZE(map)
-     allocate(localStart(nelms))
-     allocate(localCount(nelms))
-     allocate(localStride(nelms))
-     allocate(localMap(nelms))
-
-     ! Set local arguments to default values
-     localStart (:) = 1
-     localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
-     localCount ($2+2:) = 0
-     localStride(:) = 1
-     ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
-     localMap(1) = 1
-     ifelse(`$2', `1', ,`
-     do counter = 1, $2 - 1
-        localMap(counter+1) = localMap(counter) * localCount(counter)
-     enddo')
-
-     if (present(start))  localStart (:SIZE(start) ) =  start(:)
-     if (present(count))  localCount (:SIZE(count) ) =  count(:)
-     if (present(stride)) localStride(:SIZE(stride)) = stride(:)
+     ! allocate local arrays
+     allocate(localStart(numDims))
+     allocate(localCount(numDims))
+     allocate(localStride(numDims))
+     allocate(localMap(numDims))
+     if (present(start)) then
+         localStart(:numDims) = start(:numDims)
+     else
+         ! Set local arguments to default values
+         localStart(:) = 1
+     endif
+     if (present(count)) then
+         localCount(:numDims) = count(:numDims)
+     else
+         ! Set local arguments to default values
+         localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
+         localCount ($2+2:) = 0
+     endif
+     if (present(stride)) then
+         localStride(:numDims) = stride(:numDims)
+     else
+         ! Set local arguments to default values
+         localStride(:) = 1
+     endif
      if (present(map)) then
-       localMap(:SIZE(map)) = map(:)
+         localMap(:numDims) = map(:numDims)
+     else
+         ! Set local arguments to default values
+         ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
+         localMap(1) = 1
+         ifelse(`$2', `1', ,`
+         do counter = 1, $2 - 1
+            localMap(counter+1) = localMap(counter) * localCount(counter)
+         enddo')
+     endif
+
+     if (present(map)) then
        nf90mpi_$1_var_$2D_text = &
           nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, localMap, values($4), req)
      else
