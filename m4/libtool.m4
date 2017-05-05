@@ -7660,7 +7660,7 @@ if AC_TRY_EVAL(ac_compile); then
 	 # The "-l" case would never come before the object being
 	 # linked, so don't bother handling this case.
 	 esac
-       else
+       elif test "x$p" != x ; then # skip if $p is empty
 	 if test -z "$_LT_TAGVAR(postdeps, $1)"; then
 	   _LT_TAGVAR(postdeps, $1)=$prev$p
 	 else
