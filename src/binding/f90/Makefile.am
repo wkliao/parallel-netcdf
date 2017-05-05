@@ -38,11 +38,12 @@ SRCS = $(F90_SRCS) \
        api.fh \
        nfmpi_constants.fh
 
+BUILT_SOURCES = $(M4_SRCS:.m4=.fh)
+
 nodist_include_HEADERS = $(PNETCDF_MOD)
 noinst_LTLIBRARIES = libpnetcdff90.la
-libpnetcdff90_la_SOURCES = pnetcdf.f90 $(SRCS)
-
-BUILT_SOURCES = $(M4_SRCS:.m4=.fh)
+libpnetcdff90_la_SOURCES = $(F90_SRCS)
+nodist_libpnetcdff90_la_SOURCES = pnetcdf.f90 api.fh nfmpi_constants.fh $(M4_SRCS:.m4=.fh)
 
 .m4.fh:
 	$(M4) $(AM_M4FLAGS) $(M4FFLAGS) $< >$@
