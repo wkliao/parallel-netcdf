@@ -44,8 +44,8 @@ define(`TEXTVAR1',dnl
      if (.NOT. present(count)) then
          ! allocate and set default localStart
          allocate(localCount(numDims))
+         localCount (:) = 1
          if (numDims .GT. 0) localCount (1) = LEN(values)
-         localCount (2:) = 1
      else
          localCount => count
      endif
@@ -120,8 +120,8 @@ define(`TEXTVAR',dnl
      if (.NOT. present(count)) then
          ! allocate and set default localStart
          allocate(localCount(numDims))
-         localCount(:$2+1) = (/ LEN(values($4)), shape(values) /)
-         localCount($2+2:) = 0
+         localCount(:) = 0
+         if (numDims .GT. 0) localCount(:$2+1) = (/ LEN(values($4)), shape(values) /)
      else
          localCount => count
      endif
@@ -222,8 +222,8 @@ define(`NBTEXTVAR1',dnl
      if (.NOT. present(count)) then
          ! allocate and set default localStart
          allocate(localCount(numDims))
-         if (numDims .GT. 0) localCount (1) = LEN(values)
-         localCount (2:) = 1
+         localCount(:) = 1
+         if (numDims .GT. 0) localCount(1) = LEN(values)
      else
          localCount => count
      endif
@@ -298,8 +298,8 @@ define(`NBTEXTVAR',dnl
      if (.NOT. present(count)) then
          ! allocate and set default localStart
          allocate(localCount(numDims))
-         localCount(:$2+1) = (/ LEN(values($4)), shape(values) /)
-         localCount($2+2:) = 0
+         localCount(:) = 0
+         if (numDims .GT. 0) localCount(:$2+1) = (/ LEN(values($4)), shape(values) /)
      else
          localCount => count
      endif

@@ -193,7 +193,7 @@ define(`VAR',dnl
          ! allocate and set default localStart
          allocate(localCount(numDims))
          localCount(:) = 1
-         localCount(:$2) = shape(values)
+         if (numDims .GT. 0) localCount(:$2) = shape(values)
      else
          localCount => count
      endif
@@ -486,7 +486,7 @@ define(`NBVAR',dnl
          ! allocate and set default localStart
          allocate(localCount(numDims))
          localCount(:) = 1
-         localCount(:$2) = shape(values)
+         if (numDims .GT. 0) localCount(:$2) = shape(values)
      else
          localCount => count
      endif
