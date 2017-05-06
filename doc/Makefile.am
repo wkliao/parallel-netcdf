@@ -18,6 +18,5 @@ EXTRA_DIST = README.CRAY \
              README.SX \
              README.consistency \
              README.large_files \
-             pbs.script \
-             cobalt.script
+             pbs.script
 

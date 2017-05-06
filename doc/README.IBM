@@ -98,13 +98,27 @@ V1R4M1. You may build with it using the wrappers in comm/xl:
 ----
 Mira and Cetus are IBM BlueGene Q, a cross-compile system. Hence, one cannot
 run PnetCDF test programs on the login nodes. Test programs must run on the
-compute nodes through submitting a batch job. An example batch script file is
-provided in cobalt.script. The submission command for allocating 8 node with 90
-minutes is given below. Note the testing requires at least 8 MPI processes and
-in this example the command requests 8 nodes and the script runs 1 MPI process
-per node.
+compute nodes through submitting a batch job. An example batch script file and
+the submission command for allocating 8 node with 90 minutes are shown below.
+Note the testing requires at least 8 MPI processes and in this example the
+command requests 8 nodes and the script runs 1 MPI process per node.
 
-qsub -A YOUR_ACCOUNT -n 8 -t 30 --mode script ./cobalt.script
+% cat cobalt.script
+#!/bin/sh
+echo "Starting Cobalt job script"
+
+# test seqential programs
+make check TESTMPIRUN="runjob --block $COBALT_PARTNAME --ranks-per-node 1 --np NP : " \
+           TESTSEQRUN="runjob --block $COBALT_PARTNAME --ranks-per-node 1 --np 1 : " \
+           TESTOUTDIR=/path/to/GPFS/directory
+
+# test parallel programs
+make ptest TESTMPIRUN="runjob --block $COBALT_PARTNAME --ranks-per-node 1 --np NP : " \
+           TESTSEQRUN="runjob --block $COBALT_PARTNAME --ranks-per-node 1 --np 1 : " \
+           TESTOUTDIR=/path/to/GPFS/directory
+
+
+% qsub -A YOUR_ACCOUNT -n 8 -t 30 --mode script ./cobalt.script
 
 Running "make testing" can take a while (more than one hour on Mira/Cetus).
 This is because the testing performs many small read/write requests and under
