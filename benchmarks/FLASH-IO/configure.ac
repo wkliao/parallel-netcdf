@@ -212,8 +212,7 @@ if test "x${TESTOUTDIR}" = x ; then
     dnl set default to current directory
     TESTOUTDIR=.
 fi
-TESTMPIRUN4="${TESTMPIRUN} -n 4"
-AC_SUBST(TESTMPIRUN4)
+AC_SUBST(TESTMPIRUN)
 AC_SUBST(TESTOUTDIR)
 
 AM_CONDITIONAL(BUILD_BENCHMARKS_IN_PNETCDF, [test yes = no])

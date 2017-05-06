@@ -51,6 +51,10 @@ CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
 # Some of these tests are designed to run on one processes,
 # Run them on 4 processes to see if they can handle well
 
+TESTMPIRUN2  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/2/g'`
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+TESTMPIRUN6  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/6/g'`
+
 ptest ptest4: $(TESTPROGRAMS)
 	$(RM) -f $(TESTOUTDIR)/testfile.nc $(TESTOUTDIR)/testfile.nc
 	set -e ; for i in $(TESTPROGRAMS) ; do ( \

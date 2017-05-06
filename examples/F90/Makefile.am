@@ -44,9 +44,9 @@ fill_mode_SOURCES = fill_mode.f90 utils.F90
 
 CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
 
+TESTMPIRUN3  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/3/g'`
 TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
 TESTMPIRUN8  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/8/g'`
-TESTMPIRUN3  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/3/g'`
 
 ptest ptest4: $(check_PROGRAMS)
 	@for i in $(check_PROGRAMS); do { \

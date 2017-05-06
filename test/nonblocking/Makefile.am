@@ -83,6 +83,10 @@ EXTRA_DIST = $(M4_SRCS) seq_runs.sh
 # Some of these tests are designed to run on 4 processes,
 # # Run them on 2, 4, and 6 processes to see if they can handle well
 
+TESTMPIRUN2  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/2/g'`
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+TESTMPIRUN6  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/6/g'`
+
 ptest ptest4: $(TESTPROGRAMS)
 	$(RM) -f $(TESTOUTDIR)/testfile.nc $(TESTOUTDIR)/redef1.nc
 	set -e ; for i in $(TESTPROGRAMS); do ( \

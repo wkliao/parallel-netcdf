@@ -1246,18 +1246,7 @@ if test "x${TESTMPIRUN}" = x ; then
    UD_MPI_PATH_PROGS([TESTMPIRUN], [mpiexec mpirun srun])
    TESTMPIRUN+=" -n NP"
 fi
-TESTMPIRUN2=`echo $TESTMPIRUN | sed 's/ NP/ 2/g'`
-TESTMPIRUN3=`echo $TESTMPIRUN | sed 's/ NP/ 3/g'`
-TESTMPIRUN4=`echo $TESTMPIRUN | sed 's/ NP/ 4/g'`
-TESTMPIRUN6=`echo $TESTMPIRUN | sed 's/ NP/ 6/g'`
-TESTMPIRUN8=`echo $TESTMPIRUN | sed 's/ NP/ 8/g'`
-TESTMPIRUN10=`echo $TESTMPIRUN | sed 's/ NP/ 10/g'`
-AC_SUBST(TESTMPIRUN2)
-AC_SUBST(TESTMPIRUN3)
-AC_SUBST(TESTMPIRUN4)
-AC_SUBST(TESTMPIRUN6)
-AC_SUBST(TESTMPIRUN8)
-AC_SUBST(TESTMPIRUN10)
+AC_SUBST(TESTMPIRUN)
 
 AC_ARG_VAR(TESTOUTDIR, [Output file directory for "make check" and "make ptest", @<:@default: ./@:>@])
 if test "x${TESTOUTDIR}" = x ; then

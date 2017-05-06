@@ -48,7 +48,7 @@ nodist_libpnetcdff90_la_SOURCES = pnetcdf.f90 api.fh nfmpi_constants.fh $(M4_SRC
 .m4.fh:
 	$(M4) $(AM_M4FLAGS) $(M4FFLAGS) $< >$@
 
-pnetcdf.lo: pnetcdf.f90 $(SRCS)
+pnetcdf.lo $(PNETCDF_MOD): pnetcdf.f90 $(SRCS)
 
 EXTRA_DIST = $(M4_SRCS)
 

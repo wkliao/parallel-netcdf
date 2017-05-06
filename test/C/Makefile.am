@@ -40,6 +40,8 @@ CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
 ../common/libtestutils.la:
 	set -e; cd ../common && $(MAKE) $(MFLAGS) tests
 
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+
 ptest ptests ptest4: $(TESTPROGRAMS)
 	set -e ; for i in $(TESTPROGRAMS); do ( \
 	$(TESTMPIRUN4) ./$$i $(TESTOUTDIR)/testfile.nc ; \

@@ -43,6 +43,8 @@ EXTRA_DIST = seq_runs.sh test_cdf1.nc test_cdf2.nc test_cdf5.nc
 ../common/libtestutils.la:
 	set -e; cd ../common && $(MAKE) $(MFLAGS) tests
 
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+
 ptest ptests ptest4: $(TESTPROGRAMS)
 	$(TESTMPIRUN4) ./test_inq_format $(srcdir)
 	$(TESTMPIRUN4) ./cdf_type $(TESTOUTDIR)/testfile.nc

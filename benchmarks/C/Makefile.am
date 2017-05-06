@@ -19,6 +19,8 @@ check_PROGRAMS = aggregation \
 
 CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
 
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+
 ptest ptests ptest4: $(check_PROGRAMS)
 	for i in $(check_PROGRAMS); do { \
 	$(TESTMPIRUN4) ./$$i -q 10 $(TESTOUTDIR)/testfile.nc ; \

@@ -33,6 +33,10 @@ check_PROGRAMS = collective_write \
 
 CLEANFILES = *.nc core core.*
 
+TESTMPIRUN3  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/3/g'`
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+TESTMPIRUN8  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/8/g'`
+
 ptest ptest4: $(check_PROGRAMS)
 	@for i in $(check_PROGRAMS); do { \
         $(TESTMPIRUN4) ./$$i -q $(TESTOUTDIR)/testfile.nc ; \

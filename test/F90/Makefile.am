@@ -52,6 +52,12 @@ PARALLEL_PROGS = f90tst_parallel \
                  f90tst_parallel3 \
                  f90tst_parallel4
 
+TESTMPIRUN2  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/2/g'`
+TESTMPIRUN4  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/4/g'`
+TESTMPIRUN8  = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/8/g'`
+TESTMPIRUN10 = `echo $(TESTMPIRUN) | $(SED) -e 's/NP/10/g'`
+
+
 ptest ptest4: $(PARALLEL_PROGS)
 	set -e ; for i in $(PARALLEL_PROGS); do ( \
 	$(TESTMPIRUN4) ./$$i $(TESTOUTDIR)/testfile.nc ; \
