@@ -16,59 +16,58 @@ dnl
 define(`TEXTVAR1',dnl
 `dnl
    function nf90mpi_$1_var_text$3(ncid, varid, values, start, count, stride, map)
-     integer,                                                intent(in) :: ncid, varid
-     character (len=*),                                      intent($2) :: values
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: start
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: count
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: stride
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: map
+     integer,                                          intent(in) :: ncid
+     integer,                                          intent(in) :: varid
+     character (len=*),                                intent($2) :: values
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: start(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: count(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: stride(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: map(:)
 
-     integer                                     :: nf90mpi_$1_var_text$3
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer                                     :: numDims
+     integer                                 :: nf90mpi_$1_var_text$3
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStart(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localCount(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStride(:)
+     integer                                 :: numDims
 
      ! inquire variable dimensionality
      nf90mpi_$1_var_text$3 = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_text$3 .NE. NF_NOERR) return
 
-     if (numDims .GT. 0) then
-         ! allocate local arrays
+     if (.NOT. present(start)) then
+         ! allocate and set default localStart
          allocate(localStart(numDims))
+         localStart(:) = 1
+     else
+         localStart => start
+     endif
+     if (.NOT. present(count)) then
+         ! allocate and set default localStart
          allocate(localCount(numDims))
+         if (numDims .GT. 0) localCount (1) = LEN(values)
+         localCount (2:) = 1
+     else
+         localCount => count
+     endif
+     if (.NOT. present(stride)) then
+         ! allocate and set default localStride
          allocate(localStride(numDims))
-         if (present(start)) then
-             localStart(:numDims) = start(:numDims)
-         else
-             ! Set local arguments to default values
-             localStart(:) = 1
-         endif
-         if (present(count)) then
-             localCount(:numDims) = count(:numDims)
-         else
-             ! Set local arguments to default values
-             localCount (1) = LEN(values)
-             localCount (2:) = 1
-         endif
-         if (present(stride)) then
-             localStride(:numDims) = stride(:numDims)
-         else
-             ! Set local arguments to default values
-             localStride(:) = 1
-         endif
+         localStride(:) = 1
+     else
+         localStride => stride
      endif
 
      if (present(map)) then
-       nf90mpi_$1_var_text$3 = nfmpi_$1_varm_text$3(ncid, varid, localStart, localCount, localStride, map, values)
+         nf90mpi_$1_var_text$3 = &
+         nfmpi_$1_varm_text$3(ncid, varid, localStart, localCount, localStride, map, values)
      else
-       nf90mpi_$1_var_text$3 = nfmpi_$1_vars_text$3(ncid, varid, localStart, localCount, localStride, values)
+         nf90mpi_$1_var_text$3 = &
+         nfmpi_$1_vars_text$3(ncid, varid, localStart, localCount, localStride, values)
      endif
-     if (numDims .GT. 0) then
-         deallocate(localStart)
-         deallocate(localCount)
-         deallocate(localStride)
-     endif
+
+     if (.NOT. present(start))  deallocate(localStart)
+     if (.NOT. present(count))  deallocate(localCount)
+     if (.NOT. present(stride)) deallocate(localStride)
    end function nf90mpi_$1_var_text$3
 ')dnl
 
@@ -93,76 +92,58 @@ dnl
 define(`TEXTVAR',dnl
 `dnl
    function nf90mpi_$1_var_$2D_text$6(ncid, varid, values, start, count, stride, map)
-     integer,                                                intent(in) :: ncid, varid
-     character (len=*), dimension($3),                       intent($5) :: values
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: start
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: count
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: stride
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent(in) :: map
+     integer,                                          intent(in) :: ncid
+     integer,                                          intent(in) :: varid
+     character (len=*), dimension($3),                 intent($5) :: values
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: start(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: count(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: stride(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent(in) :: map(:)
 
-     integer                                     :: nf90mpi_$1_var_$2D_text$6
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localMap(:)
-     integer                                     :: numDims
-     ifelse(`$2', `1', ,`integer :: counter')
+     integer                                 :: nf90mpi_$1_var_$2D_text$6
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStart(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localCount(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStride(:)
+     integer                                 :: numDims
 
      ! inquire variable dimensionality
      nf90mpi_$1_var_$2D_text$6 = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_$2D_text$6 .NE. NF_NOERR) return
 
-     if (numDims .GT. 0) then
-         ! allocate local arrays
+     if (.NOT. present(start)) then
+         ! allocate and set default localStart
          allocate(localStart(numDims))
+         localStart(:) = 1
+     else
+         localStart => start
+     endif
+     if (.NOT. present(count)) then
+         ! allocate and set default localStart
          allocate(localCount(numDims))
+         localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
+         localCount ($2+2:) = 0
+     else
+         localCount => count
+     endif
+     if (.NOT. present(stride)) then
+         ! allocate and set default localStride
          allocate(localStride(numDims))
-         allocate(localMap(numDims))
-         if (present(start)) then
-             localStart(:numDims) = start(:numDims)
-         else
-             ! Set local arguments to default values
-             localStart(:) = 1
-         endif
-         if (present(count)) then
-             localCount(:numDims) = count(:numDims)
-         else
-             ! Set local arguments to default values
-             localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
-             localCount ($2+2:) = 0
-         endif
-         if (present(stride)) then
-             localStride(:numDims) = stride(:numDims)
-         else
-             ! Set local arguments to default values
-             localStride(:) = 1
-         endif
-         if (present(map)) then
-             localMap(:numDims) = map(:numDims)
-         else
-             ! Set local arguments to default values
-             ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
-             localMap(1) = 1
-             ifelse(`$2', `1', ,`
-             do counter = 1, $2 - 1
-                localMap(counter+1) = localMap(counter) * localCount(counter)
-             enddo')
-         endif
+         localStride(:) = 1
+     else
+         localStride => stride
      endif
 
      if (present(map)) then
-       nf90mpi_$1_var_$2D_text$6 = &
-          nfmpi_$1_varm_text$6(ncid, varid, localStart, localCount, localStride, localMap, values($4))
+         nf90mpi_$1_var_$2D_text$6 = &
+         nfmpi_$1_varm_text$6(ncid, varid, localStart, localCount, localStride, map, values($4))
      else
-       nf90mpi_$1_var_$2D_text$6 = &
-          nfmpi_$1_vars_text$6(ncid, varid, localStart, localCount, localStride, values($4))
+         nf90mpi_$1_var_$2D_text$6 = &
+         nfmpi_$1_vars_text$6(ncid, varid, localStart, localCount, localStride, values($4))
      endif
-     if (numDims .GT. 0) then
-         deallocate(localStart)
-         deallocate(localCount)
-         deallocate(localStride)
-         deallocate(localMap)
-     endif
+
+     if (.NOT. present(start))  deallocate(localStart)
+     if (.NOT. present(count))  deallocate(localCount)
+     if (.NOT. present(stride)) deallocate(localStride)
    end function nf90mpi_$1_var_$2D_text$6
 ')dnl
 
@@ -212,60 +193,59 @@ dnl
 define(`NBTEXTVAR1',dnl
 `dnl
    function nf90mpi_$1_var_text(ncid, varid, values, req, start, count, stride, map)
-     integer,                                                intent( in) :: ncid, varid
-     integer,                                                intent(out) :: req
-     character (len=*),                                      intent( $2) :: values
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: start
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: count
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: stride
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: map
+     integer,                                          intent( in) :: ncid
+     integer,                                          intent( in) :: varid
+     integer,                                          intent(out) :: req
+     character (len=*),                                intent( $2) :: values
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: start(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: count(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: stride(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: map(:)
 
-     integer                                     :: nf90mpi_$1_var_text
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer                                     :: numDims
+     integer                                 :: nf90mpi_$1_var_text
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStart(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localCount(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStride(:)
+     integer                                 :: numDims
 
      ! inquire variable dimensionality
      nf90mpi_$1_var_text = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_text .NE. NF_NOERR) return
 
-     if (numDims .GT. 0) then
-         ! allocate local arrays
+     if (.NOT. present(start)) then
+         ! allocate and set default localStart
          allocate(localStart(numDims))
+         localStart(:) = 1
+     else
+         localStart => start
+     endif
+     if (.NOT. present(count)) then
+         ! allocate and set default localStart
          allocate(localCount(numDims))
+         if (numDims .GT. 0) localCount (1) = LEN(values)
+         localCount (2:) = 1
+     else
+         localCount => count
+     endif
+     if (.NOT. present(stride)) then
+         ! allocate and set default localStride
          allocate(localStride(numDims))
-         if (present(start)) then
-             localStart(:numDims) = start(:numDims)
-         else
-             ! Set local arguments to default values
-             localStart(:) = 1
-         endif
-         if (present(count)) then
-             localCount(:numDims) = count(:numDims)
-         else
-             ! Set local arguments to default values
-             localCount (1) = LEN(values)
-             localCount (2:) = 1
-         endif
-         if (present(stride)) then
-             localStride(:numDims) = stride(:numDims)
-         else
-             ! Set local arguments to default values
-             localStride(:) = 1
-         endif
+         localStride(:) = 1
+     else
+         localStride => stride
      endif
 
      if (present(map)) then
-       nf90mpi_$1_var_text = nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, map, values, req)
+         nf90mpi_$1_var_text = &
+         nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, map, values, req)
      else
-       nf90mpi_$1_var_text = nfmpi_$1_vars_text(ncid, varid, localStart, localCount, localStride, values, req)
+         nf90mpi_$1_var_text = &
+         nfmpi_$1_vars_text(ncid, varid, localStart, localCount, localStride, values, req)
      endif
-     if (numDims .GT. 0) then
-         deallocate(localStart)
-         deallocate(localCount)
-         deallocate(localStride)
-     endif
+
+     if (.NOT. present(start))  deallocate(localStart)
+     if (.NOT. present(count))  deallocate(localCount)
+     if (.NOT. present(stride)) deallocate(localStride)
    end function nf90mpi_$1_var_text
 ')dnl
 
@@ -289,77 +269,59 @@ dnl
 define(`NBTEXTVAR',dnl
 `dnl
    function nf90mpi_$1_var_$2D_text(ncid, varid, values, req, start, count, stride, map)
-     integer,                                                intent( in) :: ncid, varid
-     integer,                                                intent(out) :: req
-     character (len=*), dimension($3),                       intent( $5) :: values
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: start
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: count
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: stride
-     integer (kind=MPI_OFFSET_KIND), dimension(:), optional, intent( in) :: map
+     integer,                                          intent( in) :: ncid
+     integer,                                          intent( in) :: varid
+     integer,                                          intent(out) :: req
+     character (len=*), dimension($3),                 intent( $5) :: values
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: start(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: count(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: stride(:)
+     integer (kind=MPI_OFFSET_KIND), target, optional, intent( in) :: map(:)
 
-     integer                                     :: nf90mpi_$1_var_$2D_text
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStart(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localCount(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localStride(:)
-     integer (kind=MPI_OFFSET_KIND), allocatable :: localMap(:)
-     integer                                     :: numDims
-     ifelse(`$2', `1', ,`integer :: counter')
+     integer                                 :: nf90mpi_$1_var_$2D_text
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStart(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localCount(:)
+     integer (kind=MPI_OFFSET_KIND), pointer :: localStride(:)
+     integer                                 :: numDims
 
      ! inquire variable dimensionality
      nf90mpi_$1_var_$2D_text = nfmpi_inq_varndims(ncid, varid, numDims)
      if (nf90mpi_$1_var_$2D_text .NE. NF_NOERR) return
 
-     if (numDims .GT. 0) then
-         ! allocate local arrays
+     if (.NOT. present(start)) then
+         ! allocate and set default localStart
          allocate(localStart(numDims))
+         localStart(:) = 1
+     else
+         localStart => start
+     endif
+     if (.NOT. present(count)) then
+         ! allocate and set default localStart
          allocate(localCount(numDims))
+         localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
+         localCount ($2+2:) = 0
+     else
+         localCount => count
+     endif
+     if (.NOT. present(stride)) then
+         ! allocate and set default localStride
          allocate(localStride(numDims))
-         allocate(localMap(numDims))
-         if (present(start)) then
-             localStart(:numDims) = start(:numDims)
-         else
-             ! Set local arguments to default values
-             localStart(:) = 1
-         endif
-         if (present(count)) then
-             localCount(:numDims) = count(:numDims)
-         else
-             ! Set local arguments to default values
-             localCount (:$2+1) = (/ LEN(values($4)), shape(values) /)
-             localCount ($2+2:) = 0
-         endif
-         if (present(stride)) then
-             localStride(:numDims) = stride(:numDims)
-         else
-             ! Set local arguments to default values
-             localStride(:) = 1
-         endif
-         if (present(map)) then
-             localMap(:numDims) = map(:numDims)
-         else
-             ! Set local arguments to default values
-             ! localMap(:$2) = (/ 1, (product(localCount(:counter)), counter = 1, $2 - 1) /)
-             localMap(1) = 1
-             ifelse(`$2', `1', ,`
-             do counter = 1, $2 - 1
-                localMap(counter+1) = localMap(counter) * localCount(counter)
-             enddo')
-         endif
+         localStride(:) = 1
+     else
+         localStride => stride
      endif
 
      if (present(map)) then
-       nf90mpi_$1_var_$2D_text = &
-          nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, localMap, values($4), req)
+         nf90mpi_$1_var_$2D_text = &
+         nfmpi_$1_varm_text(ncid, varid, localStart, localCount, localStride, map, values($4), req)
      else
-       nf90mpi_$1_var_$2D_text = &
-          nfmpi_$1_vars_text(ncid, varid, localStart, localCount, localStride, values($4), req)
+         nf90mpi_$1_var_$2D_text = &
+         nfmpi_$1_vars_text(ncid, varid, localStart, localCount, localStride, values($4), req)
      endif
-     if (numDims .GT. 0) then
-         deallocate(localStart)
-         deallocate(localCount)
-         deallocate(localStride)
-         deallocate(localMap)
-     endif
+
+     if (.NOT. present(start))  deallocate(localStart)
+     if (.NOT. present(count))  deallocate(localCount)
+     if (.NOT. present(stride)) deallocate(localStride)
    end function nf90mpi_$1_var_$2D_text
 ')dnl
 
