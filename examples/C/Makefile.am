@@ -8,7 +8,7 @@
 
 SUFFIXES = .o .c
 AM_DEFAULT_SOURCE_EXT = .c
-
+AM_CPPFLAGS = -I$(top_builddir)/src/include
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
 check_PROGRAMS = collective_write \

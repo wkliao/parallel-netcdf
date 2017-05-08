@@ -9,6 +9,7 @@
 SUFFIXES = .a .o .c .F90 .h
 
 AM_DEFAULT_SOURCE_EXT = .c
+AM_CPPFLAGS = -I$(top_builddir)/src/include
 
 check_LTLIBRARIES = libtestutils.la
 

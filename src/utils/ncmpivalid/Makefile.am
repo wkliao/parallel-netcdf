@@ -6,7 +6,8 @@
 #
 # @configure_input@
 
-AM_CPPFLAGS = -I$(top_builddir)/src/drivers/ncmpi -I$(top_srcdir)/src/drivers/ncmpi -I${top_srcdir}/src/include
+AM_CPPFLAGS  = -I$(top_srcdir)/src/drivers/ncmpi   -I${top_srcdir}/src/include
+AM_CPPFLAGS += -I$(top_builddir)/src/drivers/ncmpi -I$(top_builddir)/src/include
 
 bin_PROGRAMS = ncmpivalid
 ncmpivalid_SOURCES = ncmpivalid.c

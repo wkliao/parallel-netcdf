@@ -557,8 +557,9 @@ if test "x${enable_fortran}" = xyes ; then
 
    dnl compiler command-line define preprocessor flag, result in ${FC_DEFINE}
    dnl Not all Fortran compilers use -D
+   dnl UD_FC_PP_DEFINE
    dnl AC_FC_PP_DEFINE is first introduced in autoconf 2.69
-   UD_FC_PP_DEFINE
+   AC_FC_PP_DEFINE
 
    dnl check compiler flags for file extensions in .f .F .f90 .F90
    AC_LANG_PUSH([Fortran])

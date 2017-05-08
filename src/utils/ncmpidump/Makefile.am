@@ -4,7 +4,9 @@
 #
 # $Id$
 #
+# @configure_input@
 
+AM_CPPFLAGS = -I$(top_builddir)/src/include
 
 NCGEN = ../ncmpigen/ncmpigen
 

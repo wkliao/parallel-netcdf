@@ -60,7 +60,10 @@ dnl
  *    }
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifdef HAVE_CONFIG_H
 #include <ncconfig.h> /* output of 'configure' */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> /* strcpy() */

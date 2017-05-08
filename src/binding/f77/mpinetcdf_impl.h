@@ -8,7 +8,7 @@
 #ifndef MPINETCDF_IMPL_H
 #define MPINETCDF_IMPL_H
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 # include <ncconfig.h>
 #endif
 

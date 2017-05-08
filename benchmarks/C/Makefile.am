@@ -8,7 +8,7 @@
 
 SUFFIXES = .o .c
 
-AM_CPPFLAGS =
+AM_CPPFLAGS = -I$(top_builddir)/src/include
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la
 
 check_PROGRAMS = aggregation \

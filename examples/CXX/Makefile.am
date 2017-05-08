@@ -10,7 +10,7 @@ SUFFIXES = .cpp .o
 
 AM_DEFAULT_SOURCE_EXT = .cpp
 
-AM_CPPFLAGS = -I$(top_builddir)/src/binding/cxx
+AM_CPPFLAGS = -I$(top_builddir)/src/binding/cxx -I$(top_builddir)/src/include
 LDADD = ${top_builddir}/src/libs/libpnetcdf.la
 
 check_PROGRAMS = collective_write \

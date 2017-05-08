@@ -8,7 +8,7 @@
 
 SUFFIXES = .o .c .h .m4
 
-AM_CPPFLAGS = -I${top_srcdir}/src/include
+AM_CPPFLAGS = -I${top_srcdir}/src/include -I${top_builddir}/src/include
 
 noinst_LTLIBRARIES = libdispatchers.la
 

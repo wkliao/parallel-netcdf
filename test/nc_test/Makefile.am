@@ -10,7 +10,7 @@ SUFFIXES = .o .c .h .m4
 
 AM_DEFAULT_SOURCE_EXT = .c
 
-AM_CPPFLAGS = -I$(srcdir)/../common
+AM_CPPFLAGS = -I$(srcdir)/../common -I$(top_builddir)/src/include
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la ../common/libtestutils.la -lm
 
 if DECL_MPI_OFFSET

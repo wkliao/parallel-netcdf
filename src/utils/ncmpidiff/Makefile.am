@@ -6,6 +6,8 @@
 #
 # @configure_input@
 
+AM_CPPFLAGS = -I$(top_builddir)/src/include
+
 bin_PROGRAMS = ncmpidiff
 ncmpidiff_SOURCES = ncmpidiff.c
 ncmpidiff_LDADD = $(top_builddir)/src/libs/libpnetcdf.la

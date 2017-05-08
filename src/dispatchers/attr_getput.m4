@@ -9,7 +9,7 @@ dnl
  */
 /* $Id: attribute.m4 2873 2017-02-14 02:58:34Z wkliao $ */
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 # include <ncconfig.h>
 #endif
 

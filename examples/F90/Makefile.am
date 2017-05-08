@@ -11,7 +11,7 @@ SUFFIXES = .o .f .F90 .f90
 
 AM_DEFAULT_SOURCE_EXT = .f90
 AM_FCFLAGS = ${FC_MODINC}$(top_builddir)/src/binding/f90
-LDADD = ${top_builddir}/src/libs/libpnetcdf.la
+LDADD = ${top_builddir}/src/libs/libpnetcdf.la utils.o
 
 check_PROGRAMS = nonblocking_write \
                  column_wise \
@@ -26,18 +26,8 @@ check_PROGRAMS = nonblocking_write \
                  fill_mode \
                  vard_int
 
-nonblocking_write_SOURCES = nonblocking_write.f90 utils.F90
-column_wise_SOURCES = column_wise.f90 utils.F90
-block_cyclic_SOURCES = block_cyclic.f90 utils.F90
-flexible_api_SOURCES = flexible_api.f90 utils.F90
-get_info_SOURCES = get_info.f90 utils.F90
-hints_SOURCES = hints.f90 utils.F90
-put_var_SOURCES =  put_var.f90 utils.F90
-put_varn_real_SOURCES = put_varn_real.f90 utils.F90
-put_varn_int_SOURCES = put_varn_int.f90 utils.F90
-transpose_SOURCES = transpose.f90 utils.F90
-vard_int_SOURCES = vard_int.f90 utils.F90
-fill_mode_SOURCES = fill_mode.f90 utils.F90
+utils.o: utils.F90
+	$(FC) $(FC_DEFS) -c -o $@ $(FCFLAGS) $<
 
 # parallel runs only
 # TESTS = $(check_PROGRAMS)

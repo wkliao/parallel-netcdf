@@ -8,6 +8,8 @@
 
 SUFFIXES = .a .o .c .h .f .inc
 
+AM_CPPFLAGS = -I$(top_builddir)/src/include
+
 nodist_include_HEADERS = pnetcdf.inc
 
 C2F_SRCS = issyserrf.c \

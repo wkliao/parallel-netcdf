@@ -8,6 +8,8 @@
 
 SUFFIXES = .o .cpp .hpp
 
+AM_CPPFLAGS = -I$(top_builddir)/src/include
+
 CXX_HEADER = pnetcdf
 
 nodist_include_HEADERS = $(CXX_HEADER)

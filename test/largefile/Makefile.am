@@ -10,7 +10,7 @@ SUFFIXES = .o .c
 
 AM_DEFAULT_SOURCE_EXT = .c
 
-AM_CPPFLAGS = -I$(srcdir)/../common
+AM_CPPFLAGS = -I$(srcdir)/../common -I$(top_builddir)/src/include
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la ../common/libtestutils.la
 
 AM_CFLAGS =

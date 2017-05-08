@@ -17,7 +17,7 @@
  *           mpiexec -n 8 ncmpidiff -h -v var1,var2 file1.nc file2.nc
  */
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 # include <ncconfig.h>
 #endif
 

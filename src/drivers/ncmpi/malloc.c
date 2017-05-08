@@ -11,7 +11,7 @@
    NCI_Free_fn(ptr,__LINE__,__FILE__).
  */
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 # include <ncconfig.h>
 #endif
 

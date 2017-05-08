@@ -65,7 +65,7 @@
  * make sure ncconfig.h is included in any C file before including this file.
  * We cannot include ncconfig.h here due to the compiler warning complaining
  * about constants being redefined (caused by including ncconfig.h twice.)
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 # include <ncconfig.h>
 #endif
  */
