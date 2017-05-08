@@ -69,11 +69,9 @@
           integer array_of_sizes(2), array_of_subsizes(2)
           integer array_of_starts(2), blocklengths(2)
           integer*8 malloc_size, sum_size, recsize, two
-#ifdef SIZEOF_MPI_AINT_IS_4
+          integer aint_size
           integer disps(2)
-#else
-          integer*8 disps(2)
-#endif
+          integer*8 disps8(2)
           logical verbose
 
           call MPI_Init(err)
@@ -139,10 +137,19 @@
           call check(err, 'In nfmpi_inq_recsize: ')
           blocklengths(1) = INT(count(1))
           blocklengths(2) = INT(count(1))
-          disps(1) = start(1)*4
-          disps(2) = recsize + start(1)*4
-          call MPI_Type_create_hindexed(2, blocklengths, disps,
-     +                                  MPI_INTEGER, rec_filetype, err)
+
+          call MPI_Type_size(MPI_AINT, aint_size, err)
+          if (aint_size .EQ. 4) then
+              disps(1) = start(1)*4
+              disps(2) = recsize + start(1)*4
+              call MPI_Type_create_hindexed(2, blocklengths, disps,
+     +                             MPI_INTEGER, rec_filetype, err)
+          else
+              disps8(1) = start(1)*4
+              disps8(2) = recsize + start(1)*4
+              call MPI_Type_create_hindexed(2, blocklengths, disps8,
+     +                             MPI_INTEGER, rec_filetype, err)
+          endif
           call MPI_Type_commit(rec_filetype, err)
 
           ! create a file type for the fixed-size variable
