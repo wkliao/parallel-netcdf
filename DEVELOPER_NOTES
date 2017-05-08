@@ -651,15 +651,13 @@ diff -r autoconf-2.69/lib/autoconf/general.m4 Origin/autoconf-2.69/lib/autoconf/
 < AC_SUBST([FC_DEFS])dnl
 
 diff -r autoconf-2.69/lib/autoconf/status.m4 Origin/autoconf-2.69/lib/autoconf/status.m4
-1268d1267
-< m4_ifdef([_AC_SEEN_CONFIG(HEADERS)], [FC_DEFS=-DHAVE_CONFIG_H])
-1783,1788d1781
+1269,1274d1268
 < if test "x$FC_DEFINE" != "x-D" ; then
-<    FC_DEFS=`echo $DEFS | sed 's/-D/-$FC_DEFINE/g'`
+<    ac_fc_define_sed_str="s/-D/${FC_DEFINE}/g"
+<    FC_DEFS=`echo $DEFS | sed $ac_fc_define_sed_str`
 < else
 <    FC_DEFS=$DEFS
 < fi
-< 
 
 diff -r automake-1.15/bin/automake.in Origin/automake-1.15/bin/automake.in
 625,633d624
