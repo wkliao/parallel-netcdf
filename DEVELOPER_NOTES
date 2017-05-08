@@ -618,3 +618,67 @@ be set when running "make dist". See the makefile target "dist-hook" in
 Makefile.am files for an implementation that uses sed command to do string
 substitution.
 
+==============================================================================
+Hacking autoconf and automake
+==============================================================================
+Autoconf 2.69 has a problem of checking the version of the Fujitsu Fortran
+compiler, which causes errors for building PnetCDF at the configure time.
+
+The fix and patch have been discussed and provided in the link below. PnetCDF
+users/developers are encouraged to apply to patch to their autoconf utility.
+
+Subject: Support Fujitsu in _AC_PROG_FC_V
+https://lists.gnu.org/archive/html/autoconf-patches/2013-11/msg00001.html
+
+diff -r autoconf-2.69/lib/autoconf/fortran.m4 Origin/autoconf-2.69/lib/autoconf/fortran.m4
+581,582d580
+< # Fujitsu accepts --verbose and passes it to the linker, which doesn't yield
+< # the desired result. Therefore test for -### before testing for --verbose.
+590c588
+< for ac_verb in -v -verbose -V -\#\#\# --verbose; do
+---
+> for ac_verb in -v -verbose --verbose -V -\#\#\#; do
+
+
+On some systems, the Fortran preprocessor flag is not "-D". For example, IBM
+XL fortran compilers use flag "-WF,-D". However, autoconf 2.69 hard-codes
+"-DHAVE_CONFIG_H" into pre-defined variable "DEFS" which is used in C, C++,
+F77, and F90 compile commands. The hack below adds a pre-define variable,
+FC_DEFS, and replaces DEFS with it for Fortran-based compile commands.
+
+diff -r autoconf-2.69/lib/autoconf/general.m4 Origin/autoconf-2.69/lib/autoconf/general.m4
+1411d1410
+< AC_SUBST([FC_DEFS])dnl
+
+diff -r autoconf-2.69/lib/autoconf/status.m4 Origin/autoconf-2.69/lib/autoconf/status.m4
+1268d1267
+< m4_ifdef([_AC_SEEN_CONFIG(HEADERS)], [FC_DEFS=-DHAVE_CONFIG_H])
+1783,1788d1781
+< if test "x$FC_DEFINE" != "x-D" ; then
+<    FC_DEFS=`echo $DEFS | sed 's/-D/-$FC_DEFINE/g'`
+< else
+<    FC_DEFS=$DEFS
+< fi
+< 
+
+diff -r automake-1.15/bin/automake.in Origin/automake-1.15/bin/automake.in
+625,633d624
+< my @fpplike_flags =
+<   qw{
+<     $(FC_DEFS)
+<     $(DEFAULT_INCLUDES)
+<     $(INCLUDES)
+<     $(AM_CPPFLAGS)
+<     $(CPPFLAGS)
+<   };
+< 
+888c879
+< 		   'compile' => "\$(FC) @fpplike_flags \$(AM_FCFLAGS) \$(FCFLAGS)",
+---
+> 		   'compile' => "\$(FC) @cpplike_flags \$(AM_FCFLAGS) \$(FCFLAGS)",
+920c911
+< 		   'compile' => "\$(F77) @fpplike_flags \$(AM_FFLAGS) \$(FFLAGS)",
+---
+> 		   'compile' => "\$(F77) @cpplike_flags \$(AM_FFLAGS) \$(FFLAGS)",
+
+
