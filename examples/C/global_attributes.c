@@ -41,7 +41,7 @@
 
 #define ERR { \
     if(err!=NC_NOERR) { \
-        printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); \
+        printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err)); \
         nerrs++; \
         goto fn_exit; \
     } \

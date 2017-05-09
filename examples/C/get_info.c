@@ -43,13 +43,7 @@
 #include <mpi.h>
 #include <pnetcdf.h>
 
-#define HANDLE_ERROR {                                \
-    if (err != NC_NOERR) {                            \
-        printf("Error at line %d (%s)\n", __LINE__,   \
-               ncmpi_strerror(err));                  \
-        nerrs++;                                      \
-    }                                                 \
-}
+#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -118,15 +112,15 @@ int main(int argc, char **argv)
 
     /* exit the define mode */
     err = ncmpi_enddef(ncid);
-    HANDLE_ERROR
+    ERR
 
     /* get all the hints used */
     err = ncmpi_inq_file_info(ncid, &info_used);
-    HANDLE_ERROR
+    ERR
 
     /* close the file */
     err = ncmpi_close(ncid);
-    HANDLE_ERROR
+    ERR
 
     if (rank == 0 && verbose) print_info(&info_used);
     MPI_Info_free(&info_used);

@@ -67,13 +67,13 @@
 #define NX 10
 #define NDIMS 2
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 #define ERRS(n,a) { \
     int _i; \
     for (_i=0; _i<(n); _i++) { \
         if ((a)[_i] != NC_NOERR) { \
-            printf("Error at line=%d: err[%d] %s\n", __LINE__, _i, \
+            printf("Error at line=%d of %s: err[%d] %s\n", __LINE__,__FILE__, _i, \
                    ncmpi_strerror((a)[_i])); \
                    nerrs++; \
         } \
