@@ -27,9 +27,11 @@ libpnetcdf_la_LINK = $(LINK)
 endif
 
 if HAS_FORTRAN
+libpnetcdf_la_LIBADD += ../binding/f77/libpnetcdff.la
+libpnetcdf_la_LIBADD += ../binding/f90/libpnetcdff90.la
 # According to Automake Manual, Section 8.14.3 Mixing Fortran 77 With C and
 # C++, adding $(FLIBS) is necessary
-libpnetcdf_la_LIBADD += ../binding/f77/libpnetcdff.la ../binding/f90/libpnetcdff90.la $(FLIBS) $(FCLIBS)
+# libpnetcdf_la_LIBADD += $(FLIBS) $(FCLIBS)
 # nodist_EXTRA_libpnetcdf_la_SOURCES += dummyf90.f90
 endif
 
