@@ -62,6 +62,9 @@ This is essentially a placeholder for the next release note ...
   o New programs for I/O benchmarks
     * none
 
+  o New build recipe
+    * doc/README.Ubuntu provides build instructions for Ubuntu Linux OS.
+
   o New test program
     * test/testcases/null_args.c - tests whether the correct error codes can
       be returned when using NULL arguments for start, count, stride, or imap

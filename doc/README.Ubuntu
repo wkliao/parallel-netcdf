@@ -1,0 +1,16 @@
+# $Id$
+
+-----------------------------------------------------------------------------
+ Build PnetCDF shared libraries on Ubuntu
+-----------------------------------------------------------------------------
+
+Please set LDFLAGS to the following at the configure command line, i.e.,
+
+    ./configure --prefix=/path/to/install \
+                --enable-shared \
+                LDFLAGS="-Wl,--allow-shlib-undefined"
+
+
+Without option "--enable-shared", only the static libraries will be built
+and in this case there is no need to set LDFLAGS.
+

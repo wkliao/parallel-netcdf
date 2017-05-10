@@ -10,7 +10,8 @@ lib_LTLIBRARIES = libpnetcdf.la
 libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 
 libpnetcdf_la_SOURCES =
-libpnetcdf_la_LIBADD = ../dispatchers/libdispatchers.la ../drivers/ncmpi/libpnetcdfc.la
+libpnetcdf_la_LIBADD  = ../dispatchers/libdispatchers.la
+libpnetcdf_la_LIBADD += ../drivers/ncmpi/libpnetcdfc.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
 
 if HAS_MPICXX
