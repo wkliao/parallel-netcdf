@@ -158,10 +158,16 @@ echo "cc_temp=$cc_temp func_cc_basename_result=$func_cc_basename_result"
            fi
            return
            ;;
+        mpixlc | mpixlcxx | mpixlf77 | mpixlf90 | *[[\\/]]mpixlc | *[[\\/]]mpixlcxx | *[[\\/]]mpixlf77 | *[[\\/]]mpixlf90 )
+           func_cc_basename_result=`$cc_temp -show | cut -d' ' -f1 | xargs basename`
+echo "cc_temp=$cc_temp func_cc_basename_result=$func_cc_basename_result"
+           return
+           ;;
         *) break;;
       esac
     done
     func_cc_basename_result=`$ECHO "$cc_temp" | $SED "s%.*/%%; s%^$host_alias-%%"`
+echo "cc_temp=$cc_temp func_cc_basename_result=$func_cc_basename_result"
 }
 ])# _LT_PREPARE_CC_BASENAME
 
