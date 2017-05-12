@@ -217,7 +217,7 @@ fi
 dnl Now MPICC is configured, do some basic compiler tests
 CC=${MPICC}
 AC_PROG_CC
-AM_PROG_CC_C_O
+dnl AM_PROG_CC_C_O
 
 dnl this call needs at least autoconf version 2.60
 dnl AC_USE_SYSTEM_EXTENSIONS
@@ -406,21 +406,21 @@ if test "x${enable_fortran}" != xno ; then
       AC_PROG_FC
       dnl FCFLAGS is set in AC_PROG_FC
 
-      FCLIBS_save="$FCLIBS"
-      FCLIBS=""
-      AC_FC_LIBRARY_LDFLAGS
-      UD_MSG_DEBUG([before FCLIBS=$FCLIBS])
+      dnl FCLIBS_save="$FCLIBS"
+      dnl FCLIBS=""
+      dnl AC_FC_LIBRARY_LDFLAGS
+      dnl UD_MSG_DEBUG([before FCLIBS=$FCLIBS])
       dnl The autoconf macro for finding FCLIBS sometimes makes mistakes
       dnl (particularly with the Fujitsu frt compiler).  This next step
       dnl first sees if the FCLIBS is valid with the Fortran compiler
       dnl This also happens to Solaris Studio Fortran compilers
       dnl AC_PROG_FC_FCLIBS_VALID
       dnl Now see if FCLIBS works with the C compiler (remove invalid ones)
-      PAC_PROG_FC_CHECK_FCLIBS
+      dnl PAC_PROG_FC_CHECK_FCLIBS
 
       dnl replace FLIBS and F90LIBS with FCLIBS
-      UD_MSG_DEBUG([after FCLIBS=$FCLIBS])
-      FLIBS="$FCLIBS"
+      dnl UD_MSG_DEBUG([after FCLIBS=$FCLIBS])
+      dnl FLIBS="$FCLIBS"
       dnl F90LIBS="$FCLIBS"
 
       AC_LANG_PUSH([Fortran])
@@ -482,7 +482,7 @@ if test "x${enable_fortran}" != xno ; then
       AC_PROG_F77
       dnl FFLAGS is set in AC_PROG_F77
 
-      AC_F77_LIBRARY_LDFLAGS
+      dnl AC_F77_LIBRARY_LDFLAGS
 
       FC_saved=${FC}
       FC=${F77}
@@ -552,8 +552,10 @@ if test "x${enable_fortran}" = xyes ; then
    dnl preprocessor.
    dnl AC_FC_PP_SRCEXT is first introduced in autoconf 2.69
    dnl steal AC_FC_PP_SRCEXT from autoconf 2.69 to make UD_FC_PP_SRCEXT
-   UD_FC_PP_SRCEXT([F])    dnl sets ac_cv_fc_pp_srcext_F
-   UD_FC_PP_SRCEXT([F90])  dnl sets ac_cv_fc_pp_srcext_F90
+   dnl UD_FC_PP_SRCEXT([F])    dnl sets ac_cv_fc_pp_srcext_F
+   dnl UD_FC_PP_SRCEXT([F90])  dnl sets ac_cv_fc_pp_srcext_F90
+   AC_FC_PP_SRCEXT([F])    dnl sets ac_cv_fc_pp_srcext_F
+   AC_FC_PP_SRCEXT([F90])  dnl sets ac_cv_fc_pp_srcext_F90
 
    dnl compiler command-line define preprocessor flag, result in ${FC_DEFINE}
    dnl Not all Fortran compilers use -D
@@ -667,9 +669,7 @@ if test "x${enable_fortran}" = xyes ; then
    AC_SUBST(MPIF90)
 fi
 
-
-
-AC_PROG_INSTALL
+dnl AC_PROG_INSTALL
 
 have_yacc_lex=no
 dnl Starting from PnetCDF 1.5.0, yacc and lex is no longer needed
@@ -695,9 +695,9 @@ dnl fi
 AM_CONDITIONAL(HAVE_YACC_LEX, [test x$have_yacc_lex = xyes])
 
 dnl AC_PROG_AWK
-AC_PROG_LN_S
-AC_PROG_MAKE_SET
-AC_SUBST(SET_MAKE)
+dnl AC_PROG_LN_S
+dnl AC_PROG_MAKE_SET
+dnl AC_SUBST(SET_MAKE)
 AC_PROG_EGREP
 
 dnl AC_PROG_SED and AC_PROG_GREP are only available on autoconf 2.60 and later
@@ -1007,21 +1007,22 @@ AC_SUBST(SIZEOF_MPI_OFFSET)
 
 if test "x${enable_fortran}" = xyes ; then
 
-   dnl AC_FC_MODULE_EXTENSION
-   UD_FC_MODULE_EXTENSION
+   dnl UD_FC_MODULE_EXTENSION
+   AC_FC_MODULE_EXTENSION
    dnl UD_FC_MODULE_EXTENSION defines FC_MODEXT
    if test "x${FC_MODEXT}" = x ; then
       AC_MSG_ERROR([cannot determine Fortran module file extension!])
    fi
    UD_MSG_DEBUG([FC_MODEXT=$FC_MODEXT])
 
-   UD_FC_MODULE_FLAG
+   dnl AC_FC_MODULE_FLAG was first introduced in autoconf 2.69
+   dnl UD_FC_MODULE_FLAG
+   AC_FC_MODULE_FLAG
    dnl UD_FC_MODULE_FLAG defines FC_MODINC
    UD_MSG_DEBUG([FC_MODINC=$FC_MODINC])
 
-   dnl AC_FC_MODULE_FLAG was first introduced in autoconf 2.69
-   dnl AC_FC_MODULE_FLAG
-   UD_FC_MODULE_OUTPUT_FLAG
+   dnl AC_FC_MODULE_OUTPUT_FLAG
+   dnl UD_FC_MODULE_OUTPUT_FLAG
    dnl UD_FC_MODULE_OUTPUT_FLAG defines FC_MODOUT
    dnl UD_MSG_DEBUG([FC_MODOUT=$FC_MODOUT])
 fi
@@ -1071,10 +1072,10 @@ if test "x${enable_fortran}" = xyes ; then
       FFLAGS+=" -Wall"
       FCFLAGS+=" -Wall"
    fi
-   AC_SUBST(FLIBS)
-   AC_SUBST(FCLIBS)
+   dnl AC_SUBST(FLIBS)
+   dnl AC_SUBST(FCLIBS)
    dnl AC_SUBST(F90LIBS)
-   AC_SUBST(FLDFLAGS)
+   dnl AC_SUBST(FLDFLAGS)
    dnl AC_SUBST(F90LDFLAGS)
 fi
 
