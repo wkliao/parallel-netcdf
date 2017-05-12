@@ -22,7 +22,7 @@
 
 #define NY 2
 #define NX 5
-#define ERR {if (err!=NC_NOERR) {nerrs++; printf("Error at line %d: %s\n", __LINE__,ncmpi_strerror(err));}}
+#define ERR {if (err!=NC_NOERR) {nerrs++; printf("Error in %s at line %d: %s\n",__FILE__,__LINE__,ncmpi_strerror(err));}}
 #define TRC(x) if(verbose) printf("%d: ---- before %s() ----\n",rank,#x);err=x
 
 static int verbose;
@@ -324,12 +324,19 @@ static int test_ivarn(int ncid)
     TRC(ncmpi_wait_all)(ncid, 3, req, st); ERR
 
     j = (nprocs > 1) ? (3 + rank) % nprocs : 3;
-    TRC(ncmpi_iput_varn_int)(ncid, varid[j], num_reqs[j], starts[j], counts[j], buffer[j], &req[4]); ERR
+    TRC(ncmpi_iput_varn_int)(ncid, varid[j], num_reqs[j], starts[j], counts[j], buffer[j], &req[3]); ERR
     for (i=0; i<3; i++) {
         j = (nprocs > 1) ? (i + rank) % nprocs : i;
         TRC(ncmpi_iget_varn_int)(ncid, varid[j], num_reqs[j], starts[j], counts[j], buffer[j], &req[i]); ERR
     }
     TRC(ncmpi_wait_all)(ncid, 4, req, st); ERR
+    if (err != NC_NOERR) {
+        for (i=0; i<4; i++) {
+            if (st[i] != NC_NOERR) {
+                printf("Error in %s at line %d: st[%d] %s\n",__FILE__,__LINE__,i,ncmpi_strerror(st[i]));
+            }
+        }
+    }
 
     for (i=0; i<4; i++) {
         free(buffer[i]);
@@ -346,7 +353,7 @@ int main(int argc, char **argv) {
 
     extern int optind;
     char   filename[256];
-    int    i, err, rank, nprocs, ncid, varid[2], dimids[2];
+    int    i, nerrs=0, err, rank, nprocs, ncid, varid[2], dimids[2];
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
