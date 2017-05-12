@@ -1154,6 +1154,12 @@ AC_SUBST([FC_MODEXT])dnl
 ])
 
 dnl steal from autoconf 2.69
+dnl Fix a bug that mistakenly sets FC_MODINC to -M when Fujitsu frtpx is used.
+dnl The correct one should be -I. The fix is shown below.
+dnl bug<    for ac_flag in -M -I '-I ' '-M ' -p '-mod ' '-module ' '-Am -I'; do
+dnl ---
+dnl fix>    for ac_flag in -I '-I ' -M '-M ' -p '-mod ' '-mdir ' '-module ' '-Am -I'; do
+dnl
 # UD_FC_MODULE_FLAG([ACTION-IF-SUCCESS], [ACTION-IF-FAILURE = FAILURE])
 # ---------------------------------------------------------------------
 # Find a flag to include Fortran 90 modules from another directory.
@@ -1203,7 +1209,7 @@ AC_COMPILE_IFELSE([[
       program main
       use conftest_module
       call conftest_routine
-      end]],
+      end program]],
        [ac_cv_fc_module_flag="$ac_flag"])
      if test "$ac_cv_fc_module_flag" != unknown; then
        break

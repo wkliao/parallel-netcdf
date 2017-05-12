@@ -1007,9 +1007,10 @@ if test "x${enable_fortran}" = xyes ; then
    UD_MSG_DEBUG([FC_MODEXT=$FC_MODEXT])
 
    dnl AC_FC_MODULE_FLAG was first introduced in autoconf 2.69
-   dnl UD_FC_MODULE_FLAG
-   AC_FC_MODULE_FLAG
-   dnl UD_FC_MODULE_FLAG defines FC_MODINC
+   dnl AC_FC_MODULE_FLAG/UD_FC_MODULE_FLAG defines FC_MODINC
+   dnl However, AC_FC_MODULE_FLAG has a bug that mistakenly sets FC_MODINC to
+   dnl -M when Fujitsu frtpx is used. UD_FC_MODULE_FLAG fixes this problem.
+   UD_FC_MODULE_FLAG
    UD_MSG_DEBUG([FC_MODINC=$FC_MODINC])
 
    dnl AC_FC_MODULE_OUTPUT_FLAG
