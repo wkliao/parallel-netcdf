@@ -1348,7 +1348,7 @@ dnl AC_CONFIG_FILES([stamp-h], [echo timestamp > stamp-h])
 
 dnl add executable permission to pnetcdf-config and check_install
 AC_CONFIG_FILES([src/utils/pnetcdf-config], [chmod u+x src/utils/pnetcdf-config])
-AC_CONFIG_FILES([src/utils/check_install],  [chmod u+x src/utils/check_install])
+dnl AC_CONFIG_FILES([src/utils/check_install],  [chmod u+x src/utils/check_install])
 
 AC_OUTPUT
 echo "------------------------------------------------------------------------------"
