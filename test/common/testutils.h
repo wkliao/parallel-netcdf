@@ -12,6 +12,10 @@
 #include <string.h>
 #include <limits.h>
 
+#ifdef HAVE_CONFIG_H
+#include <ncconfig.h> /* output of 'configure' */
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
