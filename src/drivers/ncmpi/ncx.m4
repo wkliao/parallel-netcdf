@@ -29,13 +29,9 @@ dnl (MPI_Offset vs. size_t), and function name substrings for external data
 dnl types.
 dnl
 
-ifdef(`PNETCDF',`
-`#'ifdef HAVE_CONFIG_H
-`#'include <config.h>
-`#'endif',`
-`#'ifdef HAVE_CONFIG_H
-`#'include <config.h>
-`#'endif')
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
