@@ -48,7 +48,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-# include <ncconfig.h>
+# include <config.h>
 #endif
 
 #include "utf8proc.h"

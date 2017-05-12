@@ -61,12 +61,12 @@
 #ifndef UTF8PROC_H
 #define UTF8PROC_H
 
-/* Note this header file requires some constants defined in ncconfig.h. Please
- * make sure ncconfig.h is included in any C file before including this file.
- * We cannot include ncconfig.h here due to the compiler warning complaining
- * about constants being redefined (caused by including ncconfig.h twice.)
+/* Note this header file requires some constants defined in config.h. Please
+ * make sure config.h is included in any C file before including this file.
+ * We cannot include config.h here due to the compiler warning complaining
+ * about constants being redefined (caused by including config.h twice.)
 #ifdef HAVE_CONFIG_H
-# include <ncconfig.h>
+# include <config.h>
 #endif
  */
 

@@ -7,9 +7,9 @@ dnl autoconf v2.69 was released in 2012-04-24
 AC_PREREQ([2.69])
 AC_INIT([parallel-netcdf],[1.8.0],[parallel-netcdf@mcs.anl.gov])
 
-dnl ncconfig.h.in will be created by autoreconf (autoheader)
+dnl config.h.in will be created by autoreconf (autoheader)
 dnl call it right after AC_INIT, as suggested by autoconf
-AC_CONFIG_HEADERS([src/include/ncconfig.h])
+AC_CONFIG_HEADERS([src/include/config.h])
 
 AC_CONFIG_SRCDIR([src/include/pnetcdf.h.in])
 

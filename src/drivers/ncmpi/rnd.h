@@ -10,7 +10,7 @@
 #define	_RNDDOWN(x, unit)  ((x) - ((x)%(unit)))
 
 /* #define M_RND_UNIT	(sizeof(double))
- * SIZEOF_DOUBLE is defined in ncconfig.h
+ * SIZEOF_DOUBLE is defined in config.h
  */
 #define M_RND_UNIT	SIZEOF_DOUBLE
 #define	M_RNDUP(x) _RNDUP(x, M_RND_UNIT)

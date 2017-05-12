@@ -31,7 +31,7 @@ define(`APIFunc',` ifdef(`PNETCDF',`ncmpi_$1',`nc_$1')')dnl
 #include "error.h"
 
 #ifdef HAVE_CONFIG_H
-#include <ncconfig.h> /* output of 'configure' */
+#include <config.h> /* output of 'configure' */
 #endif
 
 #if defined(_CRAY) && !defined(_CRAYIEEE)

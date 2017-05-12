@@ -60,7 +60,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifdef HAVE_CONFIG_H
-#include <ncconfig.h> /* output of 'configure' */
+#include <config.h> /* output of 'configure' */
 #endif
 
 #include <stdio.h>
