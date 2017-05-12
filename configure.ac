@@ -121,7 +121,6 @@ if test "x${RM}" != x ; then
 else
    RM="rm"
 fi
-AC_SUBST(RM)
 
 AC_ARG_ENABLE(echo,
    [AS_HELP_STRING([--enable-echo],
@@ -142,15 +141,12 @@ AC_ARG_WITH(mpi,
 if test "x${MPI_INSTALL}" != x && (! test -d "${MPI_INSTALL}") ; then
    AC_MSG_ERROR(Directory '${MPI_INSTALL}' specified in --with-mpi does not exist)
 fi
+dnl MPI_INSTALL will be referred in UD_MPI_PATH_PROGS defined in acinclude.m4
 
-AC_ARG_VAR(MPICC,  MPI C compiler)
-AC_ARG_VAR(MPICXX, MPI C++ compiler)
-AC_ARG_VAR(MPIF77, MPI Fortran 77 compiler)
-AC_ARG_VAR(MPIF90, MPI Fortran 90 compiler)
-AC_ARG_VAR(CC,     Overwritten by MPICC  if MPICC  is set)
-AC_ARG_VAR(CXX,    Overwritten by MPICXX if MPICXX is set)
-AC_ARG_VAR(F77,    Overwritten by MPIF77 if MPIF77 is set)
-AC_ARG_VAR(FC,     Overwritten by MPIF90 if MPIF90 is set)
+AC_ARG_VAR(MPICC,  [MPI C compiler, @<:@default: CC@:>@])
+AC_ARG_VAR(MPICXX, [MPI C++ compiler, @<:@default: CXX@:>@])
+AC_ARG_VAR(MPIF77, [MPI Fortran 77 compiler, @<:@default: F77@:>@])
+AC_ARG_VAR(MPIF90, [MPI Fortran 90 compiler, @<:@default: FC@:>@])
 dnl AC_ARG_VAR(CPPFLAGS, [Preprocessor options for C and C++ compilers, e.g. -I<include_dir> if you have headers in a nonstandard directory <include_dir>])
 dnl AC_ARG_VAR(CFLAGS, Debugging and optimization options for the C compiler)
 dnl AC_ARG_VAR(CXXFLAGS, Debugging and optimization options for the C++ compiler)
@@ -564,12 +560,10 @@ if test "x${enable_fortran}" = xyes ; then
    AC_FC_PP_DEFINE
 
    dnl check compiler flags for file extensions in .f .F .f90 .F90
-   AC_LANG_PUSH([Fortran])
    AC_FC_SRCEXT([f])
    AC_FC_SRCEXT([F])
    AC_FC_SRCEXT([f90])
    AC_FC_SRCEXT([F90])
-   AC_LANG_POP([Fortran])
 
    dnl customized AC_FC_FIXEDFORM: to just get ac_cv_fc_fixedform without
    dnl appending ac_cv_fc_fixedform to FCFLAGS
@@ -664,9 +658,6 @@ if test "x${enable_fortran}" = xyes ; then
    AC_SUBST(PNF_X_INT8_MIN)
    AC_SUBST(PNF_X_INT8_MAX)
    AC_SUBST(PNF_X_UINT8_MAX)
-
-   AC_SUBST(MPIF77)
-   AC_SUBST(MPIF90)
 fi
 
 dnl AC_PROG_INSTALL
@@ -1222,7 +1213,7 @@ fi
 AC_MSG_CHECKING([whether test should be built and run])
 AC_ARG_ENABLE([testsets],
               [AS_HELP_STRING([--disable-testsets],
-                              [do not build or run netCDF tests])])
+                              [do not build or run PnetCDF tests])])
 test "x$enable_testsets" = xno || enable_testsets=yes
 build_tests=$enable_testsets
 AC_MSG_RESULT($build_tests)
@@ -1240,7 +1231,6 @@ dnl build benchmark programs from within PnetCDF
 AM_CONDITIONAL(BUILD_BENCHMARKS_IN_PNETCDF, [test yes = yes])
 
 AC_ARG_VAR(TESTSEQRUN, [Run command (on one MPI process) for "make check" on cross-compile environment. Example: "aprun -n 1". @<:@default: none@:>@])
-AC_SUBST(TESTSEQRUN)
 
 AC_ARG_VAR(TESTMPIRUN, [MPI run command for "make ptest", @<:@default: mpiexec -n NP@:>@])
 if test "x${TESTMPIRUN}" = x ; then
@@ -1248,14 +1238,12 @@ if test "x${TESTMPIRUN}" = x ; then
    UD_MPI_PATH_PROGS([TESTMPIRUN], [mpiexec mpirun srun])
    TESTMPIRUN+=" -n NP"
 fi
-AC_SUBST(TESTMPIRUN)
 
 AC_ARG_VAR(TESTOUTDIR, [Output file directory for "make check" and "make ptest", @<:@default: ./@:>@])
 if test "x${TESTOUTDIR}" = x ; then
    dnl set default to current directory
    TESTOUTDIR=.
 fi
-AC_SUBST(TESTOUTDIR)
 
 dnl find if gcc is available for compiling ncoffsets to run in sequential
 AC_PATH_PROG([SEQ_CC], [gcc], [$MPICC])
