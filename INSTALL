@@ -120,7 +120,6 @@ Here lists a few important options:
   --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
-  --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-debug          Enable PnetCDF internal debug mode. This also
                           enables safe mode. [default: disabled]
   --disable-in-place-swap Disable memory in-place byte swap on Little Endian
@@ -151,27 +150,28 @@ Optional Packages:
 
 Some influential environment variables:
   RM          Command for deleting files or directories. [default: rm]
-  MPICC       MPI C compiler
-  MPICXX      MPI C++ compiler
-  MPIF77      MPI Fortran 77 compiler
-  MPIF90      MPI Fortran 90 compiler
-  CC          Overwritten by MPICC  if MPICC  is set
-  CXX         Overwritten by MPICXX if MPICXX is set
-  F77         Overwritten by MPIF77 if MPIF77 is set
-  FC          Overwritten by MPIF90 if MPIF90 is set
+  MPICC       MPI C compiler, [default: CC]
+  MPICXX      MPI C++ compiler, [default: CXX]
+  MPIF77      MPI Fortran 77 compiler, [default: F77]
+  MPIF90      MPI Fortran 90 compiler, [default: FC]
+  CC          C compiler command
   CFLAGS      C compiler flags
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
               nonstandard directory <lib dir>
   LIBS        libraries to pass to the linker, e.g. -l<library>
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
+  CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
-  FCFLAGS     Fortran compiler flags
-  FFLAGS      Fortran 77 compiler flags
   LT_SYS_LIBRARY_PATH
               User-defined run-time library search path.
   CPP         C preprocessor
   CXXCPP      C++ preprocessor
+  FC          Fortran compiler command
+  FCFLAGS     Fortran compiler flags
+  F77         Fortran 77 compiler command
+  FFLAGS      Fortran 77 compiler flags
+  GCOV        name/path for the gcov utility
   TESTSEQRUN  Run command (on one MPI process) for "make check" on
               cross-compile environment. Example: "aprun -n 1". [default:
               none]
