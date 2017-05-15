@@ -58,22 +58,36 @@ ptests:
 install-data-hook:
 	@echo '+----------------------------------------------------------------------------+'
 	@echo '|'
-	@echo '|  PnetCDF has been successfully installed under $(prefix)'
+	@echo '|  PnetCDF has been successfully installed under'
+	@echo '|          $(prefix)'
 	@echo '|'
-	@echo '|  * PnetCDF header files are installed in $(prefix)/include'
-	@echo '|  * PnetCDF library file is installed in $(prefix)/lib'
-	@echo '|  * PnetCDF utility programs are installed in $(prefix)/bin'
-	@echo '|  * PnetCDF man pages are installed in $(prefix)/share/man'
+	@echo '|  * PnetCDF header files have been installed in'
+	@echo '|          $(prefix)/include'
+	@echo '|  * PnetCDF library files have been installed in'
+	@echo '|          $(prefix)/lib'
+	@echo '|  * PnetCDF utility programs have been installed in'
+	@echo '|          $(prefix)/bin'
+	@echo '|  * PnetCDF man pages have been installed in'
+	@echo '|          $(prefix)/share/man'
 	@echo '|'
-	@echo '|  To compile your PnetCDF programs, please add the following to the command'
+	@if test 'x$(has_fortran)' = xyes && test 'x$(FC_MODINC)' = 'x-I' ; then \
+	 echo '|  To compile your PnetCDF programs, please add the following to the command' ; \
+	else \
+	 echo '|  To compile your PnetCDF C programs, please add the following to the command' ; \
+	fi
 	@echo '|  line, so the compiler can find the PnetCDF header files:'
 	@echo '|      -I$(prefix)/include'
+	@if test "x$(has_fortran)" = xyes && test 'x$(FC_MODINC)' != 'x-I' ; then \
+	 echo '|  Use the following line to compile your Fortran programs'; \
+	 echo '|      $(FC_MODINC)$(prefix)/include' ; \
+	fi
 	@echo '|'
 	@echo '|  Add the following line to link your program to PnetCDF library:'
 	@echo '|      -L$(prefix)/lib -lpnetcdf'
 	@echo '|'
-	@echo '|  Add $(prefix)/lib to your run-time environment variable LD_LIBRARY_PATH,'
+	@echo '|  Add the following to your run-time environment variable LD_LIBRARY_PATH,'
 	@echo '|  if your executable is linked with the PnetCDF shared libraries.'
+	@echo '|          $(prefix)/lib'
 	@echo '|'
 	@echo '|  PnetCDF is jointly developed by a team at Northwestern University and'
 	@echo '|  Argonne National Laboratory.'
