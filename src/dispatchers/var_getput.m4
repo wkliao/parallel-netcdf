@@ -421,7 +421,7 @@ dnl
 define(`WAIT',dnl
 `dnl
 /*----< ncmpi_wait$1() >-----------------------------------------------------*/
-/* This API is ifelse(`$4',`',`an independent',`a collective') subroutine. */
+/* This API is ifelse(`$1',`',`an independent',`a collective') subroutine. */
 int
 ncmpi_wait$1(int  ncid,
              int  num_reqs, /* number of requests */
