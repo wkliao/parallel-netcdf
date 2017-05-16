@@ -3,8 +3,8 @@
  *  See COPYRIGHT notice in top-level directory.
  */
 /* $Id$ */
-#ifndef SUBFILE_H
-#define SUBFILE_H
+#ifndef _SUBFILE_H
+#define _SUBFILE_H
 
 #include "pnetcdf.h"
 #include "nc.h"
@@ -50,4 +50,4 @@ extern int ncmpii_subfile_getput_vars(NC *ncp, NC_var *varp, const MPI_Offset st
                                void *buf, MPI_Offset bufcount,
                                MPI_Datatype buftype, int rw_flag, int io_method);
 
-#endif /* end of SUBFILE_H */
+#endif /* _SUBFILE_H */

@@ -6,5 +6,5 @@
 #
 # @configure_input@
 
-SUBDIRS = ncmpi
+SUBDIRS = include common ncmpi
 

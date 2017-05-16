@@ -8,7 +8,9 @@
 
 SUFFIXES = .a .o .c .m4 .h
 
-AM_CPPFLAGS = -I${top_srcdir}/src/include -I${top_builddir}/src/include
+AM_CPPFLAGS  = -I${top_srcdir}/src/include
+AM_CPPFLAGS += -I${top_builddir}/src/include
+AM_CPPFLAGS += -I${top_srcdir}/src/drivers/include
 
 if PNETCDF_DEBUG
    AM_CPPFLAGS += -DPNETCDF_DEBUG
@@ -38,8 +40,6 @@ H_SRCS = ncmpi_dispatch.h \
          rnd.h \
          ncmpidtype.h \
          macro.h \
-         utf8proc_data.h \
-         utf8proc.h \
          subfile.h
 
 C_SRCS = ncmpi_dispatch.c \
@@ -56,7 +56,6 @@ C_SRCS = ncmpi_dispatch.c \
          filetype.c \
          nonblocking.c   \
          malloc.c \
-         utf8proc.c \
          vard.c \
          fill.c \
          util.c \

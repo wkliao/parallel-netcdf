@@ -3,7 +3,8 @@
  *  See COPYRIGHT notice in top-level directory.
  */
 /* $Id$ */
-#ifndef _RNDUP
+#ifndef _RND_H
+#define _RND_H
 
 /* useful for aligning memory */
 #define	_RNDUP(x, unit)  ((((x) + (unit) - 1) / (unit)) * (unit))

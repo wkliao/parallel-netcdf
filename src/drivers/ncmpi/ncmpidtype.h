@@ -4,8 +4,8 @@
  */
 /* $Id$ */
 
-#ifndef NCMPI_DTYPE_H
-#define NCMPI_DTYPE_H
+#ifndef NCMPIDTYPE_H
+#define NCMPIDTYPE_H
 
 int ncmpii_dtype_decode(MPI_Datatype dtype,
 			MPI_Datatype *ptype,

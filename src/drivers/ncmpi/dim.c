@@ -21,7 +21,7 @@
 #include "ncx.h"
 #include "fbits.h"
 #include "macro.h"
-#include "utf8proc.h"
+#include <utf8proc.h>
 
 /*
  * Free dim

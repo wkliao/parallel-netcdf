@@ -17,7 +17,6 @@ dnl
 #include "nc.h"
 #include "ncio.h"
 #include "fbits.h"
-#include "nctypes.h"
 
 /*
  * An external data representation interface.

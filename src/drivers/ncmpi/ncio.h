@@ -4,8 +4,8 @@
  */
 /* $Id$ */
 
-#ifndef _NCIO_H_
-#define _NCIO_H_
+#ifndef _NCIO_H
+#define _NCIO_H
 
 #include <stddef.h>       /* size_t */
 #include <sys/types.h>    /* off_t */
@@ -92,4 +92,4 @@ ncmpiio_free(ncio *nciop);
 extern int
 ncmpiio_close(ncio *nciop, int doUnlink);
 
-#endif /* _NCIO_H_ */
+#endif /* _NCIO_H */

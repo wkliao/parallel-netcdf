@@ -3,8 +3,9 @@
  *  See COPYRIGHT notice in top-level directory.
  */
 /* $Id$ */
-#ifndef _NC_H_
-#define _NC_H_
+
+#ifndef _NC_H
+#define _NC_H
 
 /*
  * netcdf library 'private' data structures, objects and interfaces
@@ -835,4 +836,4 @@ ncmpii_getput_zero_req(NC *ncp, int rw_flag);
 extern int
 ncmpii_NC_check_vlens(NC *ncp);
 
-#endif /* _NC_H_ */
+#endif /* _NC_H */

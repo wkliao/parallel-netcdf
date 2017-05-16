@@ -4,8 +4,8 @@
  */
 /* $Id$ */
 
-#ifndef _FBITS_H_
-#define _FBITS_H_
+#ifndef _FBITS_H
+#define _FBITS_H
 
 /*
  * Macros for dealing with flag bits.
@@ -23,4 +23,4 @@
 /* a if and only if b, use == when it makes sense */
 #define pIff(a,b) (((a) && (b)) || (!(a) && !(b)))
 
-#endif /*!FBITS_H_*/
+#endif /* _FBITS_H */
