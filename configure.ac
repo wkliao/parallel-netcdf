@@ -105,6 +105,11 @@ AH_TEMPLATE([HAVE_FUNC_MACRO],          [Define if C++ macro __func__ is defined
 AH_TEMPLATE([HAVE_FUNCTION_MACRO],      [Define if C++ macro __FUNCTION__ is defined])
 AH_TEMPLATE([RELAX_COORD_BOUND],        [Define if relaxed coord check is enabled])
 
+AH_TOP([#ifndef _CONFIG_H
+#define _CONFIG_H])
+AH_BOTTOM([#include <nctypes.h>
+#endif])
+
 dnl an option to use a customized rm command
 AC_ARG_VAR(RM, Command for deleting files or directories. @<:@default: rm@:>@)
 if test "x${RM}" != x ; then
@@ -928,7 +933,9 @@ AC_SUBST(INTENTV)
 
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
-AC_CHECK_TYPES([ssize_t, ptrdiff_t, schar, uchar, ushort, uint, longlong, ulonglong, int64, uint64])
+AC_TYPE_SSIZE_T
+
+AC_CHECK_TYPES([ptrdiff_t, schar, uchar, ushort, uint, longlong, ulonglong, int64, uint64])
 
 AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(off_t)
@@ -1282,6 +1289,8 @@ AC_CONFIG_FILES(Makefile \
                 src/include/Makefile \
                 src/include/pnetcdf.h \
                 src/drivers/Makefile \
+                src/drivers/common/Makefile \
+                src/drivers/include/Makefile \
                 src/drivers/ncmpi/Makefile \
                 src/binding/Makefile \
                 src/binding/cxx/Makefile \

@@ -87,7 +87,7 @@ install-data-hook:
 	@echo '|'
 	@echo '|  Add the following to your run-time environment variable LD_LIBRARY_PATH,'
 	@echo '|  if your executable is linked with the PnetCDF shared libraries.'
-	@echo '|          $(prefix)/lib'
+	@echo '|      $(prefix)/lib'
 	@echo '|'
 	@echo '|  PnetCDF is jointly developed by a team at Northwestern University and'
 	@echo '|  Argonne National Laboratory.'

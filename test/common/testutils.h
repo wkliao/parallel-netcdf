@@ -8,13 +8,13 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h> /* output of 'configure' */
 #endif
+
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096

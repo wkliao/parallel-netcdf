@@ -6,7 +6,8 @@
 #
 # @configure_input@
 
-AM_CPPFLAGS = -I$(top_builddir)/src/include
+AM_CPPFLAGS  = -I$(top_srcdir)/src/include
+AM_CPPFLAGS += -I$(top_builddir)/src/include
 
 NCGEN = ../ncmpigen/ncmpigen
 

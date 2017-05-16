@@ -70,7 +70,9 @@ This is essentially a placeholder for the next release note ...
       be returned when using NULL arguments for start, count, stride, or imap
 
   o Other updates:
-    * All build recipes (README files) have been moved to folder doc.
+    * All build recipes (README files) have been moved to folder doc. Most of
+      the recipes have been updated with instructions for building shared
+      libraries.
     * API ncmpi_open now checks the number of large variables that is legal
       for CDF-1 and CDF-2 files. See r2961. For the information about the
       number of large variables allowed in the classic formats can be found
@@ -82,6 +84,10 @@ This is essentially a placeholder for the next release note ...
       avoids conflict to the name convention reserved by automake.
 
   o Bug fixes
+    * Fix F90 APIs for reading and writing scalar variables, i.e. number of
+      dimensions is zero. The bugs appear only when using Intel Fortran
+      compiler which does not allow checking presence of an argument and
+      its contents in the same if condition. See r3009, r3012, r3013.
     * When trying to set attribute _FillValue for global variable NC_GLOBAL,
       error code NC_EGLOBAL will be returned. See r2954, r2955, r2956.
     * Conform with CDF-2 file format specification on using 2^32-1 for vsize

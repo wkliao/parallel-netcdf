@@ -11,6 +11,7 @@ libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 
 libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD  = ../dispatchers/libdispatchers.la
+libpnetcdf_la_LIBADD += ../drivers/common/libcommon.la
 libpnetcdf_la_LIBADD += ../drivers/ncmpi/libncmpi.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
 
@@ -38,6 +39,9 @@ endif
 
 ../dispatchers/libdispatchers.la:
 	set -e; cd ../dispatchers && $(MAKE) $(MFLAGS)
+
+../drivers/common/libcommon.la:
+	set -e; cd ../drivers/common && $(MAKE) $(MFLAGS)
 
 ../drivers/ncmpi/libncmpi.la:
 	set -e; cd ../drivers/ncmpi && $(MAKE) $(MFLAGS)

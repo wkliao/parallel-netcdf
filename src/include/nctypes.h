@@ -4,19 +4,12 @@
  */
 /* $Id$ */
 
-#ifndef NCTYPES_H
-#define NCTYPES_H
-
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
 #ifndef HAVE_PTRDIFF_T
-typedef int ptrdiff_t;
-#endif
-
-#ifndef HAVE_SSIZE_T
-typedef int ssize_t;
+typedef long int ptrdiff_t;
 #endif
 
 #ifndef HAVE_SCHAR
@@ -51,4 +44,3 @@ typedef long long int64;
 typedef unsigned long long uint64;
 #endif
 
-#endif

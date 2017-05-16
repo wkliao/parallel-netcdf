@@ -80,27 +80,7 @@ dnl
 #define NY 4
 #define NX 10
 
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h> /* ushort, uint */
-#endif
-
 typedef char text;
-typedef signed char schar;
-#ifndef HAVE_UCHAR 
-typedef unsigned char uchar;
-#endif
-#ifndef HAVE_USHORT
-typedef unsigned short ushort;
-#endif
-#ifndef HAVE_UINT
-typedef unsigned int uint;
-#endif
-#ifndef HAVE_LONGLONG
-typedef long long longlong;
-#endif
-#ifndef HAVE_ULONGLONG
-typedef unsigned long long ulonglong;
-#endif
 
 include(`foreach.m4')dnl
 include(`utils.m4')dnl

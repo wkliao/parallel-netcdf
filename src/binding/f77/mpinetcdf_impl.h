@@ -5,8 +5,8 @@
  */
 /* $Id$ */
 
-#ifndef MPINETCDF_IMPL_H
-#define MPINETCDF_IMPL_H
+#ifndef _MPINETCDF_IMPL_H
+#define _MPINETCDF_IMPL_H
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -71,9 +71,5 @@ extern FORTRAN_API int FORT_CALL nfmpi_issyserr_ ( MPI_Fint *v1 );
 
 /* Fortran logical values */
 
-
 #endif
-
-
-
 

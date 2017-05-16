@@ -10,7 +10,10 @@ SUFFIXES = .o .cpp
 
 AM_DEFAULT_SOURCE_EXT = .cpp
 
-AM_CPPFLAGS = -I$(top_builddir)/src/binding/cxx -I$(srcdir)/../common -I$(top_builddir)/src/include
+AM_CPPFLAGS  = -I$(top_srcdir)/src/include
+AM_CPPFLAGS += -I$(top_builddir)/src/binding/cxx
+AM_CPPFLAGS += -I$(srcdir)/../common
+AM_CPPFLAGS += -I$(top_builddir)/src/include
 LDADD = $(top_builddir)/src/libs/libpnetcdf.la ../common/libtestutils.la
 
 if DECL_MPI_OFFSET

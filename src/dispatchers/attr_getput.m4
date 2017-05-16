@@ -18,7 +18,6 @@ dnl
 
 #include <pnetcdf.h>
 #include <dispatch.h>
-#include <nctypes.h>
 
 include(`foreach.m4')dnl
 include(`utils.m4')dnl

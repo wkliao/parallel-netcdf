@@ -6,7 +6,8 @@
 #
 # @configure_input@
 
-AM_CPPFLAGS = -I$(top_builddir)/src/include
+AM_CPPFLAGS  = -I$(top_srcdir)/src/include
+AM_CPPFLAGS += -I$(top_builddir)/src/include
 
 bin_PROGRAMS = ncmpidiff
 ncmpidiff_SOURCES = ncmpidiff.c

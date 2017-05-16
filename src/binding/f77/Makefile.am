@@ -8,7 +8,8 @@
 
 SUFFIXES = .a .o .c .h .f .inc
 
-AM_CPPFLAGS = -I$(top_builddir)/src/include
+AM_CPPFLAGS  = -I$(top_srcdir)/src/include
+AM_CPPFLAGS += -I$(top_builddir)/src/include
 
 nodist_include_HEADERS = pnetcdf.inc
 
