@@ -14,7 +14,7 @@ CXX_HEADER = pnetcdf
 
 nodist_include_HEADERS = $(CXX_HEADER)
 
-noinst_LTLIBRARIES = libpnetcdfcxx.la
+noinst_LTLIBRARIES = libcxx.la
 
 # Note the file order is important
 HPP_FILES = ncmpi_notyet.h \
@@ -45,8 +45,8 @@ HPP_FILES = ncmpi_notyet.h \
             ncmpiVlenType.h
 
 LIB_SRCS   = $(HPP_FILES:.h=.cpp)
-libpnetcdfcxx_la_SOURCES = $(LIB_SRCS) $(HPP_FILES)
-nodist_libpnetcdfcxx_la_SOURCES = $(CXX_HEADER)
+libcxx_la_SOURCES = $(LIB_SRCS) $(HPP_FILES)
+nodist_libcxx_la_SOURCES = $(CXX_HEADER)
 BUILT_SOURCES = $(CXX_HEADER)
 
 EXTRA_DIST = pnetcdf.in

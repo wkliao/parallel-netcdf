@@ -11,11 +11,11 @@ libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 
 libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD  = ../dispatchers/libdispatchers.la
-libpnetcdf_la_LIBADD += ../drivers/ncmpi/libpnetcdfc.la
+libpnetcdf_la_LIBADD += ../drivers/ncmpi/libncmpi.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
 
 if HAS_MPICXX
-libpnetcdf_la_LIBADD += ../binding/cxx/libpnetcdfcxx.la
+libpnetcdf_la_LIBADD += ../binding/cxx/libcxx.la
 # According Automake Manual, Section 8.3.5 Libtool Convenience Libraries,
 # using nodist_EXTRA to trick automake to use C++ compiler
 nodist_EXTRA_libpnetcdf_la_SOURCES += dummycxx.cxx
@@ -28,8 +28,8 @@ libpnetcdf_la_LINK = $(LINK)
 endif
 
 if HAS_FORTRAN
-libpnetcdf_la_LIBADD += ../binding/f77/libpnetcdff.la
-libpnetcdf_la_LIBADD += ../binding/f90/libpnetcdff90.la
+libpnetcdf_la_LIBADD += ../binding/f77/libf77.la
+libpnetcdf_la_LIBADD += ../binding/f90/libf90.la
 # According to Automake Manual, Section 8.14.3 Mixing Fortran 77 With C and
 # C++, adding $(FLIBS) is necessary
 # libpnetcdf_la_LIBADD += $(FLIBS) $(FCLIBS)
@@ -39,16 +39,16 @@ endif
 ../dispatchers/libdispatchers.la:
 	set -e; cd ../dispatchers && $(MAKE) $(MFLAGS)
 
-../drivers/ncmpi/libpnetcdfc.la:
+../drivers/ncmpi/libncmpi.la:
 	set -e; cd ../drivers/ncmpi && $(MAKE) $(MFLAGS)
 
-../binding/cxx/libpnetcdfcxx.la:
+../binding/cxx/libcxx.la:
 	set -e; cd ../binding/cxx && $(MAKE) $(MFLAGS)
 
-../binding/f77/libpnetcdff.la:
+../binding/f77/libf77.la:
 	set -e; cd ../binding/f77 && $(MAKE) $(MFLAGS)
 
-../binding/f90/libpnetcdff90.la:
+../binding/f90/libf90.la:
 	set -e; cd ../binding/f90 && $(MAKE) $(MFLAGS)
 
 tests-local: all

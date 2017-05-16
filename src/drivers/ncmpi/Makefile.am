@@ -14,7 +14,7 @@ if PNETCDF_DEBUG
    AM_CPPFLAGS += -DPNETCDF_DEBUG
 endif
 
-noinst_LTLIBRARIES = libpnetcdfc.la
+noinst_LTLIBRARIES = libncmpi.la
 
 M4FLAGS += -I${top_srcdir}/m4
 if ENABLE_ERANGE_FILL
@@ -70,8 +70,8 @@ $(M4_SRCS:.m4=.c): Makefile
 ncx.h: ncx_h.m4 Makefile
 	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
 
-libpnetcdfc_la_SOURCES = $(C_SRCS) $(H_SRCS)
-nodist_libpnetcdfc_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
+libncmpi_la_SOURCES = $(C_SRCS) $(H_SRCS)
+nodist_libncmpi_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 
 # automake says "... BUILT_SOURCES is honored only by 'make all', 'make check',
 # and 'make install'. This means you cannot build a specific target (e.g.,
@@ -79,7 +79,7 @@ nodist_libpnetcdfc_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 BUILT_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 
 if ENABLE_SUBFILING
-libpnetcdfc_la_SOURCES += subfile.c
+libncmpi_la_SOURCES += subfile.c
 endif
 
 CLEANFILES = $(M4_SRCS:.m4=.c) ncx.h *.gcno

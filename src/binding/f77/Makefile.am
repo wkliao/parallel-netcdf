@@ -22,9 +22,9 @@ LIB_FSRCS = strerrorf.f \
             strerrnof.f \
             inq_libversf.f
 
-noinst_LTLIBRARIES  = libpnetcdff.la
-libpnetcdff_la_SOURCES = $(LIB_FSRCS) mpinetcdf_impl.h
-nodist_libpnetcdff_la_SOURCES = $(C2F_SRCS) mpifnetcdf.h
+noinst_LTLIBRARIES  = libf77.la
+libf77_la_SOURCES = $(LIB_FSRCS) mpinetcdf_impl.h
+nodist_libf77_la_SOURCES = $(C2F_SRCS) mpifnetcdf.h
 
 EXTRA_DIST = buildiface \
 	     defs \
