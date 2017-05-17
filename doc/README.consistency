@@ -1,6 +1,7 @@
 ---------------------------------------------
 Note on parallel I/O data consistency
 ---------------------------------------------
+
 PnetCDF follows the same parallel I/O data consistency as MPI-IO standard.
 Refer the URL below for more information.
 http://www.mpi-forum.org/docs/mpi-2.2/mpi22-report/node296.htm#Node296
