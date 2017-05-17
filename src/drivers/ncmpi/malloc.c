@@ -4,11 +4,18 @@
  */
 /* $Id$ */
 
-/* These are routines for allocating and deallocating memory.
-   They should be called as NCI_Malloc(size) and
-   NCI_Free(ptr). In macro.h, they are macro-replaced to
-   NCI_Malloc_fn(size,__LINE__,__FILE__) and
-   NCI_Free_fn(ptr,__LINE__,__FILE__).
+/* These are routines for allocating and deallocating heap memory dynamically.
+   They should be called as
+       NCI_Malloc(size)
+       NCI_Calloc(nelems, esize)
+       NCI_Realloc(ptr, size)
+       NCI_Free(ptr)
+
+   In macro.h, they are macro-replaced to
+       NCI_Malloc_fn(size, __LINE__, __FILE__) and
+       NCI_Calloc_fn(nelems, esize, __LINE__, __FILE__) and
+       NCI_Realloc_fn(ptr, size, __LINE__, __func__, __FILE__)
+       NCI_Free_fn(ptr,__LINE__,__FILE__).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -19,19 +26,17 @@
 #include <stdio.h>
 #include <string.h> /* strcpy(), strlen() */
 
-#include <mpi.h>
-#include "nc.h"
-
+/* PNC_MALLOC_TRACE is set at the configure time when --enable-debug is used */
 #ifdef PNC_MALLOC_TRACE
 
 #ifdef HAVE_SEARCH_H
 #include <search.h> /* tfind(), tsearch() and tdelete() */
 #endif
 
-/* global variables for malloc tracing */
-static void       *ncmpii_mem_root;
-static MPI_Offset  ncmpii_mem_alloc;
-static MPI_Offset  ncmpii_max_mem_alloc;
+/* static variables for malloc tracing (initialized to 0s) */
+static void   *ncmpii_mem_root;
+static size_t  ncmpii_mem_alloc;
+static size_t  ncmpii_max_mem_alloc;
 
 /*----< ncmpii_init_malloc_tracing() >----------------------------------------*/
 void ncmpii_init_malloc_tracing(void)
@@ -44,7 +49,7 @@ void ncmpii_init_malloc_tracing(void)
 
 /*----< ncmpii_inq_malloc_size() >--------------------------------------------*/
 /* get the current aggregate size allocated by malloc */
-int ncmpii_inq_malloc_size(MPI_Offset *size)
+int ncmpii_inq_malloc_size(size_t *size)
 {
 #ifdef PNC_MALLOC_TRACE
     *size = ncmpii_mem_alloc;
@@ -56,7 +61,7 @@ int ncmpii_inq_malloc_size(MPI_Offset *size)
 
 /*----< ncmpii_inq_malloc_max_size() >----------------------------------------*/
 /* get the max watermark ever researched by malloc */
-int ncmpii_inq_malloc_max_size(MPI_Offset *size)
+int ncmpii_inq_malloc_max_size(size_t *size)
 {
 #ifdef PNC_MALLOC_TRACE
     *size = ncmpii_max_mem_alloc;
@@ -145,7 +150,7 @@ void ncmpii_add_mem_entry(void       *buf,
         printf("Error: tsearch()\n");
         return;
     }
-    ncmpii_mem_alloc += (MPI_Offset)size;
+    ncmpii_mem_alloc += size;
     ncmpii_max_mem_alloc = MAX(ncmpii_max_mem_alloc, ncmpii_mem_alloc);
 }
 
@@ -169,7 +174,7 @@ void ncmpii_del_mem_entry(void *buf)
         free((*found)->filename);
 
         /* subtract the space amount to be freed */
-        ncmpii_mem_alloc -= (MPI_Offset)((*found)->size);
+        ncmpii_mem_alloc -= (*found)->size;
         void *tmp = (*found)->self;
         ret = tdelete(&node, &ncmpii_mem_root, ncmpii_cmp);
         if (ret == NULL) {
@@ -193,12 +198,11 @@ void *NCI_Malloc_fn(size_t      size,
 #endif
     if (size == 0) return NULL;
     void *buf = malloc(size);
-    if (!buf) {
+    if (!buf)
 	fprintf(stderr, "malloc(%zd) failed in file %s func %s line %d\n", size, filename, func, lineno);
 #ifdef PNETCDF_DEBUG
-	MPI_Abort(MPI_COMM_WORLD, 1);
+    assert(buf != NULL);
 #endif
-    }
 #ifdef PNC_MALLOC_TRACE
     ncmpii_add_mem_entry(buf, size, lineno, func, filename);
 #endif
@@ -219,12 +223,11 @@ void *NCI_Calloc_fn(size_t      nelem,
 #endif
     if (nelem == 0 || elsize == 0) return NULL;
     void *buf =calloc(nelem, elsize);
-    if (!buf) {
+    if (!buf)
 	fprintf(stderr, "calloc(%zd, %zd) failed in file %s func %s line %d\n", nelem, elsize, filename, func, lineno);
 #ifdef PNETCDF_DEBUG
-	MPI_Abort(MPI_COMM_WORLD, 1);
+    assert(buf != NULL);
 #endif
-    }
 #ifdef PNC_MALLOC_TRACE
     ncmpii_add_mem_entry(buf, nelem * elsize, lineno, func, filename);
 #endif
@@ -248,12 +251,11 @@ void *NCI_Realloc_fn(void       *ptr,
 #endif
     if (size == 0) return NULL;
     void *buf = (void *) realloc(ptr, size);
-    if (!buf) {
+    if (!buf)
 	fprintf(stderr, "realloc failed in file %s func %s line %d\n", filename, func, lineno);
 #ifdef PNETCDF_DEBUG
-	MPI_Abort(MPI_COMM_WORLD, 1);
+    assert(buf != NULL);
 #endif
-    }
 #ifdef PNC_MALLOC_TRACE
     ncmpii_add_mem_entry(buf, size, lineno, func, filename);
 #endif

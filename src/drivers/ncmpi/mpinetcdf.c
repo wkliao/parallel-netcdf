@@ -1156,7 +1156,7 @@ ncmpii_inq_misc(void       *ncdp,
 int ncmpi_inq_malloc_size(MPI_Offset *size)
 {
 #ifdef PNC_MALLOC_TRACE
-    ncmpii_inq_malloc_size(size);
+    ncmpii_inq_malloc_size((size_t)size);
     return NC_NOERR;
 #else
     DEBUG_RETURN_ERROR(NC_ENOTENABLED)
@@ -1169,7 +1169,7 @@ int ncmpi_inq_malloc_size(MPI_Offset *size)
 int ncmpi_inq_malloc_max_size(MPI_Offset *size)
 {
 #ifdef PNC_MALLOC_TRACE
-    ncmpii_inq_malloc_max_size(size);
+    ncmpii_inq_malloc_max_size((size_t)size);
     return NC_NOERR;
 #else
     DEBUG_RETURN_ERROR(NC_ENOTENABLED)

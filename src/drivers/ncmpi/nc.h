@@ -736,10 +736,10 @@ ncmpiio_wait(NC *ncp, int io_method, int num_reqs, int *req_ids,
                 int *statuses);
 
 extern int
-ncmpii_inq_malloc_size(MPI_Offset *size);
+ncmpii_inq_malloc_size(size_t *size);
 
 extern int
-ncmpii_inq_malloc_max_size(MPI_Offset *size);
+ncmpii_inq_malloc_max_size(size_t *size);
 
 extern int
 ncmpii_inq_malloc_list(void);
