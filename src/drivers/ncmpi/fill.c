@@ -17,6 +17,8 @@
 
 #include <mpi.h>
 
+#include <common.h>
+#include "nc.h"
 #include "ncx.h"
 #include "macro.h"
 

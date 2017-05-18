@@ -22,7 +22,7 @@ dnl
 
 #include <mpi.h>
 
-#include "nc.h"
+#include <common.h>
 #include "ncx.h"
 #include "ncmpidtype.h"
 #include "macro.h"

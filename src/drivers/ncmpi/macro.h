@@ -4,26 +4,8 @@
  */
 /* $Id$ */
 
-#ifndef _H_MACRO
-#define _H_MACRO
-
-#ifndef MAX
-#define MAX(mm,nn) (((mm) > (nn)) ? (mm) : (nn))
-#endif
-#ifndef MIN
-#define MIN(mm,nn) (((mm) < (nn)) ? (mm) : (nn))
-#endif
-
-void *NCI_Malloc_fn(size_t size, int lineno, const char *func, const char *fname);
-void *NCI_Calloc_fn(size_t nelem, size_t elsize, int lineno, const char *func, const char *fname);
-void *NCI_Realloc_fn(void *ptr, size_t size, int lineno, const char *func, const char *fname);
-void  NCI_Free_fn(void *ptr, int lineno, const char *func, const char *fname);
-
-#define NCI_Malloc(a)    NCI_Malloc_fn(a,__LINE__,__func__,__FILE__)
-#define NCI_Calloc(a,b)  NCI_Calloc_fn(a,b,__LINE__,__func__,__FILE__)
-#define NCI_Realloc(a,b) NCI_Realloc_fn(a,b,__LINE__,__func__,__FILE__)
-#define NCI_Free(a)      NCI_Free_fn(a,__LINE__,__func__,__FILE__)
-
+#ifndef _MACRO_H
+#define _MACRO_H
 
 #define CHECK_MPI_ERROR(mpi_errorcode, err_msg, nc_err) {                     \
     if (mpi_errorcode != MPI_SUCCESS) {                                       \

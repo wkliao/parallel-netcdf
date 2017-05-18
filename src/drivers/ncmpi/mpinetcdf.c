@@ -18,6 +18,7 @@
 
 #include <mpi.h>
 
+#include <common.h>
 #include "nc.h"
 #include "ncx.h"
 #include "macro.h"
@@ -1148,44 +1149,5 @@ ncmpii_inq_misc(void       *ncdp,
     }
 
     return NC_NOERR;
-}
-
-/*----< ncmpi_inq_malloc_size() >--------------------------------------------*/
-/* This is an independent subroutine.
- * report the current aggregate size allocated by malloc, yet to be freed */
-int ncmpi_inq_malloc_size(MPI_Offset *size)
-{
-#ifdef PNC_MALLOC_TRACE
-    ncmpii_inq_malloc_size((size_t)size);
-    return NC_NOERR;
-#else
-    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
-#endif
-}
-
-/*----< ncmpi_inq_malloc_max_size() >----------------------------------------*/
-/* This is an independent subroutine.
- * get the max watermark ever researched by malloc (aggregated amount) */
-int ncmpi_inq_malloc_max_size(MPI_Offset *size)
-{
-#ifdef PNC_MALLOC_TRACE
-    ncmpii_inq_malloc_max_size((size_t)size);
-    return NC_NOERR;
-#else
-    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
-#endif
-}
-
-/*----< ncmpi_inq_malloc_list() >--------------------------------------------*/
-/* This is an independent subroutine.
- * walk the malloc tree and print yet-to-be-freed malloc residues */
-int ncmpi_inq_malloc_list(void)
-{
-#ifdef PNC_MALLOC_TRACE
-    ncmpii_inq_malloc_list();
-    return NC_NOERR;
-#else
-    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
-#endif
 }
 

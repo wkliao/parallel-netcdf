@@ -15,6 +15,7 @@
 
 #include <mpi.h>
 
+#include <common.h>
 #include "nc.h"
 #include "ncmpidtype.h"
 #include "macro.h"

@@ -39,6 +39,7 @@ dnl
 #include <limits.h>
 
 ifdef(`PNETCDF',`
+`#'include "pnetcdf.h"
 `#'include "ncx.h"
 `#'include "macro.h"',`
 `#'pragma GCC diagnostic ignored "-Wdeprecated"

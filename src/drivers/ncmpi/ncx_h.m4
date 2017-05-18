@@ -9,18 +9,19 @@ dnl
  */
 /* "$Id$" */
 
-#ifndef _NCX_H_
-#define _NCX_H_
+#ifndef _NCX_H
+#define _NCX_H
+
+#include <stddef.h>    /* size_t */
+#include <sys/types.h> /* off_t */
+#include <errno.h>
 
 #include <mpi.h>
 
-#include "nc.h"
-#include "ncio.h"
-#include "fbits.h"
+#include "rnd.h"
 
 /*
  * An external data representation interface.
-
  *
  * This started out as a general replacement for ONC XDR,
  * specifically, the xdrmem family of functions.
@@ -33,12 +34,6 @@ dnl
  * So, now there is a matrix of functions.
  *
  */
-
-#include "rnd.h"
-#include <stddef.h> /* size_t */
-#include <errno.h>
-#include <sys/types.h> /* off_t */
-
 
 #if defined(_CRAY) && !defined(_CRAYIEEE) && !defined(__crayx1)
 #define CRAYFLOAT 1 /* CRAY Floating point */

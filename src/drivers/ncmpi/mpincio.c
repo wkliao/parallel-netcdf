@@ -33,6 +33,7 @@
 
 #include <mpi.h>
 
+#include <common.h>
 #include "nc.h"
 #include "ncio.h"
 #include "fbits.h"

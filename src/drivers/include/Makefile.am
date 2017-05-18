@@ -7,5 +7,5 @@
 # @configure_input@
 
 
-EXTRA_DIST = utf8proc.h
+EXTRA_DIST = utf8proc.h common.h
 

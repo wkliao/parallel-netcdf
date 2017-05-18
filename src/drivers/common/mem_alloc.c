@@ -26,6 +26,9 @@
 #include <stdio.h>
 #include <string.h> /* strcpy(), strlen() */
 
+#include <common.h>
+#include <pnetcdf.h>
+
 /* PNC_MALLOC_TRACE is set at the configure time when --enable-debug is used */
 #ifdef PNC_MALLOC_TRACE
 
@@ -38,6 +41,7 @@ static void   *ncmpii_mem_root;
 static size_t  ncmpii_mem_alloc;
 static size_t  ncmpii_max_mem_alloc;
 
+#if 0
 /*----< ncmpii_init_malloc_tracing() >----------------------------------------*/
 void ncmpii_init_malloc_tracing(void)
 {
@@ -46,32 +50,6 @@ void ncmpii_init_malloc_tracing(void)
     ncmpii_mem_root      = NULL;
 }
 #endif
-
-/*----< ncmpii_inq_malloc_size() >--------------------------------------------*/
-/* get the current aggregate size allocated by malloc */
-int ncmpii_inq_malloc_size(size_t *size)
-{
-#ifdef PNC_MALLOC_TRACE
-    *size = ncmpii_mem_alloc;
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-/*----< ncmpii_inq_malloc_max_size() >----------------------------------------*/
-/* get the max watermark ever researched by malloc */
-int ncmpii_inq_malloc_max_size(size_t *size)
-{
-#ifdef PNC_MALLOC_TRACE
-    *size = ncmpii_max_mem_alloc;
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-#ifdef PNC_MALLOC_TRACE
 
 #ifndef MAX
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
@@ -106,22 +84,7 @@ void walker(const void *node, const VISIT which, const int depth) {
     if (which == preorder || which == leaf)
         printf("Warning: malloc yet to be freed (buf=%p size=%zd filename=%s func=%s line=%d)\n", f->buf, f->size, f->filename, f->func, f->lineno);
 }
-#endif
 
-/* check if there is any malloc residue */
-int ncmpii_inq_malloc_list(void)
-{
-#ifdef PNC_MALLOC_TRACE
-    /* check if malloc tree is empty */
-    if (ncmpii_mem_root != NULL)
-        twalk(ncmpii_mem_root, walker);
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-#ifdef PNC_MALLOC_TRACE
 /*----< ncmpii_add_mem_entry() >----------------------------------------------*/
 /* add a new malloc entry to the table */
 static
@@ -280,4 +243,45 @@ void NCI_Free_fn(void       *ptr,
     free(ptr);
 }
 
+
+/*----< ncmpi_inq_malloc_size() >--------------------------------------------*/
+/* This is an independent subroutine.
+ * report the current aggregate size allocated by malloc, yet to be freed */
+int ncmpi_inq_malloc_size(MPI_Offset *size)
+{
+#ifdef PNC_MALLOC_TRACE
+    *size = (MPI_Offset)ncmpii_mem_alloc;
+    return NC_NOERR;
+#else
+    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
+#endif
+}
+
+/*----< ncmpi_inq_malloc_max_size() >----------------------------------------*/
+/* This is an independent subroutine.
+ * get the max watermark ever researched by malloc (aggregated amount) */
+int ncmpi_inq_malloc_max_size(MPI_Offset *size)
+{
+#ifdef PNC_MALLOC_TRACE
+    *size = (MPI_Offset)ncmpii_max_mem_alloc;
+    return NC_NOERR;
+#else
+    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
+#endif
+}
+
+/*----< ncmpi_inq_malloc_list() >--------------------------------------------*/
+/* This is an independent subroutine.
+ * walk the malloc tree and print yet-to-be-freed malloc residues */
+int ncmpi_inq_malloc_list(void)
+{
+#ifdef PNC_MALLOC_TRACE
+    /* check if malloc tree is empty */
+    if (ncmpii_mem_root != NULL)
+        twalk(ncmpii_mem_root, walker);
+    return NC_NOERR;
+#else
+    DEBUG_RETURN_ERROR(NC_ENOTENABLED)
+#endif
+}
 

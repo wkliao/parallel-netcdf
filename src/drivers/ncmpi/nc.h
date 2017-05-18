@@ -736,35 +736,6 @@ ncmpiio_wait(NC *ncp, int io_method, int num_reqs, int *req_ids,
                 int *statuses);
 
 extern int
-ncmpii_inq_malloc_size(size_t *size);
-
-extern int
-ncmpii_inq_malloc_max_size(size_t *size);
-
-extern int
-ncmpii_inq_malloc_list(void);
-
-#ifdef PNC_MALLOC_TRACE
-void ncmpii_init_malloc_tracing(void);
-#endif
-
-extern void *
-NCI_Malloc_fn(size_t size, const int lineno, const char *func,
-              const char *filename);
-
-extern void *
-NCI_Calloc_fn(size_t nelem, size_t elsize, const int lineno, const char *func,
-              const char *filename);
-
-extern void *
-NCI_Realloc_fn(void *ptr, size_t size, const int lineno, const char *func,
-               const char *filename);
-
-extern void
-NCI_Free_fn(void *ptr, const int lineno, const char *func,
-            const char *filename);
-
-extern int
 ncmpii_inq_files_opened(int *num, int *ncids);
 
 extern MPI_Datatype

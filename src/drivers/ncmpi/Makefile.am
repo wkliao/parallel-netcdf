@@ -55,7 +55,6 @@ C_SRCS = ncmpi_dispatch.c \
          ncmpidtype.c \
          filetype.c \
          nonblocking.c   \
-         malloc.c \
          vard.c \
          fill.c \
          util.c \
