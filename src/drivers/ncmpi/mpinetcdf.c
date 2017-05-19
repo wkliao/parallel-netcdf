@@ -338,9 +338,9 @@ ncmpii_create(MPI_Comm     comm,
 
     /* open file collectively */
     err = ncmpiio_create(comm, path, cmode, env_info, ncp);
+    if (env_info != MPI_INFO_NULL) MPI_Info_free(&env_info);
     if (err != NC_NOERR) { /* fatal error */
         if (err == NC_EMULTIDEFINE_OMODE) err = NC_EMULTIDEFINE_CMODE;
-        if (env_info != MPI_INFO_NULL) MPI_Info_free(&env_info);
         ncmpii_free_NC(ncp);
         DEBUG_RETURN_ERROR(err)
     }
@@ -352,8 +352,6 @@ ncmpii_create(MPI_Comm     comm,
     ncp->numPutReqs = 0;
     ncp->get_list   = NULL;
     ncp->put_list   = NULL;
-
-    if (env_info != MPI_INFO_NULL) MPI_Info_free(&env_info);
 
     /* initialize unlimited_id as no unlimited dimension yet defined */
     ncp->dims.unlimited_id = -1;
