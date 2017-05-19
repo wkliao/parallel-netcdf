@@ -1780,8 +1780,6 @@ ncmpii_hdr_get_NC(NC *ncp)
 
     /* CDF-5's minimum header size is 4 bytes more than CDF-1 and CDF-2's */
     getbuf.size = _RNDUP( MAX(MIN_NC_XSZ+4, ncp->chunk), X_ALIGN );
-    if (getbuf.size > NC_DEFAULT_CHUNKSIZE)
-        getbuf.size = NC_DEFAULT_CHUNKSIZE;
 
     if (getbuf.size != (size_t)getbuf.size) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
     getbuf.pos = getbuf.base = (void *)NCI_Malloc((size_t)getbuf.size);

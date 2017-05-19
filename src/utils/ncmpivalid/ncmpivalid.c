@@ -829,8 +829,6 @@ val_get_NC(int fd, NC *ncp)
 
     /* CDF-5's minimum header size is 4 bytes more than CDF-1 and CDF-2's */
     getbuf.size = _RNDUP( MAX(MIN_NC_XSZ+4, ncp->chunk), X_ALIGN );
-    if (getbuf.size > NC_DEFAULT_CHUNKSIZE)
-        getbuf.size = NC_DEFAULT_CHUNKSIZE;
 
     getbuf.pos = getbuf.base = (void *)NCI_Malloc(getbuf.size);
     getbuf.index = 0;
@@ -991,7 +989,7 @@ int main(int argc, char **argv)
     }
 
     /* Allocate NC object */
-    ncp = ncmpii_new_NC(NULL);
+    ncp = ncmpii_new_NC(NULL);  /* using zero chunk size */
     if (ncp == NULL) {
         status = NC_ENOMEM;
         printf("Error at line %d when calling ncmpii_new_NC()\n",__LINE__);
