@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> /* strcpy(), strlen() */
+#include <assert.h>
 
 #include <common.h>
 #include <pnetcdf.h>
@@ -49,13 +50,6 @@ void ncmpii_init_malloc_tracing(void)
     ncmpii_max_mem_alloc = 0;
     ncmpii_mem_root      = NULL;
 }
-#endif
-
-#ifndef MAX
-#define MAX(a,b) (((a) > (b)) ? (a) : (b))
-#endif
-#ifndef MIN
-#define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
 typedef struct {
