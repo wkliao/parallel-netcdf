@@ -573,12 +573,11 @@ ncmpii_put_rec(int ncid, MPI_Offset recnum, void *const *datap);
 typedef struct bufferinfo {
     ncio       *nciop;
     MPI_Offset  offset;   /* current read/write offset in the file */
+    MPI_Offset  size;     /* size of the buffer */
     int         version;  /* 1, 2, and 5 for CDF-1, 2, and 5 respectively */
     int         safe_mode;/* 0: disabled, 1: enabled */
     void       *base;     /* beginning of read/write buffer */
     void       *pos;      /* current position in buffer */
-    MPI_Offset  size;     /* size of the buffer */
-    MPI_Offset  index;    /* index of current position in buffer */
 } bufferinfo;
 
 extern int

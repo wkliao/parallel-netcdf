@@ -917,7 +917,6 @@ hdr_fetch(bufferinfo *gbp) {
 
     memset(gbp->base, 0, (size_t)gbp->size);
     gbp->pos = gbp->base;
-    gbp->index = 0;
 
     MPI_Comm_rank(gbp->nciop->comm, &rank);
     if (rank == 0) {
@@ -937,7 +936,7 @@ hdr_fetch(bufferinfo *gbp) {
             gbp->nciop->get_size += get_size;
         }
     }
-    /* we might have had to backtrack */
+    /* we might have to backtrack */
     gbp->offset += (gbp->size - slack);
 
     if (gbp->safe_mode == 1) {
@@ -984,7 +983,6 @@ hdr_get_NCtype(bufferinfo *gbp,
 
     /* get an external unsigned 4-byte integer from the file */
     status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
-    gbp->index += X_SIZEOF_INT;
     if (status != NC_NOERR) return status;
 
     *typep = (NCtype) type;
@@ -1002,7 +1000,6 @@ hdr_get_uint32(bufferinfo *gbp,
      */
     int status = hdr_check_buffer(gbp, 4); /* size of int32 == 4 */
     if (status != NC_NOERR) return status;
-    gbp->index += 4;
 
     status = ncmpix_get_uint32((const void **)(&gbp->pos), xp);
     return status;
@@ -1019,7 +1016,6 @@ hdr_get_uint64(bufferinfo *gbp,
      */
     int status = hdr_check_buffer(gbp, 8); /* size of int64 == 8 */
     if (status != NC_NOERR) return status;
-    gbp->index += 8;
 
     status = ncmpix_get_uint64((const void **)(&gbp->pos), xp);
     return status;
@@ -1038,7 +1034,6 @@ hdr_get_nc_type(bufferinfo *gbp,
     if (status != NC_NOERR) return status;
 
     status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
-    gbp->index += X_SIZEOF_INT;
     if (status != NC_NOERR) return status;
 
     if (type != NC_BYTE    &&
@@ -1142,7 +1137,6 @@ hdr_get_NC_name(bufferinfo  *gbp,
             memcpy(cpos, gbp->pos, (size_t)strcount);
             nbytes -= strcount;
             gbp->pos = (void *)((char *)gbp->pos + strcount);
-            gbp->index += strcount;
             cpos += strcount;
             bufremain -= strcount;
         } else {
@@ -1168,7 +1162,6 @@ hdr_get_NC_name(bufferinfo  *gbp,
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
         gbp->pos = (void *)((char *)gbp->pos + padding);
-        gbp->index += padding;
     }
 
     *ncstrpp = ncstrp;
@@ -1345,7 +1338,6 @@ hdr_get_NC_attrV(bufferinfo *gbp,
             memcpy(value, gbp->pos, (size_t)attcount);
             nbytes -= attcount;
             gbp->pos = (void *)((char *)gbp->pos + attcount);
-            gbp->index += attcount;
             value = (void *)((char *)value + attcount);
             bufremain -= attcount;
         } else {
@@ -1368,7 +1360,6 @@ hdr_get_NC_attrV(bufferinfo *gbp,
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
         gbp->pos = (void *)((char *)gbp->pos + padding);
-        gbp->index += padding;
     }
 
     return NC_NOERR;
@@ -1783,7 +1774,6 @@ ncmpii_hdr_get_NC(NC *ncp)
 
     if (getbuf.size != (size_t)getbuf.size) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
     getbuf.pos = getbuf.base = (void *)NCI_Malloc((size_t)getbuf.size);
-    getbuf.index = 0;
 
     /* Fetch the next header chunk. The chunk is 'gbp->size' bytes big */
     status = hdr_fetch(&getbuf);
@@ -1796,7 +1786,6 @@ ncmpii_hdr_get_NC(NC *ncp)
     status = ncmpix_getn_text((const void **)(&getbuf.pos), sizeof(magic),
                               magic);
     if (status != NC_NOERR) return status;
-    getbuf.index += (MPI_Offset)sizeof(magic);
 
     /* check if the first three bytes are 'C','D','F' */
     if (memcmp(magic, ncmagic1, sizeof(ncmagic1)-1) != 0) {
@@ -1858,11 +1847,6 @@ ncmpii_hdr_get_NC(NC *ncp)
         nrecs = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) goto fn_exit;
-
-    if (getbuf.version < 5)
-        getbuf.index += X_SIZEOF_SIZE_T;
-    else
-        getbuf.index += X_SIZEOF_INT64;
 
     ncp->numrecs = nrecs;
 
@@ -2386,7 +2370,6 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
         if (ncp->safe_mode) fprintf(stderr,"Error: CDF magic number from root's header\n");
         return err;
     }
-    getbuf->index += (MPI_Offset)sizeof(magic);
 
     /* check if the first 3 letters are "CDF" */
     if (memcmp(magic, ncmagic1, sizeof(ncmagic1)-1) != 0) {
@@ -2494,12 +2477,6 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
             fprintf(stderr,"Error: failed to read numrecs from root's header\n");
         return err; /* should not continue */
     }
-
-    /* move the buffer point forward */
-    if (getbuf->version < 5)
-        getbuf->index += X_SIZEOF_SIZE_T;
-    else
-        getbuf->index += X_SIZEOF_INT64;
 
     root_ncp->numrecs = nrecs;
     if (root_ncp->numrecs != ncp->numrecs) {

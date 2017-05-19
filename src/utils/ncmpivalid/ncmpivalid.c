@@ -63,7 +63,6 @@ val_fetch(int fd, bufferinfo *gbp) {
 
     memset(gbp->base, 0, gbp->size);
     gbp->pos = gbp->base;
-    gbp->index = 0;
 
     if (-1 == lseek(fd, gbp->offset-slack, SEEK_SET)) {
         printf("Error at line %d: lseek %s\n",__LINE__,strerror(errno));
@@ -326,7 +325,6 @@ val_get_nc_type(int fd, bufferinfo *gbp, nc_type *typep) {
 
     /* get a 4-byte integer */
     status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
-    gbp->index += X_SIZEOF_INT;
     if (status != NC_NOERR) return status;
 
   if (   type != NC_BYTE
@@ -831,7 +829,6 @@ val_get_NC(int fd, NC *ncp)
     getbuf.size = _RNDUP( MAX(MIN_NC_XSZ+4, ncp->chunk), X_ALIGN );
 
     getbuf.pos = getbuf.base = (void *)NCI_Malloc(getbuf.size);
-    getbuf.index = 0;
 
     /* Fetch the next header chunk. The chunk is 'gbp->size' bytes big
      * netcdf_file = header data
@@ -843,7 +840,6 @@ val_get_NC(int fd, NC *ncp)
     /* First get the file format information, magic */
     memset(magic, 0, sizeof(magic));
     status = ncmpix_getn_text((const void **)(&getbuf.pos), sizeof(magic), magic);
-    getbuf.index += sizeof(magic);
 
     if (memcmp(magic, ncmagic, sizeof(ncmagic)-1) != 0) {
         printf("Error: Unknow file signature, (C D F \\001, \\002, or \\005) is expected!\n");
@@ -907,8 +903,6 @@ val_get_NC(int fd, NC *ncp)
     else
         x_sizeof_NON_NEG = 8;
 
-    /* advance buffer for 4 or 8 bytes */
-    getbuf.index += x_sizeof_NON_NEG;
     ncp->numrecs = nrecs;
 
 #ifdef HAVE_MPI_GET_ADDRESS
