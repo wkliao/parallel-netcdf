@@ -50,14 +50,6 @@
 #undef X_ALIGN
 #endif
 
-#define MAX_NC_ID 1024
-
-/* ncid corresponds to the index of IDalloc. The content of IDalloc[ncid] is
- * either 0 or 1. 1 means ncid is corresponds to an opened file. 0 for
- * otherwise. (not thread-safe)
- */
-static unsigned char IDalloc[MAX_NC_ID];
-
 inline void
 ncmpiio_free(ncio *nciop) {
     if (nciop != NULL) {
@@ -177,10 +169,10 @@ ncmpiio_create(MPI_Comm     comm,
                NC          *ncp)
 {
     ncio *nciop;
-    int i, rank, mpireturn, err;
+    int rank, mpireturn, err;
     int mpiomode = MPI_MODE_RDWR | MPI_MODE_CREATE;
 
-    /* checking path consistency is expected done in MPI-IO */
+    /* checking path consistency is expected to be done in MPI-IO */
 
     MPI_Comm_rank(comm, &rank);
 
@@ -284,18 +276,6 @@ ncmpiio_create(MPI_Comm     comm,
          */
     }
 
-    for (i=0; i<MAX_NC_ID; i++)
-        if (IDalloc[i] == 0)
-            break;
-
-    if (i == MAX_NC_ID) {
-        ncmpiio_free(nciop);
-        DEBUG_RETURN_ERROR(NC_ENFILE)
-    }
-
-    nciop->fd = i;
-    IDalloc[i] = 1;
-
     /* collective I/O mode is the default mode */
     set_NC_collectiveFh(nciop);
 
@@ -322,7 +302,7 @@ ncmpiio_open(MPI_Comm     comm,
              NC          *ncp)
 {
     ncio *nciop;
-    int i, mpireturn;
+    int mpireturn;
     int mpiomode = fIsSet(ioflags, NC_WRITE) ? MPI_MODE_RDWR : MPI_MODE_RDONLY;
 
     /* Note ioflags has been checked for consistency before entering this API.
@@ -366,15 +346,6 @@ ncmpiio_open(MPI_Comm     comm,
         ncmpiio_free(nciop);
         return ncmpii_handle_error(mpireturn, "MPI_File_open");
     }
-
-    /* check if max number of opened files is reached */
-    for (i=0; i<MAX_NC_ID && IDalloc[i] != 0; i++);
-    if (i == MAX_NC_ID) {
-        ncmpiio_free(nciop);
-        DEBUG_RETURN_ERROR(NC_ENFILE)
-    }
-    nciop->fd = i;
-    IDalloc[i] = 1;
 
     /* default mode is collective */
     set_NC_collectiveFh(nciop);
@@ -436,7 +407,6 @@ ncmpiio_close(ncio *nciop, int doUnlink) {
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_close");
     }
-    IDalloc[nciop->fd] = 0;
 
     if (doUnlink) {
         TRACE_IO(MPI_File_delete)((char *)nciop->path, nciop->mpiinfo);

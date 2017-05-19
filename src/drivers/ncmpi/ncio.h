@@ -53,12 +53,6 @@ typedef struct {
     int ioflags;
 
     /*
-     * The file descriptor of the netcdf file.
-     * This gets handed to the user as the netcdf id.
-     */
-    int fd;
-
-    /*
      * The MPI File handle and the communicator
      */
     MPI_File collective_fh;
