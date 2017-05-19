@@ -12,6 +12,10 @@ AM_CPPFLAGS  = -I${top_srcdir}/src/include
 AM_CPPFLAGS += -I${top_srcdir}/src/include
 AM_CPPFLAGS += -I${top_srcdir}/src/drivers/include
 
+if PNETCDF_DEBUG
+   AM_CPPFLAGS += -DPNETCDF_DEBUG
+endif
+
 noinst_LTLIBRARIES = libcommon.la
 
 H_SRCS = utf8proc_data.h
