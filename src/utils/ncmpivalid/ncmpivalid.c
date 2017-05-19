@@ -371,11 +371,11 @@ val_get_NC_attrV(bufferinfo *gbp, NC_attr *attrp) {
     int status;
     void *value = attrp->xvalue;
     char pad[X_ALIGN-1]; 
-    MPI_Offset nvalues = attrp->nelems, esz, padding, bufremain, attcount;
+    MPI_Offset nvalues, padding, bufremain, attcount;
     MPI_Aint pos_addr, base_addr;
 
-    esz = ncmpix_len_nctype(attrp->type);
-    padding = attrp->xsz - esz * nvalues;
+    nvalues = attrp->nelems * ncmpix_len_nctype(attrp->type);
+    padding = attrp->xsz - nvalues;
 #ifdef HAVE_MPI_GET_ADDRESS
     MPI_Get_address(gbp->pos,  &pos_addr);
     MPI_Get_address(gbp->base, &base_addr);
@@ -387,9 +387,9 @@ val_get_NC_attrV(bufferinfo *gbp, NC_attr *attrp) {
 
   while (nvalues > 0) {
     if (bufremain > 0) {
-      attcount = MIN(bufremain, esz * nvalues);
+      attcount = MIN(bufremain, nvalues);
       (void) memcpy(value, gbp->pos, attcount);
-      nvalues -= attcount/esz;
+      nvalues -= attcount;
       gbp->pos = (void *)((char *)gbp->pos + attcount);
       value = (void *)((char *)value + attcount);
       bufremain -= attcount;
@@ -403,13 +403,15 @@ val_get_NC_attrV(bufferinfo *gbp, NC_attr *attrp) {
     }
   }
  
-  memset(pad, 0, X_ALIGN-1);
-  if (memcmp(gbp->pos, pad, padding) != 0) {
-    printf("Error @ [0x%8.8Lx]: \n\tPadding should be 0x00 for the values alignment of ",
-           (long long unsigned) (((size_t) gbp->pos - (size_t) gbp->base) + gbp->offset - gbp->size)); 
-    return NC_EINVAL;
+  if (padding > 0) {
+      memset(pad, 0, X_ALIGN-1);
+      if (memcmp(gbp->pos, pad, padding) != 0) {
+        printf("Error @ [0x%8.8Lx]: \n\tPadding should be 0x00 for the values alignment of ",
+               (long long unsigned) (((size_t) gbp->pos - (size_t) gbp->base) + gbp->offset - gbp->size)); 
+        return NC_EINVAL;
+      }
+      gbp->pos = (void *)((char *)gbp->pos + padding);
   }
-  gbp->pos = (void *)((char *)gbp->pos + padding);
 
   return NC_NOERR;
 }
