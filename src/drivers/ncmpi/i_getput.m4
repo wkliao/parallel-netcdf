@@ -152,8 +152,8 @@ ncmpii_igetput_varm(NC               *ncp,
      * ptype: element data type (MPI primitive type) in buftype
      * bufcount: If it is -1, then this is called from a high-level API and in
      * this case buftype will be an MPI primitive data type. If not, then this
-     * is called from a flexible API. In that case, we recalculate bufcount to
-     * match with count[].
+     * is called from a flexible API. In the former case, we recalculate bufcount
+     * to match with count[].
      * bnelems: number of ptypes in user buffer
      * nbytes: number of bytes (in external data representation) to read/write
      * from/to the file
