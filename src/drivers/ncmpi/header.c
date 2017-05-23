@@ -730,11 +730,11 @@ hdr_put_NC_var(bufferinfo   *pbp,
          * if (varp->len != (int)varp->len) DEBUG_RETURN_ERROR(NC_EVARSIZE)
          */
         uint vsize = (uint)varp->len;
-        if (varp->len > 4294967292) { /* 2^32 - 4 bytes */
+        if (varp->len > 4294967292LL) { /* 2^32 - 4 bytes */
             /* CDF-2 specification: use 2^32-1 for vsize when the variable
              * size is larger than 2^32-4 bytes
              */
-            vsize = 4294967295;
+            vsize = 4294967295U;
         }
         status = ncmpix_put_uint32((void**)(&pbp->pos), vsize);
     }
