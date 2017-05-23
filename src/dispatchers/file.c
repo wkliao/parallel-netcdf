@@ -4,6 +4,10 @@
  */
 /* $Id$ */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -441,11 +445,14 @@ ncmpi_inq_file_format(const char *filename,
 
     *formatp = NC_FORMAT_UNKNOWN;
 
-    if ((fd = open(filename, O_RDONLY, 0700)) == -1) {
+    if ((fd = open(filename, O_RDONLY, 00400)) == -1) {
              if (errno == ENOENT)       return NC_ENOENT;
         else if (errno == EACCES)       return NC_EACCESS;
         else if (errno == ENAMETOOLONG) return NC_EBAD_FILE;
-        else                            return NC_EFILE;
+        else {
+            fprintf(stderr,"Error on opening file %s (%s)\n",filename,strerror(errno));
+            return NC_EFILE;
+        }
     }
     /* get first 8 bytes of file */
     rlen = read(fd, signature, 8);

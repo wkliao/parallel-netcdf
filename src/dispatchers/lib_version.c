@@ -4,6 +4,10 @@
  */
 /* $Id$ */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <pnetcdf.h>
 
 /* The const string below is for the RCS ident(1) command to find a string like
