@@ -408,35 +408,6 @@ int
 ncmpi_inq_file_format(const char *filename,
                       int        *formatp) /* out */
 {
-#ifdef _USE_NCMPI
-    int ncid, err;
-    PNC *pncp;
-
-    /* open file for reading its header */
-    err = ncmpi_open(MPI_COMM_SELF, filename, NC_NOWRITE, MPI_INFO_NULL, &ncid);
-    if (err != NC_NOERR) {
-        if (err == NC_ENOTNC3)
-            *formatp = NC_FORMAT_NETCDF4;
-        else if (err == NC_ENOTNC)
-            *formatp = NC_FORMAT_UNKNOWN;
-        return err;
-    }
-
-    /* obtain pncp object pointer */
-    err = PNC_check_id(ncid, &pncp);
-    if (err != NC_NOERR) return err;
-
-    if (pncp->format == 5) {
-        *formatp = NC_FORMAT_CDF5;
-    } else if (pncp->format == 2) {
-        *formatp = NC_FORMAT_CDF2;
-    } else {  /* if (pncp->format == 1) */
-        *formatp = NC_FORMAT_CLASSIC;
-    }
-    err = ncmpi_close(ncid);
-
-    return err;
-#else
     char *cdf_signature="CDF";
     char *hdf5_signature="\211HDF\r\n\032\n";
     char signature[8];
@@ -445,6 +416,10 @@ ncmpi_inq_file_format(const char *filename,
 
     *formatp = NC_FORMAT_UNKNOWN;
 
+    /* must include config.h on 32-bit machines, as AC_SYS_LARGEFILE is called
+     * at the configure time and it defines _FILE_OFFSET_BITS to 64 if large
+     * file feature is supported.
+     */
     if ((fd = open(filename, O_RDONLY, 00400)) == -1) {
              if (errno == ENOENT)       return NC_ENOENT;
         else if (errno == EACCES)       return NC_EACCESS;
@@ -479,7 +454,6 @@ ncmpi_inq_file_format(const char *filename,
     }
 
     return NC_NOERR;
-#endif
 }
 
 /*----< ncmpi_inq_version() >-----------------------------------------------*/
