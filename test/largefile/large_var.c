@@ -32,9 +32,9 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define FOUR_G 4294967296
-#define TWO_G  2147483648
-#define ONE_G  1073741824
+#define FOUR_G 4294967296LL
+#define TWO_G  2147483648LL
+#define ONE_G  1073741824LL
 
 #define NZ 4
 #define NY 10
