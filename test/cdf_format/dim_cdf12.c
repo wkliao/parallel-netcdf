@@ -60,14 +60,6 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define FOUR_G 4294967296
-#define TWO_G  2147483648
-#define ONE_G  1073741824
-
-#define NZ 4
-#define NY 10
-#define NX TWO_G
-
 #define ERR if (err!=NC_NOERR) {printf("Error at line %d: err=%s (%s)\n", __LINE__,nc_err_code_name(err),ncmpi_strerror(err)); nerrs++;}
 
 #define ERR_EXPECT(exp) if (err!=exp) {printf("Error at line %d: expect error %s but got %s\n", __LINE__,nc_err_code_name(exp),nc_err_code_name(err)); nerrs++;}
