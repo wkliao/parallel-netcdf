@@ -13,11 +13,8 @@ SUBDIRS = common \
           cdf_format \
           header \
           testcases \
-          nonblocking
-
-if BUILD_LARGE_FILE_TEST
-SUBDIRS += largefile
-endif
+          nonblocking \
+          largefile
 
 if HAS_MPICXX
 SUBDIRS += CXX

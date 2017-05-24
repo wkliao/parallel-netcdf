@@ -1233,7 +1233,7 @@ AC_ARG_ENABLE([large-file-test],
                      "make testing" can run very slow. @<:@default: disabled@:>@])],
     [large_file_test=${enableval}], [large_file_test=no]
 )
-AM_CONDITIONAL(BUILD_LARGE_FILE_TEST, [test x$large_file_test = xyes])
+AM_CONDITIONAL(RUN_LARGE_FILE_TEST, [test x$large_file_test = xyes])
 
 dnl build benchmark programs from within PnetCDF
 AM_CONDITIONAL(BUILD_BENCHMARKS_IN_PNETCDF, [test yes = yes])

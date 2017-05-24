@@ -60,7 +60,8 @@ TESTPROGRAMS = ncmpi_vars_null_stride \
                check_type \
                test_erange \
                scalar \
-               null_args
+               null_args \
+               redef1
 
 M4_SRCS  = erange_fill.m4
 
@@ -100,13 +101,15 @@ if HAVE_MPI_MOD
     test_vardf90_SOURCES = test_vardf90.f90
        varn_real_SOURCES = varn_real.f90
 endif
-if BUILD_LARGE_FILE_TEST
+   check_PROGRAMS = $(TESTPROGRAMS)
+   check_PROGRAMS += bigrecords
+if RUN_LARGE_FILE_TEST
    TESTPROGRAMS += bigrecords
+endif
    bigrecords_SOURCES = bigrecords.f
+else
+   check_PROGRAMS = $(TESTPROGRAMS)
 endif
-endif
-
-check_PROGRAMS = $(TESTPROGRAMS) redef1
 
 # autimake 1.11.3 has not yet implemented AM_TESTS_ENVIRONMENT
 # For newer versions, we can use AM_TESTS_ENVIRONMENT instead

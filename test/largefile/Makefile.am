@@ -10,8 +10,10 @@ SUFFIXES = .o .c
 
 AM_DEFAULT_SOURCE_EXT = .c
 
-AM_CPPFLAGS = -I$(srcdir)/../common -I$(top_builddir)/src/include
-LDADD = $(top_builddir)/src/libs/libpnetcdf.la ../common/libtestutils.la
+AM_CPPFLAGS  = -I$(srcdir)/../common
+AM_CPPFLAGS += -I$(top_builddir)/src/include
+LDADD  = $(top_builddir)/src/libs/libpnetcdf.la
+LDADD += ../common/libtestutils.la
 
 AM_CFLAGS =
 if IS_BIGENDIAN
@@ -30,6 +32,18 @@ TESTPROGRAMS = large_files large_var
 
 check_PROGRAMS = $(TESTPROGRAMS)
 
+EXTRA_DIST = seq_runs.sh
+
+CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
+
+../common/libtestutils.la:
+	set -e; cd ../common && $(MAKE) $(MFLAGS) tests
+
+TESTS =
+
+if RUN_LARGE_FILE_TEST
+TESTS += seq_runs.sh
+
 # autimake 1.11.3 has not yet implemented AM_TESTS_ENVIRONMENT
 # For newer versions, we can use AM_TESTS_ENVIRONMENT instead
 # AM_TESTS_ENVIRONMENT  = TESTPROGRAMS="$(TESTPROGRAMS)" ; export TESTPROGRAMS;
@@ -38,15 +52,6 @@ check_PROGRAMS = $(TESTPROGRAMS)
 TESTS_ENVIRONMENT  = TESTPROGRAMS="$(TESTPROGRAMS)" ; export TESTPROGRAMS;
 TESTS_ENVIRONMENT += TESTSEQRUN="$(TESTSEQRUN)" ; export TESTSEQRUN;
 TESTS_ENVIRONMENT += TESTOUTDIR="$(TESTOUTDIR)" ; export TESTOUTDIR;
-
-TESTS = seq_runs.sh
-
-EXTRA_DIST = seq_runs.sh
-
-CLEANFILES = *.nc core core.* *.gcda *.gcno *.gcov gmon.out
-
-../common/libtestutils.la:
-	set -e; cd ../common && $(MAKE) $(MFLAGS) tests
 
 # Some of these tests are designed to run on one processes,
 # Run them on 4 processes to see if they can handle well
@@ -74,6 +79,9 @@ ptest6: $(TESTPROGRAMS)
 	) ; done
 
 ptests: ptest2 ptest4 ptest6
+else
+ptest ptest2 ptest4 ptest6 ptests:
+endif
 ptest8 ptest10:
 
 # build check targets but not invoke
