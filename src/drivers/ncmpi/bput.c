@@ -16,6 +16,7 @@
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"

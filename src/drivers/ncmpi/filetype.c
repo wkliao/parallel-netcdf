@@ -17,10 +17,10 @@
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "macro.h"
 
 
 #if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET

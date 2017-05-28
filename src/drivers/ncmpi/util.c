@@ -11,8 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
+
+#include <pnc_debug.h>
 #include "nc.h"
-#include "macro.h"
 #include "ncmpidtype.h"
 #include "ncx.h"
 

@@ -17,11 +17,11 @@
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "rnd.h"
 #include "ncx.h"
-#include "macro.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif

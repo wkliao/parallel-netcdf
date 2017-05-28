@@ -22,12 +22,12 @@ dnl
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
 #include "fbits.h"
 #include "rnd.h"
-#include "macro.h"
 #include "utf8proc.h"
 
 include(`foreach.m4')dnl

@@ -27,9 +27,9 @@ dnl
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include "nc.h"
 #include "ncx.h"
-#include "macro.h"
 
 /*
  *  Datatype Mapping:

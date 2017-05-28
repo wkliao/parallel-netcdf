@@ -8,12 +8,15 @@
 # include <config.h>
 #endif
 
-#include <common.h>
-#include "subfile.h"
+#include <stdlib.h>
 #ifdef TAU_SSON
 #include <TAU.h>
 #endif
-#include <stdlib.h>
+
+#include <pnc_debug.h>
+#include <common.h>
+#include "macro.h"
+#include "subfile.h"
 #include "ncmpidtype.h"
 
 static int DEBUG = 1;

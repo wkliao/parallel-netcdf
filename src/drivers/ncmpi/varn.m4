@@ -22,11 +22,11 @@ dnl
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
 #include "ncmpidtype.h"
-#include "macro.h"
 
 /*----< ncmpii_getput_varn() >------------------------------------------------*/
 static int

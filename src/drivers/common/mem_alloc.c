@@ -27,8 +27,9 @@
 #include <string.h> /* strcpy(), strlen() */
 #include <assert.h>
 
-#include <common.h>
 #include <pnetcdf.h>
+#include <pnc_debug.h>
+#include <common.h>
 
 /* PNC_MALLOC_TRACE is set at the configure time when --enable-debug is used */
 #ifdef PNC_MALLOC_TRACE

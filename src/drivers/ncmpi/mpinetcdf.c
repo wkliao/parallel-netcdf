@@ -18,10 +18,10 @@
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "macro.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -162,7 +162,7 @@ ncmpii_create(MPI_Comm     comm,
               MPI_Info     info,
               void       **ncpp)
 {
-    int i, err, status, safe_mode=0, mpireturn, default_format, root_cmode;
+    int i, err, safe_mode=0, mpireturn, default_format;
     char *env_str;
     MPI_Info   env_info=MPI_INFO_NULL;
     MPI_Offset chunksize=NC_DEFAULT_CHUNKSIZE;
@@ -183,35 +183,11 @@ ncmpii_create(MPI_Comm     comm,
          * be '\0' (null character). In this case, safe_mode is enabled */
     }
 
-    /* path's validity is checked in MPI-IO with error code MPI_ERR_BAD_FILE
-     * path consistency is checked in MPI-IO with error code MPI_ERR_NOT_SAME
-     */
-    if (path == NULL || *path == '\0') DEBUG_RETURN_ERROR(NC_EBAD_FILE)
+    /* path's validity and cmode consistency have been checked in ncmpi_create()
+     * in src/dispatchers/file.c */
 
     /* check default format */
     ncmpi_inq_default_format(&default_format);
-
-    /* check if cmode is consistent with root's */
-    root_cmode = cmode;
-    TRACE_COMM(MPI_Bcast)(&root_cmode, 1, MPI_INT, 0, comm);
-    if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Bcast");
-
-    /* only root's cmode matters */
-    status = NC_NOERR;
-    if (root_cmode != cmode) {
-        cmode = root_cmode;
-        DEBUG_ASSIGN_ERROR(status, NC_EMULTIDEFINE_CMODE)
-    }
-
-    if (safe_mode) { /* sync status among all processes */
-        err = status;
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
-    }
-    /* continue to use root's cmode to create the file, but will report cmode
-     * inconsistency error, if there is any */
 
 #if SIZEOF_MPI_OFFSET <  8
     /* check cmode */
@@ -369,7 +345,7 @@ ncmpii_create(MPI_Comm     comm,
 
     *ncpp = (void*)ncp;
 
-    return status;
+    return NC_NOERR;
 }
 
 /*----< ncmpii_open() >------------------------------------------------------*/
@@ -380,7 +356,7 @@ ncmpii_open(MPI_Comm    comm,
             MPI_Info    info,
             void       **ncpp)
 {
-    int i, err, status, safe_mode=0, mpireturn, root_omode;
+    int i, err, status=NC_NOERR, safe_mode=0, mpireturn;
     char *env_str;
     MPI_Info   env_info=MPI_INFO_NULL;
     MPI_Offset chunksize=NC_DEFAULT_CHUNKSIZE;
@@ -404,36 +380,8 @@ ncmpii_open(MPI_Comm    comm,
          * be '\0' (null character). In this case, safe_mode is enabled */
     }
 
-    /* path's validity is checked in MPI-IO with error code MPI_ERR_BAD_FILE
-     * path consistency is checked in MPI-IO with error code MPI_ERR_NOT_SAME
-     */
-    if (path == NULL || *path == '\0') DEBUG_RETURN_ERROR(NC_EBAD_FILE)
-
-    /* check if omode is consistent with root's */
-
-    /* Note if omode contains NC_NOWRITE, it is equivalent to NC_CLOBBER.
-     * In pnetcdf.h, they both are defined the same value, 0.
-     * Only root's omode matters.
-     */
-    root_omode = omode;
-    TRACE_COMM(MPI_Bcast)(&root_omode, 1, MPI_INT, 0, comm);
-    if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Bcast");
-
-    status = NC_NOERR;
-    if (root_omode != omode) {
-        omode = root_omode;
-        DEBUG_ASSIGN_ERROR(status, NC_EMULTIDEFINE_OMODE)
-    }
-
-    if (safe_mode) { /* sync status among all processes */
-        err = status;
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
-    }
-    /* continue to use root's omode to open the file, but will report omode
-     * inconsistency error, if there is any */
+    /* path's validity and omode consistency have been checked in ncmpi_open()
+     * in src/dispatchers/file.c */
 
     /* NC_DISKLESS is not supported yet */
     if (omode & NC_DISKLESS) DEBUG_RETURN_ERROR(NC_EINVAL_OMODE)

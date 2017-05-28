@@ -22,10 +22,10 @@ dnl
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "ncx.h"
 #include "ncmpidtype.h"
-#include "macro.h"
 
 
 /* buffer layers:

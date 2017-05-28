@@ -38,20 +38,6 @@
 #define WRITE_REQ 0
 #define READ_REQ  1
 
-/* C macros for TRACE MPI calls */
-#ifdef PNETCDF_TRACE_MPI_COMM
-#define TRACE_COMM(x) printf("TRACE-MPI-COMM: FILE %s FUNC %s() LINE %d calling %s()\n",__FILE__,__func__,__LINE__,#x),mpireturn=x
-#else
-#define TRACE_COMM(x) mpireturn=x
-#endif
-
-#ifdef PNETCDF_TRACE_MPI_IO
-#define TRACE_IO(x) printf("TRACE-MPI-IO:   FILE %s FUNC %s() LINE %d calling %s()\n",__FILE__,__func__,__LINE__,#x),mpireturn=x
-#else
-#define TRACE_IO(x) mpireturn=x
-#endif
-
-
 /* XXX: this seems really low.  do we end up spending a ton of time mallocing?
  * could we reduce that by increasing this to something 21st century? */
 #ifndef NC_ARRAY_GROWBY

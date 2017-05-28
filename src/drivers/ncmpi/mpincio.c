@@ -33,12 +33,12 @@
 
 #include <mpi.h>
 
+#include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
 #include "ncio.h"
 #include "fbits.h"
 #include "rnd.h"
-#include "macro.h"
 
 #if !defined(NDEBUG) && !defined(X_INT_MAX)
 #define  X_INT_MAX INT_MAX

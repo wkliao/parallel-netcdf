@@ -7,54 +7,6 @@
 #ifndef _MACRO_H
 #define _MACRO_H
 
-#define CHECK_MPI_ERROR(mpi_errorcode, err_msg, nc_err) {                     \
-    if (mpi_errorcode != MPI_SUCCESS) {                                       \
-        char errorString[MPI_MAX_ERROR_STRING];                               \
-        int rank, errorStringLen;                                             \
-        MPI_Comm_rank(ncp->nciop->comm, &rank);                               \
-        MPI_Error_string(mpi_errorcode, errorString, &errorStringLen);        \
-        printf("%2d: MPI Failure at line %d of %s (%s : %s)\n",               \
-               rank, __LINE__, __FILE__, err_msg, errorString);               \
-        mpi_err = nc_err;                                                     \
-    }                                                                         \
-}
-
-#ifdef PNETCDF_DEBUG
-#define DEBUG_RETURN_ERROR(err) {                                       \
-    char *_env_str = getenv("PNETCDF_VERBOSE_DEBUG_MODE");              \
-    if (_env_str != NULL && *_env_str != '0') {                         \
-        int _rank;                                                      \
-        MPI_Comm_rank(MPI_COMM_WORLD, &_rank);                          \
-        fprintf(stderr, "Rank %d: %s error at line %d of %s in %s\n",   \
-        _rank,ncmpi_strerrno(err),__LINE__,__func__,__FILE__);          \
-    }                                                                   \
-    return err;                                                         \
-}
-#define DEBUG_ASSIGN_ERROR(status, err) {                               \
-    char *_env_str = getenv("PNETCDF_VERBOSE_DEBUG_MODE");              \
-    if (_env_str != NULL && *_env_str != '0') {                         \
-        int _rank;                                                      \
-        MPI_Comm_rank(MPI_COMM_WORLD, &_rank);                          \
-        fprintf(stderr, "Rank %d: %s error at line %d of %s in %s\n",   \
-        _rank,ncmpi_strerrno(err),__LINE__,__func__,__FILE__);          \
-    }                                                                   \
-    status = err;                                                       \
-}
-#define DEBUG_TRACE_ERROR {                                             \
-    char *_env_str = getenv("PNETCDF_VERBOSE_DEBUG_MODE");              \
-    if (_env_str != NULL && *_env_str != '0') {                         \
-        int _rank;                                                      \
-        MPI_Comm_rank(MPI_COMM_WORLD, &_rank);                          \
-        fprintf(stderr, "Rank %d: %s error at line %d of %s in %s\n",   \
-        _rank,ncmpi_strerrno(err),__LINE__,__func__,__FILE__);          \
-    }                                                                   \
-}
-#else
-#define DEBUG_RETURN_ERROR(err) return err;
-#define DEBUG_ASSIGN_ERROR(status, err) status = err;
-#define DEBUG_TRACE_ERROR
-#endif
-
 #define GET_ONE_COUNT(count) {                                                \
     int _i;                                                                   \
     count = (MPI_Offset*) NCI_Malloc((size_t)varp->ndims * SIZEOF_MPI_OFFSET);\
