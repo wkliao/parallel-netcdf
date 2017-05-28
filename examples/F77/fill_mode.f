@@ -204,6 +204,7 @@
           ! write to the 2nd record
           err = nfmpi_put_vara_int_all(ncid, rec_varid, starts, counts,
      +                                 buf)
+          call check(err, 'In nfmpi_put_vara_int_all: ')
 
           ! close the file
           err = nfmpi_close(ncid)
