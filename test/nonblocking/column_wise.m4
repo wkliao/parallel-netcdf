@@ -81,8 +81,6 @@ typedef char text;
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
 
-#define ERR {if(err!=NC_NOERR){nerrs++; printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));}}
-
 define(`TEST_COLUMN_WISE',`dnl
 static
 int test_column_wise_$1(char *filename, int cdf)
@@ -101,17 +99,17 @@ int test_column_wise_$1(char *filename, int cdf)
     else if (cdf == NC_FORMAT_CDF5)
         cmode |= NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* the global array is NY * (NX * nprocs) */
     G_NX  = NX * nprocs;
     myOff = NX * rank;
     myNX  = NX;
 
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", G_NX, &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 2, dimid, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", G_NX, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 2, dimid, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* First, fill the entire array with zeros, using a blocking I/O.
        Every process writes a subarray of size NY * myNX */
@@ -139,7 +137,7 @@ int test_column_wise_$1(char *filename, int cdf)
     num_reqs = 0;
     for (i=0; i<myNX; i++) {
         err = ncmpi_iput_vara_$1(ncid, varid, start, count, buf[i],
-                                 &reqs[num_reqs++]); ERR
+                                 &reqs[num_reqs++]); CHECK_ERR
         start[1] += nprocs;
     }
 
@@ -155,7 +153,7 @@ int test_column_wise_$1(char *filename, int cdf)
      * changed to use a number > NC_BYTE_SWAP_BUFFER_SIZE/sizeof(int), say
      * 1025
      */
-    err = ncmpi_cancel(ncid, num_reqs, reqs, sts); ERR
+    err = ncmpi_cancel(ncid, num_reqs, reqs, sts); CHECK_ERR
 
     /* check if write buffer contents have been altered after cancelling */
     for (i=0; i<myNX; i++) {
@@ -173,7 +171,7 @@ int test_column_wise_$1(char *filename, int cdf)
     num_reqs = 0;
     for (i=0; i<myNX; i++) {
         err = ncmpi_iput_vara_$1(ncid, varid, start, count, buf[i],
-                                 &reqs[num_reqs++]); ERR
+                                 &reqs[num_reqs++]); CHECK_ERR
         start[1] += nprocs;
     }
 
@@ -184,7 +182,7 @@ int test_column_wise_$1(char *filename, int cdf)
         reqs[2*i+1] = tmp;
     }
 
-    err = ncmpi_wait_all(ncid, num_reqs, reqs, sts); ERR
+    err = ncmpi_wait_all(ncid, num_reqs, reqs, sts); CHECK_ERR
 
     /* check if write buffer contents have been altered after wait */
     for (i=0; i<myNX; i++) {
@@ -221,21 +219,21 @@ int test_column_wise_$1(char *filename, int cdf)
     num_reqs = 0;
     for (i=0; i<myNX; i++) {
         err = ncmpi_iget_vara_$1(ncid, varid, start, count, buf[i],
-                                 &reqs[num_reqs++]); ERR
+                                 &reqs[num_reqs++]); CHECK_ERR
         start[1] += nprocs;
     }
     /* this test is to see if cancelling free up all the internal malloc */
-    err = ncmpi_cancel(ncid, num_reqs, reqs, sts); ERR
+    err = ncmpi_cancel(ncid, num_reqs, reqs, sts); CHECK_ERR
 
     /* post iget requests again */
     start[1] = rank;
     num_reqs = 0;
     for (i=0; i<myNX; i++) {
         err = ncmpi_iget_vara_$1(ncid, varid, start, count, buf[i],
-                                 &reqs[num_reqs++]); ERR
+                                 &reqs[num_reqs++]); CHECK_ERR
         start[1] += nprocs;
     }
-    err = ncmpi_wait_all(ncid, num_reqs, reqs, sts); ERR
+    err = ncmpi_wait_all(ncid, num_reqs, reqs, sts); CHECK_ERR
 
     /* check status of all requests */
     for (i=0; i<num_reqs; i++)
@@ -256,7 +254,7 @@ int test_column_wise_$1(char *filename, int cdf)
         }
     }
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     free(sts);
     free(reqs);

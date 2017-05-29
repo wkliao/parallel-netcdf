@@ -13,11 +13,6 @@
 
 #include <testutils.h>
 
-#define PRINT_ERR_ON_SCREEN
-
-#define ERRCODE 2
-#define ERR {if (err!=NC_NOERR) {printf("Error at line %d: %s\n", __LINE__, ncmpi_strerror(err)); nerrs++;}}
-
 /*----< main() >------------------------------------------------------------*/
 int main(int argc, char **argv)
 {
@@ -55,13 +50,13 @@ int main(int argc, char **argv)
 #endif
 
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER | NC_64BIT_DATA,
-                       MPI_INFO_NULL, &ncid); ERR
+                       MPI_INFO_NULL, &ncid); CHECK_ERR
 
     /* define a variable of a 6 x 4 integer array in the nc file */
-    err = ncmpi_def_dim(ncid, "Y", 6, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 4, &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var", NC_INT, 2, dimid, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", 6, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 4, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 2, dimid, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* create a 6 x 4 integer variable in the file with contents:
            0,  1,  2,  3,
@@ -76,7 +71,7 @@ int main(int argc, char **argv)
     start[0] = 0; start[1] = 0;
     count[0] = 6; count[1] = 4;
     if (rank > 0) count[0] = count[1] = 0;
-    err = ncmpi_put_vara_int_all(ncid, varid, start, count, &var[0][0]); ERR
+    err = ncmpi_put_vara_int_all(ncid, varid, start, count, &var[0][0]); CHECK_ERR
 
     if (nprocs > 1) MPI_Barrier(MPI_COMM_WORLD);
 
@@ -86,13 +81,13 @@ int main(int argc, char **argv)
       imap[0] = 1;   imap[1] = 6;   /* would be {4, 1} if not transposing */
 #define TEST_NON_BLOCKING_API
 #ifdef TEST_NON_BLOCKING_API
-    err = ncmpi_iget_varm_float(ncid, varid, start, count, stride, imap, &rh[0][0], &req); ERR
+    err = ncmpi_iget_varm_float(ncid, varid, start, count, stride, imap, &rh[0][0], &req); CHECK_ERR
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
 
-    if (status != NC_NOERR) ERR
+    err = status; CHECK_ERR
 #else
-    err = ncmpi_get_varm_float_all(ncid, varid, start, count, stride, imap, &rh[0][0]); ERR
+    err = ncmpi_get_varm_float_all(ncid, varid, start, count, stride, imap, &rh[0][0]); CHECK_ERR
 #endif
 
     /* check the contents of read */
@@ -131,7 +126,7 @@ int main(int argc, char **argv)
     start[0] = 0; start[1] = 0;
     count[0] = 6; count[1] = 4;
     if (rank > 0) count[0] = count[1] = 0;
-    err = ncmpi_put_vara_int_all(ncid, varid, start, count, &var[0][0]); ERR
+    err = ncmpi_put_vara_int_all(ncid, varid, start, count, &var[0][0]); CHECK_ERR
 
     /* set the contents of the write buffer varT, a 4 x 6 char array
           50, 51, 52, 53, 54, 55,
@@ -148,13 +143,13 @@ int main(int argc, char **argv)
     imap[0]   = 1; imap[1]   = 6;   /* would be {4, 1} if not transposing */
     if (rank > 0) count[0] = count[1] = 0;
 #ifdef TEST_NON_BLOCKING_API
-    err = ncmpi_iput_varm_schar(ncid, varid, start, count, stride, imap, &varT[0][0], &req); ERR
+    err = ncmpi_iput_varm_schar(ncid, varid, start, count, stride, imap, &varT[0][0], &req); CHECK_ERR
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
 
-    if (status != NC_NOERR) ERR
+    err = status; CHECK_ERR
 #else
-    err = ncmpi_put_varm_schar_all(ncid, varid, start, count, stride, imap, &varT[0][0]); ERR
+    err = ncmpi_put_varm_schar_all(ncid, varid, start, count, stride, imap, &varT[0][0]); CHECK_ERR
 #endif
 
     /* the output from command "ncmpidump -v var test.nc" should be:
@@ -180,7 +175,7 @@ int main(int argc, char **argv)
             }
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

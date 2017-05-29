@@ -16,6 +16,13 @@
 #include <string.h>
 #include <limits.h>
 
+#define CHECK_ERR { \
+    if (err != NC_NOERR) { \
+        nerrs++; \
+        printf("Error: line %d in %s (%s)\n", __LINE__,__FILE__,nc_err_code_name(err)); \
+    } \
+}
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif

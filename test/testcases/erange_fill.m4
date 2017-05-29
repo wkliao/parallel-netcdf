@@ -29,8 +29,6 @@
 
 #define LEN 10
 
-#define ERR {if(err!=NC_NOERR){printf("Error at %s line %d: %s\n",__func__,__LINE__, ncmpi_strerror(err)); nerrs++;}}
-
 #define ERR_EXPECT(expect) { \
     if (err != expect) { \
         printf("Error at %s line %d: expect %s but got %s\n", \
@@ -84,13 +82,13 @@ int test_default_fill_mode(char* filename) {
     MPI_Comm comm=MPI_COMM_WORLD;
 
     /* create a new file */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); ERR
-    err = ncmpi_set_fill(ncid, NC_FILL, &old_mode); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); CHECK_ERR
+    err = ncmpi_set_fill(ncid, NC_FILL, &old_mode); CHECK_ERR
     if (old_mode == NC_FILL) {
         printf("Error at %s line %d: expected NC_NOFILL but got NC_FILL\n",__func__,__LINE__);
         nerrs++;
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 
@@ -104,17 +102,17 @@ int test_default_fill_$1(char* filename) {
     MPI_Comm comm=MPI_COMM_WORLD;
 
     /* create a new file */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); ERR
-    err = ncmpi_set_fill(ncid, NC_FILL, NULL); ERR
-    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); ERR
-    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); CHECK_ERR
+    err = ncmpi_set_fill(ncid, NC_FILL, NULL); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* reopen the file and check the contents of variable */
     omode = NC_NOWRITE;
-    err = ncmpi_open(comm, filename, omode, info, &ncid); ERR
-    err = ncmpi_inq_varid(ncid, "var", &varid); ERR
-    err = GET_VAR($1)(ncid, varid, buf); ERR
+    err = ncmpi_open(comm, filename, omode, info, &ncid); CHECK_ERR
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
+    err = GET_VAR($1)(ncid, varid, buf); CHECK_ERR
     for (i=0; i<LEN; i++) {
         if (buf[i] != NC_FILL_VALUE($1)) {
             printf("Error at %s line %d: expect buf[%d]=IFMT($1) but got IFMT($1)\n",
@@ -122,7 +120,7 @@ int test_default_fill_$1(char* filename) {
             nerrs++;
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 ')dnl
@@ -139,20 +137,20 @@ int test_user_fill_$1(char* filename, $1 fillv) {
     MPI_Comm comm=MPI_COMM_WORLD;
 
     /* create a new file */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); ERR
-    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); CHECK_ERR
     /* put attribute _FillValue does not automatically enable file mode */
-    err = ncmpi_put_att(ncid, varid, "_FillValue", NC_TYPE($1), 1, &fillv); ERR
-    /* err = ncmpi_def_var_fill(ncid, varid, 0, &fillv); ERR */
-    err = ncmpi_def_var_fill(ncid, varid, 0, NULL); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_put_att(ncid, varid, "_FillValue", NC_TYPE($1), 1, &fillv); CHECK_ERR
+    /* err = ncmpi_def_var_fill(ncid, varid, 0, &fillv); CHECK_ERR */
+    err = ncmpi_def_var_fill(ncid, varid, 0, NULL); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* reopen the file and check the contents of variable */
     omode = NC_NOWRITE;
-    err = ncmpi_open(comm, filename, omode, info, &ncid); ERR
-    err = ncmpi_inq_varid(ncid, "var", &varid); ERR
-    err = GET_VAR($1)(ncid, varid, buf); ERR
+    err = ncmpi_open(comm, filename, omode, info, &ncid); CHECK_ERR
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
+    err = GET_VAR($1)(ncid, varid, buf); CHECK_ERR
     for (i=0; i<LEN; i++) {
         if (buf[i] != fillv) {
             printf("Error at %s line %d: expect buf[%d]=IFMT($1) but got IFMT($1)\n",
@@ -160,7 +158,7 @@ int test_user_fill_$1(char* filename, $1 fillv) {
             nerrs++;
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 ')dnl
@@ -177,32 +175,32 @@ int test_erange_put_$1_$2(char* filename) {
     MPI_Comm comm=MPI_COMM_WORLD;
 
     /* create a new file */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); ERR
-    err = ncmpi_set_fill(ncid, NC_FILL, NULL); ERR
-    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_TYPE($1), 1, &dimid, &varid1); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_TYPE($1), 1, &dimid, &varid2); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); CHECK_ERR
+    err = ncmpi_set_fill(ncid, NC_FILL, NULL); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_TYPE($1), 1, &dimid, &varid1); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_TYPE($1), 1, &dimid, &varid2); CHECK_ERR
     /* use non-default fill value */
-    err = ncmpi_put_att(ncid, varid2, "_FillValue", NC_TYPE($1), 1, &fillv); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_put_att(ncid, varid2, "_FillValue", NC_TYPE($1), 1, &fillv); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
-    err = ncmpi_inq_format(ncid, &cdf); ERR
+    err = ncmpi_inq_format(ncid, &cdf); CHECK_ERR
 
     /* put data with ERANGE values */
     $2 wbuf[LEN];
     for (i=0; i<LEN; i++) wbuf[i] = ($2) ifelse(index(`$1',`u'), 0, `-1', `XTYPE_MAX($2)');
     err = PUT_VAR($2)(ncid, varid1, wbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
     err = PUT_VAR($2)(ncid, varid2, wbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* reopen the file and check the contents of variable */
     omode = NC_NOWRITE;
-    err = ncmpi_open(comm, filename, omode, info, &ncid); ERR
-    err = ncmpi_inq_varid(ncid, "var1", &varid1); ERR
-    err = GET_VAR($1)(ncid, varid1, buf); ERR
+    err = ncmpi_open(comm, filename, omode, info, &ncid); CHECK_ERR
+    err = ncmpi_inq_varid(ncid, "var1", &varid1); CHECK_ERR
+    err = GET_VAR($1)(ncid, varid1, buf); CHECK_ERR
     for (i=0; i<LEN; i++) {
         $1 expect = ($1)NC_FILL_VALUE($1);
         ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf != NC_FORMAT_CDF5) expect = ($1)wbuf[i];')')
@@ -213,8 +211,8 @@ int test_erange_put_$1_$2(char* filename) {
         }
     }
     /* test non-default fill value */
-    err = ncmpi_inq_varid(ncid, "var2", &varid2); ERR
-    err = GET_VAR($1)(ncid, varid2, buf); ERR
+    err = ncmpi_inq_varid(ncid, "var2", &varid2); CHECK_ERR
+    err = GET_VAR($1)(ncid, varid2, buf); CHECK_ERR
     for (i=0; i<LEN; i++) {
         $1 expect = fillv;
         ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf != NC_FORMAT_CDF5) expect = ($1)wbuf[i];')')
@@ -224,7 +222,7 @@ int test_erange_put_$1_$2(char* filename) {
             nerrs++;
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 ')dnl
@@ -247,28 +245,28 @@ int test_erange_get_$1_$2(char* filename) {
     MPI_Comm comm=MPI_COMM_WORLD;
 
     /* create a new file */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); ERR
-    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", LEN, &dimid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_TYPE($1), 1, &dimid, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
-    err = ncmpi_inq_format(ncid, &cdf); ERR
+    err = ncmpi_inq_format(ncid, &cdf); CHECK_ERR
 
     /* write MAX values */
     for (i=0; i<LEN; i++)
         wbuf[i] = ($1) ifelse(index(`$1',`u'), 0,`XTYPE_MAX($1)',`ifelse(index(`$2',`u'), 0,`-1', `XTYPE_MAX($1)')');
-    err = PUT_VAR($1)(ncid, varid, wbuf); ERR
-    err = ncmpi_close(ncid); ERR
+    err = PUT_VAR($1)(ncid, varid, wbuf); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* reopen the file and check the contents of variable */
     omode = NC_NOWRITE;
-    err = ncmpi_open(comm, filename, omode, info, &ncid); ERR
-    err = ncmpi_inq_varid(ncid, "var", &varid); ERR
+    err = ncmpi_open(comm, filename, omode, info, &ncid); CHECK_ERR
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
 
     /* get data with ERANGE values */
     $2 rbuf[LEN];
     err = GET_VAR($2)(ncid, varid, rbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
 
     for (i=0; i<LEN; i++) {
         $2 expect = ($2)NC_FILL_VALUE($2);
@@ -279,7 +277,7 @@ int test_erange_get_$1_$2(char* filename) {
             nerrs++;
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 ')dnl

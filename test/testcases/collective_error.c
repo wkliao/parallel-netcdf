@@ -30,11 +30,9 @@
 
 #include <testutils.h>
 
-#define ERR { if (err!=NC_NOERR){printf("PE %d: error at line %d (%s)\n",rank,__LINE__,ncmpi_strerror(err)); nerrs++;}}
-
 #define EXP_ERR(e) { \
     if (err!=e) { \
-        printf("PE %d: error at line %d expecting %s but got %s\n",rank,__LINE__,nc_err_code_name(e),nc_err_code_name(err)); \
+        printf("Error at line %d in %s: expecting %s but got %s\n",__LINE__,__FILE__,ncmpi_strerrno(e),ncmpi_strerrno(err)); \
         nerrs++; \
     } \
 }
@@ -51,10 +49,10 @@ int test_collective_error(char *filename, int safe_mode)
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     /* Create a 2 element vector of doubles */
-    err = ncmpi_create(comm, filename, NC_CLOBBER, MPI_INFO_NULL, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "dim", 2, &dimids[0]); ERR
-    err = ncmpi_def_var(ncid, "var", NC_DOUBLE, 1, dimids, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_create(comm, filename, NC_CLOBBER, MPI_INFO_NULL, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "dim", 2, &dimids[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_DOUBLE, 1, dimids, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     if (rank == 0) {
         start[0] = 0;
@@ -114,7 +112,7 @@ int test_collective_error(char *filename, int safe_mode)
     else
         EXP_ERR(NC_NOERR)
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
 
     /* check if user put buffer contents altered */
     if (buf[0] != 1.0) {
@@ -143,9 +141,9 @@ int test_collective_error(char *filename, int safe_mode)
     else
         EXP_ERR(NC_NOERR)
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }

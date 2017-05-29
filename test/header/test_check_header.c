@@ -56,7 +56,6 @@
 #include <pnetcdf.h>
 #include "testutils.h"
 
-#define ERR {if(status!=NC_NOERR)printf("Error at line %d: %s\n",__LINE__,ncmpi_strerror(status));}
 
 int main(int argc, char **argv) {
   MPI_Offset i, j, k;
@@ -99,7 +98,7 @@ int main(int argc, char **argv) {
    */
 
   status = ncmpi_create(comm, opts.outfname, NC_CLOBBER|NC_64BIT_OFFSET, MPI_INFO_NULL, &ncid);
-  ERR
+  CHECK_ERR
 
 
   /**
@@ -112,7 +111,7 @@ int main(int argc, char **argv) {
   printf("title:%s\n", title);
   status = ncmpi_put_att_text (ncid, NC_GLOBAL, "title",
                           strlen(title), title);
-  ERR
+  CHECK_ERR
   
    
   /**
@@ -126,13 +125,13 @@ int main(int argc, char **argv) {
       status = ncmpi_def_dim(ncid, "x", 100, &dimid1);
   else 
       status = ncmpi_def_dim(ncid, "x", 99, &dimid1);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_dim(ncid, "y", 100, &dimid2);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_dim(ncid, "z", 100, &dimid3);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_dim(ncid, "time", NC_UNLIMITED, &udimid);
-  ERR
+  CHECK_ERR
 
   /**
    * Define the dimensionality and then add 4 variables:
@@ -145,13 +144,13 @@ int main(int argc, char **argv) {
   xytime_dim[0] = udimid;
   time_dim[0] = udimid;
   status = ncmpi_def_var (ncid, "square", NC_INT, 2, square_dim, &square_id);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_var (ncid, "cube", NC_INT, 3, cube_dim, &cube_id);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_var (ncid, "time", NC_INT, 1, time_dim, &time_id);
-  ERR
+  CHECK_ERR
   status = ncmpi_def_var (ncid, "xytime", NC_INT, 3, xytime_dim, &xytime_id);
-  ERR
+  CHECK_ERR
 
   /**
    * Add an attribute for variable: 
@@ -164,7 +163,7 @@ int main(int argc, char **argv) {
 
   status = ncmpi_put_att_text (ncid, square_id, "description",
                           strlen(description), description);
-  ERR
+  CHECK_ERR
 
   /**
    * End Define Mode (switch to data mode)
@@ -176,7 +175,7 @@ int main(int argc, char **argv) {
       (rank  > 0 && status != NC_EDIMS_SIZE_MULTIDEFINE)) {  
       fprintf(stderr, "%d: Unexpected Error code %s: %s!\n",rank, nc_err_code_name(status),ncmpi_strerror(status));
       status = ncmpi_close(ncid);
-      ERR
+      CHECK_ERR
   }
 
 #ifdef NOT_YET
@@ -220,29 +219,29 @@ int main(int argc, char **argv) {
       status = ncmpi_put_vara_int_all(ncid, square_id,
                     square_start, square_count,
                     &data[0][0][0]);
-      ERR
+      CHECK_ERR
       status = ncmpi_put_vara_int_all(ncid, cube_id,
                     cube_start, cube_count,
                     &data[0][0][0]);
-      ERR
+      CHECK_ERR
       status = ncmpi_put_vara_int_all(ncid, time_id,
                     time_start, time_count,
                     (void *)buffer);
-      ERR
+      CHECK_ERR
       status = ncmpi_put_vara_int_all(ncid, xytime_id,
                     xytime_start, xytime_count,
                     &data[0][0][0]);
-      ERR
+      CHECK_ERR
 
 /*
 status = ncmpi_sync(ncid);
-ERR
+CHECK_ERR
 status = ncmpi_redef(ncid);
-ERR
+CHECK_ERR
 status = ncmpi_del_att(ncid, square_id, "description");
-ERR
+CHECK_ERR
 status = ncmpi_enddef(ncid);
-ERR
+CHECK_ERR
 */
 
   /**
@@ -251,7 +250,7 @@ ERR
    */
 
       status = ncmpi_close(ncid);
-      ERR
+      CHECK_ERR
   /*******************  END OF NETCDF ACCESS  ****************/
 
     MPI_Barrier(MPI_COMM_WORLD); 

@@ -16,8 +16,6 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR) {printf("Error(%d) at line %d: %s\n",err,__LINE__,ncmpi_strerror(err)); nerrs++; }}
-
 /*----< test_attr_types() >---------------------------------------------------*/
 static
 int test_attr_types(char *filename,
@@ -32,7 +30,7 @@ int test_attr_types(char *filename,
     cmode = NC_CLOBBER|format;
 
     /* create a file in CDF-1 or CDF-2 format */
-    err = ncmpi_create(comm, filename, cmode, info, &ncid); ERR
+    err = ncmpi_create(comm, filename, cmode, info, &ncid); CHECK_ERR
     for (i=0; i<5; i++) {
         char name[32];
         sprintf(name, "gattr_%d", i);
@@ -43,7 +41,7 @@ int test_attr_types(char *filename,
         }
     }
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }
@@ -63,8 +61,8 @@ int test_var_types(char *filename,
     cmode = NC_CLOBBER|format;
 
     /* create a file in CDF-1 or CDF-2 format */
-    err = ncmpi_create(comm, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "dim", NC_UNLIMITED, &dimid); ERR
+    err = ncmpi_create(comm, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "dim", NC_UNLIMITED, &dimid); CHECK_ERR
     for (i=0; i<5; i++) {
         char name[32];
         sprintf(name, "var_%d", i);
@@ -74,7 +72,7 @@ int test_var_types(char *filename,
             nerrs++;
         }
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }

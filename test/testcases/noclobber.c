@@ -19,7 +19,13 @@
 
 #include <testutils.h>
 
-#define ERR if (err!=NC_NOERR) {printf("Error at line %d: %s\n", __LINE__,ncmpi_strerror(err)); exit(-1);}
+#define EXP_ERR(exp) { \
+    if (err != exp) { \
+        nerrs++; \
+        fprintf(stderr, "Error at line %d in %s: expect %s but got %s\n", \
+                __LINE__, __FILE__, ncmpi_strerrno(exp), ncmpi_strerrno(err)); \
+    } \
+}
 
 int main(int argc, char **argv) {
     char filename[256];
@@ -48,14 +54,13 @@ int main(int argc, char **argv) {
     /* create a file if it does not exist */
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
-    err = ncmpi_close(ncid); ERR
+    CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* now the file exists, test if PnetCDF can return correct error code */
     cmode = NC_NOCLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    if (err != NC_EEXIST) /* err == NC_EOFILE */
-        nerrs++;
+    EXP_ERR(NC_EEXIST) /* err == NC_EOFILE */
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

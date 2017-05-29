@@ -14,8 +14,6 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR) {printf("Error(%d) at line %d: %s\n",err,__LINE__,ncmpi_strerror(err)); nerrs++; }}
-
 int main(int argc, char **argv) {
     char dir_name[256], filename[256];
     int err, rank, nerrs=0, format, ncid;
@@ -41,16 +39,16 @@ int main(int argc, char **argv) {
 
     /* test CDF-1 -----------------------------------------------------------*/
     sprintf(filename,"%s/test_cdf1.nc",dir_name);
-    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); ERR
-    err = ncmpi_inq_format(ncid, &format); ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); CHECK_ERR
+    err = ncmpi_inq_format(ncid, &format); CHECK_ERR
     if (format != NC_FORMAT_CLASSIC) {
         printf("Error (line=%d): expecting CDF-1 format for file %s but got %d\n",
                __LINE__,filename,format);
         nerrs++;
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
   
-    err = ncmpi_inq_file_format(filename, &format); ERR
+    err = ncmpi_inq_file_format(filename, &format); CHECK_ERR
     if (format != NC_FORMAT_CLASSIC) {
         printf("Error (line=%d): expecting CDF-1 format for file %s but got %d\n",
                __LINE__,filename,format);
@@ -59,16 +57,16 @@ int main(int argc, char **argv) {
 
     /* test CDF-2 -----------------------------------------------------------*/
     sprintf(filename,"%s/test_cdf2.nc",dir_name);
-    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); ERR
-    err = ncmpi_inq_format(ncid, &format); ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); CHECK_ERR
+    err = ncmpi_inq_format(ncid, &format); CHECK_ERR
     if (format != NC_FORMAT_CDF2) {
         printf("Error (line=%d): expecting CDF-2 format for file %s but got %d\n",
                __LINE__,filename,format);
         nerrs++;
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
   
-    err = ncmpi_inq_file_format(filename, &format); ERR
+    err = ncmpi_inq_file_format(filename, &format); CHECK_ERR
     if (format != NC_FORMAT_CDF2) {
         printf("Error (line=%d): expecting CDF-2 format for file %s but got %d\n",
                __LINE__,filename,format);
@@ -77,16 +75,16 @@ int main(int argc, char **argv) {
 
     /* test CDF-5 -----------------------------------------------------------*/
     sprintf(filename,"%s/test_cdf5.nc",dir_name);
-    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); ERR
-    err = ncmpi_inq_format(ncid, &format); ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, 0, MPI_INFO_NULL, &ncid); CHECK_ERR
+    err = ncmpi_inq_format(ncid, &format); CHECK_ERR
     if (format != NC_FORMAT_CDF5) {
         printf("Error (line=%d): expecting CDF-5 format for file %s but got %d\n",
                __LINE__,filename,format);
         nerrs++;
     }
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
   
-    err = ncmpi_inq_file_format(filename, &format); ERR
+    err = ncmpi_inq_file_format(filename, &format); CHECK_ERR
     if (format != NC_FORMAT_CDF5) {
         printf("Error (line=%d): expecting CDF-5 format for file %s but got %d\n",
                __LINE__,filename,format);

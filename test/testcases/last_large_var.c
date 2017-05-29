@@ -49,8 +49,6 @@
 
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); nerrs++;}}
-
 static
 int check_last_var(char *filename)
 {
@@ -59,19 +57,19 @@ int check_last_var(char *filename)
     /* create a new file ---------------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); ERR
-    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); CHECK_ERR
 
     /* define only fixed-size variables and the last one is "big" */
-    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); ERR
-    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
 
-    err = ncmpi_enddef(ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }
@@ -84,17 +82,17 @@ int check_fix_var(char *filename)
     /* create a new CDF-1 file ----------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "X", 536870911, &dimid[0]); ERR
+    err = ncmpi_def_dim(ncid, "X", 536870911, &dimid[0]); CHECK_ERR
 
     /* define only fixed-size variables and no one is "big"
      * make the starting offset of last one > 2GiB (illegal for CDF-1)
      */
-    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_FLOAT, 1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var4", NC_INT,   1, dimid, &varid); ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_FLOAT, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var4", NC_INT,   1, dimid, &varid); CHECK_ERR
 
     err = ncmpi_close(ncid);
     if (err != NC_EVARSIZE) {
@@ -105,20 +103,20 @@ int check_fix_var(char *filename)
     /* create a new CDF-2 file ----------------------------------------------*/
     cmode = NC_CLOBBER | NC_64BIT_OFFSET;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "X", 536870911, &dimid[0]); ERR
+    err = ncmpi_def_dim(ncid, "X", 536870911, &dimid[0]); CHECK_ERR
 
     /* define only fixed-size variables and no one is "big"
      * make the starting offset of last one > 2GiB (legal for CDF-2)
      */
-    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_FLOAT, 1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var4", NC_INT,   1, dimid, &varid); ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_FLOAT, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var4", NC_INT,   1, dimid, &varid); CHECK_ERR
 
-    err = ncmpi_enddef(ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }
@@ -131,16 +129,16 @@ int check_fix_rec_var(char *filename)
     /* create a new file ---------------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); ERR
-    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); CHECK_ERR
 
     /* define a record variable */
-    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
     if (err != NC_EVARSIZE) {
@@ -169,50 +167,50 @@ int check_rec_var(char *filename, int cmode)
     /* create a new file ---------------------------------------------------*/
     cmode |= NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "Y", 66661,        &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "X", 66661,        &dimid[2]); ERR
+    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", 66661,        &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 66661,        &dimid[2]); CHECK_ERR
 
     /* define record variables: last one is large */
-    err = ncmpi_def_var(ncid, "var",       NC_INT,   1, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var_large", NC_FLOAT, 3, dimid, &varid); ERR
+    err = ncmpi_def_var(ncid, "var",       NC_INT,   1, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_large", NC_FLOAT, 3, dimid, &varid); CHECK_ERR
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* create a new file ---------------------------------------------------*/
     cmode |= NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "Y", 1048576, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "X", 1000, &dimid[2]); ERR
+    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", 1048576, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 1000, &dimid[2]); CHECK_ERR
 
     /* define record variables: both starting offsets are < 2^31-4 */
-    err = ncmpi_def_var(ncid, "var1", NC_SHORT, 3, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_SHORT, 3, dimid, &varid); ERR
+    err = ncmpi_def_var(ncid, "var1", NC_SHORT, 3, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_SHORT, 3, dimid, &varid); CHECK_ERR
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* create a new file ---------------------------------------------------*/
     cmode |= NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "Y", 1048576, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "X", 1024, &dimid[2]); ERR
+    err = ncmpi_def_dim(ncid, "Z", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", 1048576, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 1024, &dimid[2]); CHECK_ERR
 
     /* define record variables: some starting offsets are > 2^31-4 */
-    err = ncmpi_def_var(ncid, "var1", NC_SHORT, 3, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_SHORT, 3, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 3, dimid, &varid); ERR
-    err = ncmpi_def_var(ncid, "var4", NC_SHORT, 3, dimid, &varid); ERR
+    err = ncmpi_def_var(ncid, "var1", NC_SHORT, 3, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_SHORT, 3, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var3", NC_SHORT, 3, dimid, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var4", NC_SHORT, 3, dimid, &varid); CHECK_ERR
 
     err = ncmpi_close(ncid);
-    if (cmode & NC_64BIT_OFFSET || cmode & NC_64BIT_DATA) ERR
+    if (cmode & NC_64BIT_OFFSET || cmode & NC_64BIT_DATA) CHECK_ERR
     else if (err != NC_EVARSIZE) {
         printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
         nerrs++;
@@ -235,16 +233,16 @@ int check_not_last_var(char *filename)
     /* create a new file ---------------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); ERR
-    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); CHECK_ERR
 
     /* the large variable is not the last */
-    err = ncmpi_def_var(ncid, "var_large", NC_FLOAT, 2, dimid+2, &varid); ERR
-    err = ncmpi_def_var(ncid, "var",       NC_INT,   1, dimid+1, &varid); ERR
+    err = ncmpi_def_var(ncid, "var_large", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var",       NC_INT,   1, dimid+1, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
     if (err != NC_EVARSIZE) {
@@ -268,21 +266,21 @@ int check_add_var(char *filename)
     /* create a new file ---------------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); ERR
-    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); CHECK_ERR
 
-    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); ERR
-    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
 
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* add a new fixed-size variable */
-    err = ncmpi_redef(ncid); ERR
-    err = ncmpi_def_var(ncid, "var_new", NC_INT, 2, dimid, &varid); ERR
+    err = ncmpi_redef(ncid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_new", NC_INT, 2, dimid, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
     if (err != NC_EVARSIZE) {
@@ -306,15 +304,15 @@ int check_var_offset(char *filename)
     /* create a new file ---------------------------------------------------*/
     cmode = NC_CLOBBER;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); ERR
-    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 5, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "YY", 66661, &dimid[2]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "XX", 66661, &dimid[3]); CHECK_ERR
 
-    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); ERR
-    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 1, dimid+1, &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
 
     /* make the file header size larger than 2 GiB */
     err = ncmpi__enddef(ncid, 2147483648LL, 1, 1, 1);
@@ -323,7 +321,7 @@ int check_var_offset(char *filename)
         nerrs++;
     }
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;
 }
 

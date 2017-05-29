@@ -55,7 +55,6 @@
 
 #define NY 2
 #define NX 5
-#define ERR if (err!=NC_NOERR) {printf("Error at line %d: %s\n", __LINE__,ncmpi_strerror(err)); nerrs++;}
 
 #define CHECK_VALUE_PERMUTED { \
     for (j=0; j<count[0]; j++) { \
@@ -98,7 +97,7 @@ int get_var_and_verify(int ncid,
     for (j=0; j<count[0]; j++) for (i=0; i<count[1]; i++) buf[j][i] = -1;
 
     /* read back using regular vara API */
-    err = ncmpi_get_vara_int_all(ncid, varid, start, count, buf[0]); ERR
+    err = ncmpi_get_vara_int_all(ncid, varid, start, count, buf[0]); CHECK_ERR
 
     /* check if the contents of buf are expected */
     CHECK_VALUE_PERMUTED
@@ -107,7 +106,7 @@ int get_var_and_verify(int ncid,
     for (j=0; j<count[0]; j++) for (i=0; i<count[1]; i++) buf[j][i] = -1;
 
     /* read back using flexible vara API */
-    err = ncmpi_get_vara_all(ncid, varid, start, count, buf[1], 1, buftype); ERR
+    err = ncmpi_get_vara_all(ncid, varid, start, count, buf[1], 1, buftype); CHECK_ERR
 
     /* check if the contents of buf are expected */
     CHECK_VALUE
@@ -116,7 +115,7 @@ int get_var_and_verify(int ncid,
     for (j=0; j<count[0]; j++) for (i=0; i<count[1]; i++) buf[j][i] = -1;
 
     /* read back using vard API and permuted buftype */
-    err = ncmpi_get_vard_all(ncid, varid, filetype, buf[1], 1, buftype); ERR
+    err = ncmpi_get_vard_all(ncid, varid, filetype, buf[1], 1, buftype); CHECK_ERR
 
     /* check if the contents of buf are expected */
     CHECK_VALUE
@@ -125,7 +124,7 @@ int get_var_and_verify(int ncid,
     for (j=0; j<count[0]; j++) for (i=0; i<count[1]; i++) buf[j][i] = -1;
 
     /* read back using vard API and no buftype */
-    err = ncmpi_get_vard_all(ncid, varid, filetype, buf[0], 0, MPI_DATATYPE_NULL); ERR
+    err = ncmpi_get_vard_all(ncid, varid, filetype, buf[0], 0, MPI_DATATYPE_NULL); CHECK_ERR
 
     /* check if the contents of buf are expected */
     CHECK_VALUE_PERMUTED
@@ -134,7 +133,7 @@ int get_var_and_verify(int ncid,
     for (i=0; i<(count[0]+4)*(count[1]+4); i++) ncbuf[i] = -1;
 
     /* read back using ghost buftype */
-    err = ncmpi_get_vard_all(ncid, varid, filetype, ncbuf, 1, ghost_buftype); ERR
+    err = ncmpi_get_vard_all(ncid, varid, filetype, ncbuf, 1, ghost_buftype); CHECK_ERR
 
     for (j=0; j<count[0]; j++) {
         for (i=0; i<count[1]; i++)
@@ -226,16 +225,16 @@ int main(int argc, char **argv) {
 
     /* create a new file for write */
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER, MPI_INFO_NULL,
-                       &ncid); ERR
+                       &ncid); CHECK_ERR
 
     /* define a 2D array */
-    err = ncmpi_def_dim(ncid, "REC_DIM", NC_UNLIMITED, &dimids[0]); ERR
-    err = ncmpi_def_dim(ncid, "X",       NX*nprocs,    &dimids[1]); ERR
-    err = ncmpi_def_var(ncid, "rec_var", NC_INT, 2, dimids, &varid0); ERR
-    err = ncmpi_def_var(ncid, "dummy_rec", NC_INT, 2, dimids, &varid2); ERR
-    err = ncmpi_def_dim(ncid, "FIX_DIM", 2, &dimids[0]); ERR
-    err = ncmpi_def_var(ncid, "fix_var", NC_INT, 2, dimids, &varid1); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_dim(ncid, "REC_DIM", NC_UNLIMITED, &dimids[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X",       NX*nprocs,    &dimids[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "rec_var", NC_INT, 2, dimids, &varid0); CHECK_ERR
+    err = ncmpi_def_var(ncid, "dummy_rec", NC_INT, 2, dimids, &varid2); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "FIX_DIM", 2, &dimids[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "fix_var", NC_INT, 2, dimids, &varid1); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* create a file type for the record variable */
     int *array_of_blocklengths=(int*) malloc(count[0]*sizeof(int));
@@ -256,16 +255,16 @@ int main(int argc, char **argv) {
     for (j=0; j<NY; j++) for (i=0; i<NX; i++) buf[j][i] = rank*100 + j*10 + i;
 
     /* get header size and put size by far */
-    err = ncmpi_inq_header_size(ncid, &header_size); ERR
-    err = ncmpi_inq_put_size(ncid, &put_size); ERR
+    err = ncmpi_inq_header_size(ncid, &header_size); CHECK_ERR
+    err = ncmpi_inq_put_size(ncid, &put_size); CHECK_ERR
 
     /* write the record variable */
-    err = ncmpi_put_vard_all(ncid, varid0, rec_filetype, bufptr, 1, buftype); ERR
+    err = ncmpi_put_vard_all(ncid, varid0, rec_filetype, bufptr, 1, buftype); CHECK_ERR
 
     /* check if put_size is correctly reported */
-    err = ncmpi_inq_put_size(ncid, &new_put_size); ERR
+    err = ncmpi_inq_put_size(ncid, &new_put_size); CHECK_ERR
     MPI_Type_size(buftype, &buftype_size);
-    err = ncmpi_inq_format(ncid, &format); ERR
+    err = ncmpi_inq_format(ncid, &format); CHECK_ERR
     expected_put_size = buftype_size;
 
     /* for writing a record variable, root process will update numrec to the
@@ -281,15 +280,15 @@ int main(int argc, char **argv) {
     CHECK_VALUE
 
     /* check if root process can write to file header in data mode */
-    err = ncmpi_rename_var(ncid, varid0, "rec_VAR"); ERR
+    err = ncmpi_rename_var(ncid, varid0, "rec_VAR"); CHECK_ERR
 
-    err = ncmpi_inq_put_size(ncid, &put_size); ERR
+    err = ncmpi_inq_put_size(ncid, &put_size); CHECK_ERR
 
     /* write the fixed-size variable */
-    err = ncmpi_put_vard_all(ncid, varid1, fix_filetype, bufptr, 1, buftype); ERR
+    err = ncmpi_put_vard_all(ncid, varid1, fix_filetype, bufptr, 1, buftype); CHECK_ERR
 
     /* check if put_size is correctly reported */
-    err = ncmpi_inq_put_size(ncid, &new_put_size); ERR
+    err = ncmpi_inq_put_size(ncid, &new_put_size); CHECK_ERR
     expected_put_size = buftype_size;
     if (expected_put_size != new_put_size - put_size) {
         printf("Error: unexpected put size (%lld) reported, expecting %d\n",
@@ -301,31 +300,31 @@ int main(int argc, char **argv) {
     CHECK_VALUE
  
     /* check if root process can write to file header in data mode */
-    err = ncmpi_rename_var(ncid, varid0, "rec_var"); ERR
+    err = ncmpi_rename_var(ncid, varid0, "rec_var"); CHECK_ERR
 
     /* test the same routines in independent data mode */
-    err = ncmpi_begin_indep_data(ncid); ERR
-    err = ncmpi_put_vard(ncid, varid0, rec_filetype, bufptr, 1, buftype); ERR
+    err = ncmpi_begin_indep_data(ncid); CHECK_ERR
+    err = ncmpi_put_vard(ncid, varid0, rec_filetype, bufptr, 1, buftype); CHECK_ERR
     CHECK_VALUE
-    err = ncmpi_rename_var(ncid, varid0, "rec_VAR"); ERR
-    err = ncmpi_put_vard(ncid, varid1, fix_filetype, bufptr, 1, buftype); ERR
+    err = ncmpi_rename_var(ncid, varid0, "rec_VAR"); CHECK_ERR
+    err = ncmpi_put_vard(ncid, varid1, fix_filetype, bufptr, 1, buftype); CHECK_ERR
     CHECK_VALUE
-    err = ncmpi_rename_var(ncid, varid0, "rec_var"); ERR
-    err = ncmpi_end_indep_data(ncid); ERR
+    err = ncmpi_rename_var(ncid, varid0, "rec_var"); CHECK_ERR
+    err = ncmpi_end_indep_data(ncid); CHECK_ERR
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* open the same file and read back for validate */
     err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, MPI_INFO_NULL,
-                     &ncid); ERR
+                     &ncid); CHECK_ERR
 
-    err = ncmpi_inq_varid(ncid, "rec_var", &varid0); ERR
-    err = ncmpi_inq_varid(ncid, "fix_var", &varid1); ERR
+    err = ncmpi_inq_varid(ncid, "rec_var", &varid0); CHECK_ERR
+    err = ncmpi_inq_varid(ncid, "fix_var", &varid1); CHECK_ERR
 
     nerrs += get_var_and_verify(ncid, varid0, start, count, buf, buftype, ghost_buftype, rec_filetype);
     nerrs += get_var_and_verify(ncid, varid1, start, count, buf, buftype, ghost_buftype, fix_filetype);
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     MPI_Type_free(&rec_filetype);
     MPI_Type_free(&fix_filetype);

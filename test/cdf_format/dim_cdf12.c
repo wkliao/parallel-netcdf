@@ -60,8 +60,6 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define ERR if (err!=NC_NOERR) {printf("Error at line %d: err=%s (%s)\n", __LINE__,nc_err_code_name(err),ncmpi_strerror(err)); nerrs++;}
-
 #define ERR_EXPECT(exp) if (err!=exp) {printf("Error at line %d: expect error %s but got %s\n", __LINE__,nc_err_code_name(exp),nc_err_code_name(err)); nerrs++;}
 
 int main(int argc, char** argv)
@@ -103,69 +101,69 @@ int main(int argc, char** argv)
     cmode = NC_CLOBBER;
 
     /* max dimension size for CDF-1 file is 2^31-3 = 2147483647 - 3 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", INT_MAX, &dimid[0]);
     ERR_EXPECT(NC_EDIMSIZE)
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* use the max dimension size to define a 1D variableis */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, dimid, &varid); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* use the max dimension size to define a 1D variableis, followed by
      * another variable to make the file size > 2147483647 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3,  &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3,  &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); CHECK_ERR
     /* for cdf-1, adding var1 after var0 will cause NC_EVARSIZE */
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
     /* use the max dimension size - 1024 to define a 1D variableis, followed
      * by another variable to make the file size < 2147483647 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-1024, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,            &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-1024, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,            &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* define the first variable of type short that makes the file size >
      * 2147483647. error should be reported in ncmpi_enddef() or
      * ncmpi_close() */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,         &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_CHAR,  1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,         &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_CHAR,  1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
     /* define two variables to make the file size just < 2147483647 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3-512-8, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,       &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX-3-512-8, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,       &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* define two variables to make the file size just > 2147483647 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2+1, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,           &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2+1, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,           &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
@@ -173,69 +171,69 @@ int main(int argc, char** argv)
     cmode = NC_CLOBBER | NC_64BIT_OFFSET;
 
     /* max dimension size for CDF-2 file is 2^32-3 = 4294967295 - 3 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", UINT_MAX, &dimid[0]);
     ERR_EXPECT(NC_EDIMSIZE)
-    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* use the max dimension size to define a 1D variableis */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, dimid, &varid); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, dimid, &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* use the max dimension size to define a 1D variableis, followed by
      * another variable to make the file size > 4294967295 */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_CHAR, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* define the first variable of type short that makes the file size >
      * 4294967295. error should be reported in ncmpi_enddef() or
      * ncmpi_close() */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,          &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT,   1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
     /* define 2 int 1D variables of dimension size > max */
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,       &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,       &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2+1, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,           &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2+1, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,           &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
     ERR_EXPECT(NC_EVARSIZE)
 
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
-    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", 2,         &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); ERR
-    err = ncmpi_close(ncid); ERR
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y", INT_MAX/2, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", 2,         &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     MPI_Info_free(&info);
 

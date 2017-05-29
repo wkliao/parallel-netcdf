@@ -58,8 +58,6 @@
 #define NX 4
 #define GHOST 2
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); nerrs++;}}
-
 #define INIT_PUT_BUF(buf) \
     for (i=0; i<array_of_sizes[0]; i++) { \
         for (j=0; j<array_of_sizes[1]; j++) { \
@@ -152,15 +150,15 @@ int main(int argc, char** argv)
     /* create a new file for writing ----------------------------------------*/
     cmode = NC_CLOBBER | NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* define 2 dimensions */
-    err = ncmpi_def_dim(ncid, "Y", NY,        &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX*nprocs, &dimid[1]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY,        &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX*nprocs, &dimid[1]); CHECK_ERR
 
     /* define a variable of size NY * (NX * nprocs) */
-    err = ncmpi_def_var(ncid, "var", NC_DOUBLE, 2, dimid, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_var(ncid, "var", NC_DOUBLE, 2, dimid, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
      start[0] = 0;  start[1] = NX * rank;
      count[0] = NY; count[1] = NX;
@@ -184,21 +182,21 @@ int main(int argc, char** argv)
 
     MPI_Offset bufsize = sizeof(double);
     for (i=0; i<2; i++) bufsize *= count[i];
-    err = ncmpi_buffer_attach(ncid, bufsize); ERR
+    err = ncmpi_buffer_attach(ncid, bufsize); CHECK_ERR
 
     err = ncmpi_bput_varm(ncid, varid, start, count, stride, imap, buf_int,
                           1, subarray, &req);
-    ERR
+    CHECK_ERR
     /* check if the contents of put buffer are altered */
     CHECK_PUT_BUF(buf_int)
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
-    err = status; ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
+    err = status; CHECK_ERR
 
     /* check the contents of put buffer are altered */
     CHECK_PUT_BUF(buf_int)
 
-    err = ncmpi_buffer_detach(ncid); ERR
+    err = ncmpi_buffer_detach(ncid); CHECK_ERR
 
     /* read back using a blocking get_varm flexible API ---------------------*/
     /* initiate get buffer contents */
@@ -207,7 +205,7 @@ int main(int argc, char** argv)
     /* calling a blocking flexible API */
     err = ncmpi_get_varm_all(ncid, varid, start, count, stride, imap, buf_int,
                              1, subarray);
-    ERR
+    CHECK_ERR
 
     /* check the contents of get buffer */
     CHECK_GET_BUF(buf_int)
@@ -224,22 +222,22 @@ int main(int argc, char** argv)
     /* initiate put buffer contents */
     INIT_PUT_BUF(buf_dbl)
 
-    err = ncmpi_buffer_attach(ncid, bufsize); ERR
+    err = ncmpi_buffer_attach(ncid, bufsize); CHECK_ERR
 
     err = ncmpi_bput_varm(ncid, varid, start, count, stride, imap, buf_dbl,
                           1, subarray, &req);
-    ERR
+    CHECK_ERR
 
     /* check the contents of put buffer are altered */
     CHECK_PUT_BUF(buf_dbl)
 
-    err = ncmpi_wait_all(ncid, 1, &req, &status); ERR
-    err = status; ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &status); CHECK_ERR
+    err = status; CHECK_ERR
 
     /* check the contents of put buffer are altered */
     CHECK_PUT_BUF(buf_dbl)
 
-    err = ncmpi_buffer_detach(ncid); ERR
+    err = ncmpi_buffer_detach(ncid); CHECK_ERR
 
     /* read back using a blocking get_varm flexible API ---------------------*/
     /* initiate get buffer contents */
@@ -248,14 +246,14 @@ int main(int argc, char** argv)
     /* calling a blocking flexible API */
     err = ncmpi_get_varm_all(ncid, varid, start, count, stride, imap, buf_dbl,
                              1, subarray);
-    ERR
+    CHECK_ERR
 
     /* check the contents of get buffer */
     CHECK_GET_BUF(buf_dbl)
 
     MPI_Type_free(&subarray);
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

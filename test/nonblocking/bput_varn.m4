@@ -85,18 +85,12 @@ typedef char text;
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
 
-#define ERR \
-    if (err != NC_NOERR) { \
-        printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); \
-        nerrs++; \
-    }
-
 #define ERRS(n,a) { \
     int _i; \
     for (_i=0; _i<(n); _i++) { \
         if ((a)[_i] != NC_NOERR) { \
-            printf("Error at line=%d: err[%d] %s\n", __LINE__, _i, \
-                   ncmpi_strerror((a)[_i])); \
+            printf("Error: line %d in %s: err[%d] %s\n", __LINE__, __FILE__, _i, \
+                   ncmpi_strerrno((a)[_i])); \
             nerrs++; \
         } \
     } \
@@ -274,16 +268,16 @@ test_bput_varn_$1(char *filename, int cdf)
     else if (cdf == NC_FORMAT_CDF5)
         cmode |= NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* create a global array of size NY * NX */
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var0", NC_TYPE($1), NDIMS, dimid, &varid[0]); ERR
-    err = ncmpi_def_var(ncid, "var1", NC_TYPE($1), NDIMS, dimid, &varid[1]); ERR
-    err = ncmpi_def_var(ncid, "var2", NC_TYPE($1), NDIMS, dimid, &varid[2]); ERR
-    err = ncmpi_def_var(ncid, "var3", NC_TYPE($1), NDIMS, dimid, &varid[3]); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var0", NC_TYPE($1), NDIMS, dimid, &varid[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var1", NC_TYPE($1), NDIMS, dimid, &varid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var2", NC_TYPE($1), NDIMS, dimid, &varid[2]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var3", NC_TYPE($1), NDIMS, dimid, &varid[3]); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* allocate space for starts and counts */
     starts[0] = (MPI_Offset**) malloc(4 * 6 * sizeof(MPI_Offset*));
@@ -350,7 +344,7 @@ test_bput_varn_$1(char *filename, int cdf)
 
     /* give PnetCDF a space to buffer the nonblocking requests */
     if (bufsize > 0) {
-        err = ncmpi_buffer_attach(ncid, bufsize); ERR
+        err = ncmpi_buffer_attach(ncid, bufsize); CHECK_ERR
     }
 
     /* test error code: NC_ENULLSTART */
@@ -366,7 +360,7 @@ test_bput_varn_$1(char *filename, int cdf)
     for (i=0; i<nreqs; i++) {
         err = ncmpi_bput_varn_$1(ncid, varid[i], my_nsegs[i], starts[i],
                                  counts[i], buffer[i], &reqs[i]);
-        ERR
+        CHECK_ERR
     }
     /* check if write buffer contents have been altered */
     for (i=0; i<nreqs; i++) {
@@ -401,7 +395,7 @@ test_bput_varn_$1(char *filename, int cdf)
     for (i=0; i<nreqs; i++) {
         err = ncmpi_bput_varn_$1(ncid, varid[i], my_nsegs[i], starts[i],
                                  counts[i], buffer[i], &reqs[i]);
-        ERR
+        CHECK_ERR
     }
     /* check if write buffer contents have been altered */
     for (i=0; i<nreqs; i++) {
@@ -436,7 +430,7 @@ test_bput_varn_$1(char *filename, int cdf)
 
         err = ncmpi_bput_varn(ncid, varid[i], my_nsegs[i], starts[i],
                               counts[i], buffer[i], 1, buftype, &reqs[i]);
-        ERR
+        CHECK_ERR
         MPI_Type_free(&buftype);
     }
     /* check if write buffer contents have been altered */
@@ -486,7 +480,7 @@ test_bput_varn_$1(char *filename, int cdf)
 
         err = ncmpi_bput_varn(ncid, varid[i], my_nsegs[i], starts[i],
                               counts[i], buffer[i], 1, buftype, &reqs[i]);
-        ERR
+        CHECK_ERR
         MPI_Type_free(&buftype);
     }
     /* check if write buffer contents have been altered */
@@ -521,7 +515,7 @@ test_bput_varn_$1(char *filename, int cdf)
 
     /* free the buffer space for bput */
     if (bufsize > 0) {
-        err = ncmpi_buffer_detach(ncid); ERR
+        err = ncmpi_buffer_detach(ncid); CHECK_ERR
     }
 
     /* test error code: NC_ENULLABUF */
@@ -532,7 +526,7 @@ test_bput_varn_$1(char *filename, int cdf)
         nerrs++;
     }
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     for (i=0; i<nreqs; i++) free(buffer[i]);
     free(starts[0][0]);

@@ -28,8 +28,6 @@
 
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR){nerrs++;printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));}}
-
 int main(int argc, char** argv) {
     char filename[256];
     int rank, nprocs, err, nerrs=0, ncid, cmode;
@@ -55,10 +53,10 @@ int main(int argc, char** argv) {
     }
 
     cmode = NC_CLOBBER;
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
-    err = ncmpi_inq_striping(ncid, &striping_size, &striping_count); ERR
+    err = ncmpi_inq_striping(ncid, &striping_size, &striping_count); CHECK_ERR
 
     root_striping_size  = striping_size;
     root_striping_count = striping_count;
@@ -81,7 +79,7 @@ int main(int argc, char** argv) {
         printf("Success: striping_size=%d striping_count=%d\n",striping_size,striping_count);
 */
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

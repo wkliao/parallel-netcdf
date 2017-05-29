@@ -23,9 +23,6 @@
 
 #include <testutils.h>
 
-#define ERRCODE 2
-#define ERR {if (err != NC_NOERR){printf("Error at line %d: err=%d %s\n", __LINE__, err, ncmpi_strerror(err));nerrs++;}}
-
 #define STR_LEN 19
 #define NUM_VALS 2
 
@@ -62,16 +59,16 @@ int main(int argc, char **argv)
     strcpy(data[1], "2005-04-11_13:00:00");
 
     cmode = NC_CLOBBER;
-    err  = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid); ERR
+    err  = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid); CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "time", NC_UNLIMITED, dimids); ERR
-    err = ncmpi_def_dim(ncid, "text_dim", STR_LEN, &dimids[1]); ERR
+    err = ncmpi_def_dim(ncid, "time", NC_UNLIMITED, dimids); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "text_dim", STR_LEN, &dimids[1]); CHECK_ERR
 
     /* create ONLY one record variable of type NC_CHAR and make sure each
      * record is of size not aligned with 4-byte boundary.
      */
-    err = ncmpi_def_var(ncid, "text_var", NC_CHAR, 2, dimids, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_var(ncid, "text_var", NC_CHAR, 2, dimids, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* Write some records of var data. */
     count[0] = 1;
@@ -80,12 +77,12 @@ int main(int argc, char **argv)
     start[1] = 0;
     for (i=0; i<NUM_VALS; i++) {
         err = ncmpi_put_vara_text_all(ncid, varid, start, count, data[start[0]]);
-        ERR
+        CHECK_ERR
         start[0]++;
     }
 
     /* read the entire data back */
-    err = ncmpi_get_var_text_all(ncid, varid, data_in); ERR
+    err = ncmpi_get_var_text_all(ncid, varid, data_in); CHECK_ERR
 
     /* check the contents */
     for (i=0; i<NUM_VALS; i++)
@@ -95,7 +92,7 @@ int main(int argc, char **argv)
       }
 
     err = ncmpi_close(ncid);
-    ERR
+    CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

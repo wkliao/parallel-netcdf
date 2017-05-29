@@ -26,12 +26,6 @@
 #define NX 10
 #define NDIMS 2
 
-#define ERR \
-    if (err != NC_NOERR) { \
-        printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); \
-        nerrs++; \
-    }
-
 int main(int argc, char** argv)
 {
     char filename[256];
@@ -62,24 +56,24 @@ int main(int argc, char** argv)
 
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER|NC_64BIT_DATA,
                        MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
-    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX*nprocs,    &dimid[1]); ERR
-    err = ncmpi_def_var(ncid, "var", NC_UBYTE, NDIMS, dimid, &varid); ERR
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX*nprocs,    &dimid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_UBYTE, NDIMS, dimid, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     for (i=0; i<NY; i++) for (j=0; j<NX; j++) buffer[i][j] = rank+10;
 
      start[0] = 0;     start[1] = NX*rank;
      count[0] = NY/2;  count[1] = NX/2;
     stride[0] = 2;    stride[1] = 2;
-    err = ncmpi_buffer_attach(ncid, NY*NX); ERR
+    err = ncmpi_buffer_attach(ncid, NY*NX); CHECK_ERR
 
-    err = ncmpi_begin_indep_data(ncid); ERR
+    err = ncmpi_begin_indep_data(ncid); CHECK_ERR
     err = ncmpi_bput_vars_uchar(ncid, varid, start, count, stride,
                                 &buffer[0][0], &req);
-    ERR
+    CHECK_ERR
 
     /* check if write buffer contents have been altered */
     for (i=0; i<NY; i++)
@@ -91,10 +85,10 @@ int main(int argc, char** argv)
             }
         }
 
-    err = ncmpi_end_indep_data(ncid); ERR
+    err = ncmpi_end_indep_data(ncid); CHECK_ERR
 
     /* calling wait API after exiting independent data mode on purpose */
-    err = ncmpi_wait_all(ncid, 1, &req, &st); ERR
+    err = ncmpi_wait_all(ncid, 1, &req, &st); CHECK_ERR
 
     /* check if write buffer contents have been altered */
     for (i=0; i<NY; i++)
@@ -106,8 +100,8 @@ int main(int argc, char** argv)
             }
         }
 
-    err = ncmpi_buffer_detach(ncid); ERR
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_buffer_detach(ncid); CHECK_ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;

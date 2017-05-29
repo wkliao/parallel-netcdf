@@ -70,18 +70,12 @@
 #define NX 10
 #define NDIMS 2
 
-#define ERR \
-    if (err != NC_NOERR) { \
-        printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err)); \
-        nerrs++; \
-    }
-
 #define ERRS(n,a) { \
     int _i; \
     for (_i=0; _i<(n); _i++) { \
         if ((a)[_i] != NC_NOERR) { \
-            printf("Error at line=%d: err[%d] %s\n", __LINE__, _i, \
-                   ncmpi_strerror((a)[_i])); \
+            printf("Error: line %d in %s: err[%d] %s\n", __LINE__, __FILE__, _i, \
+                   ncmpi_strerrno((a)[_i])); \
             nerrs++; \
         } \
     } \
@@ -304,20 +298,20 @@ int main(int argc, char** argv)
     /* create a new file for writing ----------------------------------------*/
     cmode = NC_CLOBBER | NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* create a global array of size NY * NX */
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); CHECK_ERR
 
     /* post write requests while still in define mode */
     for (i=0; i<4; i++) {
         err = ncmpi_def_var(ncid, varname[i], NC_INT64, NDIMS, dimid, &varid[i]);
-        ERR
+        CHECK_ERR
 
         err = ncmpi_iput_varn_longlong(ncid, varid[i], my_nsegs[i], starts[i],
                                        counts[i], buffer[i], &reqs[i]);
-        ERR
+        CHECK_ERR
     }
 
     /* test error code: NC_ENULLSTART */
@@ -329,13 +323,14 @@ int main(int argc, char** argv)
         nerrs++;
     }
 
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
     clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     /* check if write buffer contents have been altered */
@@ -351,7 +346,7 @@ int main(int argc, char** argv)
     /* all processes read entire variables back and check contents */
     nerrs += check_contents_for_fail(ncid, varid, __LINE__);
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* try with buffer being a single contiguous space ----------------------*/
     for (i=0; i<nreqs; i++) bufsize += req_lens[i];
@@ -363,28 +358,29 @@ int main(int argc, char** argv)
     /* create a new file for writing */
     cmode = NC_CLOBBER | NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* create a global array of size NY * NX */
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); CHECK_ERR
 
     /* post write requests while still in define mode */
     for (i=0; i<4; i++) {
         err = ncmpi_def_var(ncid, varname[i], NC_INT64, NDIMS, dimid, &varid[i]);
-        ERR
+        CHECK_ERR
 
         err = ncmpi_iput_varn_longlong(ncid, varid[i], my_nsegs[i], starts[i],
                                        counts[i], cbuffer[i], &reqs[i]);
-        ERR
+        CHECK_ERR
     }
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
     clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     /* check if write buffer contents have been altered */
@@ -400,7 +396,7 @@ int main(int argc, char** argv)
     /* all processes read entire variables back and check contents */
     nerrs += check_contents_for_fail(ncid, varid, __LINE__);
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* permute write order: so starts[*] are not in an increasing order:
      * swap segment 0 with segment 2 and swap segment 1 with segment 3
@@ -413,20 +409,20 @@ int main(int argc, char** argv)
     /* create a new file for writing */
     cmode = NC_CLOBBER | NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* create a global array of size NY * NX */
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); CHECK_ERR
 
     /* write requests request while still in define mode */
     for (i=0; i<4; i++) {
         err = ncmpi_def_var(ncid, varname[i], NC_INT64, NDIMS, dimid, &varid[i]);
-        ERR
+        CHECK_ERR
 
         err = ncmpi_iput_varn_longlong(ncid, varid[i], my_nsegs[i], starts[i],
                                        counts[i], buffer[i], &reqs[i]);
-        ERR
+        CHECK_ERR
     }
 
     /* post read requests while still in define mode */
@@ -434,16 +430,17 @@ int main(int argc, char** argv)
         for (j=0; j<req_lens[i]; j++) cbuffer[i][j] = -1;
         err = ncmpi_iget_varn_longlong(ncid, varid[i], my_nsegs[i], starts[i],
                                        counts[i], cbuffer[i], &reqs[4+i]);
-        ERR
+        CHECK_ERR
     }
 
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
     clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs*2, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     /* check if write buffer contents have been altered */
@@ -461,9 +458,10 @@ int main(int argc, char** argv)
     /* commit read requests */
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs+4, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
@@ -490,26 +488,26 @@ int main(int argc, char** argv)
     /* create a new file for writing */
     cmode = NC_CLOBBER | NC_64BIT_DATA;
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    ERR
+    CHECK_ERR
 
     /* create a global array of size NY * NX */
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX, &dimid[1]); CHECK_ERR
 
     /* write requests request while still in define mode */
     for (i=0; i<4; i++) {
         err = ncmpi_def_var(ncid, varname[i], NC_INT64, NDIMS, dimid, &varid[i]);
-        ERR
+        CHECK_ERR
 
         err = ncmpi_iput_varn(ncid, varid[i], my_nsegs[i], starts[i], counts[i],
-                              buffer[i], 1, buftype[i], &reqs[i]); ERR
-        ERR
+                              buffer[i], 1, buftype[i], &reqs[i]);
+        CHECK_ERR
     }
     /* test flexible get API, using a noncontiguous buftype */
     for (i=0; i<nreqs; i++) {
         err = ncmpi_iget_varn(ncid, varid[i], my_nsegs[i], starts[i], counts[i],
                               rbuffer[i], 1, buftype[i], &reqs[i+4]);
-        ERR
+        CHECK_ERR
     }
 
     for (i=0; i<nreqs; i++) MPI_Type_free(&buftype[i]);
@@ -526,16 +524,17 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         err = ncmpi_iget_varn_longlong(ncid, varid[i], my_nsegs[i], starts[i],
                                        counts[i], cbuffer[i], &reqs[i+8]);
-        ERR
+        CHECK_ERR
     }
 
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
     clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs*3, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     /* all processes read entire variables back and check contents */
@@ -544,6 +543,7 @@ int main(int argc, char** argv)
     /* flush nonblocking 1st batch read requests */
     nerrs += check_num_pending_reqs(ncid, nreqs*2, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs+4, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     for (i=0; i<nreqs; i++) {
@@ -564,6 +564,7 @@ int main(int argc, char** argv)
     /* flush nonblocking 2nd batch read requests */
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs+8, sts);
+    CHECK_ERR
     ERRS(nreqs, sts)
 
     for (i=0; i<nreqs; i++) {
@@ -577,7 +578,7 @@ int main(int argc, char** argv)
     }
 
     err = ncmpi_close(ncid);
-    ERR
+    CHECK_ERR
 
     if (bufsize>0) free(cbuffer[0]);
     for (i=0; i<nreqs; i++) free(buffer[i]);

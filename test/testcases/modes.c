@@ -25,20 +25,18 @@
 
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));nerrs++}}
-
 #define EXPECT_ERR(err_no) \
     if (err != err_no) { \
         nerrs++; \
-        printf("Error at line %d: expect error code %s but got %s\n", \
-               __LINE__,nc_err_code_name(err_no),nc_err_code_name(err)); \
+        printf("Error line %d in %s: expect error code %s but got %s\n", \
+               __LINE__,__FILE__, ncmpi_strerrno(err_no),ncmpi_strerrno(err)); \
     }
 
 #define EXPECT_ERR2(err_no1, err_no2) \
     if (err != err_no1 && err != err_no2) { \
         nerrs++; \
-        printf("Error at line %d: expect error code %s but got %s\n", \
-               __LINE__,nc_err_code_name(err_no1),nc_err_code_name(err)); \
+        printf("Error line %d in %s: expect error code %s or %s but got %s\n", \
+               __LINE__,__FILE__,ncmpi_strerrno(err_no1),ncmpi_strerrno(err_no2),ncmpi_strerrno(err)); \
     }
 
 static

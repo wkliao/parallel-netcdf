@@ -30,8 +30,6 @@
 
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));nerrs++;}}
-
 static
 void check_num_vars(int  ncid,
                     int  expected_nvars,
@@ -41,9 +39,9 @@ void check_num_vars(int  ncid,
 {
     int err, nvars, num_rec_vars, num_fix_vars;
 
-    err = ncmpi_inq_nvars(ncid, &nvars); ERR
-    err = ncmpi_inq_num_rec_vars(ncid, &num_rec_vars); ERR
-    err = ncmpi_inq_num_fix_vars(ncid, &num_fix_vars); ERR
+    err = ncmpi_inq_nvars(ncid, &nvars); CHECK_ERR
+    err = ncmpi_inq_num_rec_vars(ncid, &num_rec_vars); CHECK_ERR
+    err = ncmpi_inq_num_fix_vars(ncid, &num_fix_vars); CHECK_ERR
 
     if (nvars != expected_nvars) {
         printf("Error: expecting %d number of variables defined, but got %d\n", expected_nvars, nvars);
@@ -87,33 +85,33 @@ int main(int argc, char** argv) {
 
     /* create a new file for writing ----------------------------------------*/
     cmode = NC_CLOBBER;
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
 
     /* define dimension and variable */
-    err = ncmpi_def_dim(ncid, "REC_DIM", NC_UNLIMITED, &dimid[0]); ERR
-    err = ncmpi_def_dim(ncid, "Y",       2,            &dimid[1]); ERR
-    err = ncmpi_def_dim(ncid, "X",       10,           &dimid[2]); ERR
+    err = ncmpi_def_dim(ncid, "REC_DIM", NC_UNLIMITED, &dimid[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "Y",       2,            &dimid[1]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X",       10,           &dimid[2]); CHECK_ERR
 
     nerrs = 0;
 
-    err = ncmpi_def_var(ncid, "REC_VAR_1", NC_INT, 1, dimid, &varid[0]); ERR
-    err = ncmpi_def_var(ncid, "REC_VAR_2", NC_INT, 3, dimid, &varid[1]); ERR
-    err = ncmpi_def_var(ncid, "REC_VAR_3", NC_INT, 2, dimid, &varid[2]); ERR
-    err = ncmpi_def_var(ncid, "REC_VAR_4", NC_INT, 1, dimid, &varid[3]); ERR
+    err = ncmpi_def_var(ncid, "REC_VAR_1", NC_INT, 1, dimid, &varid[0]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "REC_VAR_2", NC_INT, 3, dimid, &varid[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "REC_VAR_3", NC_INT, 2, dimid, &varid[2]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "REC_VAR_4", NC_INT, 1, dimid, &varid[3]); CHECK_ERR
 
     check_num_vars(ncid, 4, 4, 0, &nerrs);
 
-    err = ncmpi_def_var(ncid, "FIX_VAR_1", NC_INT, 2, dimid+1, &varid[4]); ERR
-    err = ncmpi_def_var(ncid, "FIX_VAR_2", NC_INT, 1, dimid+1, &varid[5]); ERR
-    err = ncmpi_def_var(ncid, "FIX_VAR_3", NC_INT, 1, dimid+2, &varid[6]); ERR
+    err = ncmpi_def_var(ncid, "FIX_VAR_1", NC_INT, 2, dimid+1, &varid[4]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "FIX_VAR_2", NC_INT, 1, dimid+1, &varid[5]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "FIX_VAR_3", NC_INT, 1, dimid+2, &varid[6]); CHECK_ERR
 
     check_num_vars(ncid, 7, 4, 3, &nerrs);
 
-    err = ncmpi_enddef(ncid); ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
 
     check_num_vars(ncid, 7, 4, 3, &nerrs);
 
-    err = ncmpi_close(ncid); ERR
+    err = ncmpi_close(ncid); CHECK_ERR
 
     /* check if PnetCDF freed all internal malloc */
     MPI_Offset malloc_size, sum_size;
