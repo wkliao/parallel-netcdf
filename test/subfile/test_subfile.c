@@ -415,5 +415,5 @@ end:
 
     MPI_Finalize();
 
-    return 0;
+    return (nerrs > 0);
 }

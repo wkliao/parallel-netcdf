@@ -252,6 +252,6 @@ if (status != NC_NOERR) handle_error(status);
 	}
   }
   MPI_Finalize();
-  return 0;
+  return (nerrs > 0);
 }
 

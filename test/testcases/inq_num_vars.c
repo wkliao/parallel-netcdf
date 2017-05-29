@@ -30,7 +30,7 @@
 
 #include <testutils.h>
 
-#define ERR {if(err!=NC_NOERR)printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));}
+#define ERR {if(err!=NC_NOERR){printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));nerrs++;}}
 
 static
 void check_num_vars(int  ncid,
@@ -61,7 +61,7 @@ void check_num_vars(int  ncid,
 
 int main(int argc, char** argv) {
     char filename[256];
-    int nerrs, rank, nprocs, err;
+    int nerrs=0, rank, nprocs, err;
     int ncid, cmode, varid[7], dimid[3];
     MPI_Info info=MPI_INFO_NULL;
 
@@ -133,6 +133,6 @@ int main(int argc, char** argv) {
 
 fn_exit:
     MPI_Finalize();
-    return 0;
+    return (nerrs > 0);
 }
 

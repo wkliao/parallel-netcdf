@@ -563,7 +563,6 @@ main(int argc, char* argv[])	// test new netCDF interface
         else       printf(PASS_STR);
     }
 
-
-   MPI_Finalize();
-   return nerrs;
+    MPI_Finalize();
+    return (nerrs > 0);
 }

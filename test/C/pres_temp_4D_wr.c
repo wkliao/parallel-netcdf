@@ -290,5 +290,5 @@ main(int argc, char ** argv)
 
     MPI_Finalize();
 
-    return nerrs;
+    return (nerrs > 0);
 }

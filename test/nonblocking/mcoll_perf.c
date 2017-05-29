@@ -338,7 +338,7 @@ int main(int argc, char **argv)
     if (argc > 2) {
         if (!rank) printf("Usage: %s [file base name]\n",argv[0]);
         MPI_Finalize();
-        return 0;
+        return 1;
     }
     if (argc == 2) snprintf(fbasename, 256, "%s", argv[1]);
     else           strcpy(fbasename, "testfile");
@@ -697,5 +697,5 @@ printf("filename2=%s filename3=%s\n",filename2, filename3);
     }
 
     MPI_Finalize();
-    return 0;
+    return (nerrs > 0);
 }

@@ -93,6 +93,6 @@ int main( int argc, char *argv[] )
         else       printf(PASS_STR);
     }
 
-   MPI_Finalize();
-   return 0;
+    MPI_Finalize();
+    return (nerrs > 0);
 }

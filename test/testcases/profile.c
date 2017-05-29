@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
     MPI_Bcast(&err, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (err == 1) {
         MPI_Finalize();
-        return 0;
+        return 1;
     }
     MPI_Bcast(&verbose, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(filename, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -431,6 +431,6 @@ int main(int argc, char **argv) {
     }
 
     MPI_Finalize();
-    return 0;
+    return (nerrs > 0);
 }
 

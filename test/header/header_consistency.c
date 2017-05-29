@@ -343,13 +343,13 @@ int main(int argc, char **argv)
     if (nprocs < 2) {
         if (!rank) printf("This program is for running 2 or more processes. Exiting ...\n");
         MPI_Finalize();
-        return 0;
+        return 1;
     }
 
     if (argc > 2) {
         if (!rank) printf("Usage: %s [filename]\n",argv[0]);
         MPI_Finalize();
-        return 0;
+        return 1;
     }
     if (argc == 2) filename = argv[1];
 
@@ -393,6 +393,6 @@ int main(int argc, char **argv)
     }
 
     MPI_Finalize();
-    return 0;
+    return (nerrs > 0);
 }
 

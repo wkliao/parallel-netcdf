@@ -426,6 +426,6 @@ int main(int argc, char** argv) {
     }
 
     MPI_Finalize();
-    return 0;
+    return (nerrs == 0) ? 0 : 1;
 }
 

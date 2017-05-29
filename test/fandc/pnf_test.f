@@ -222,7 +222,6 @@
 
       call MPI_Finalize  (ierr)
 
-
       Stop
 
       end ! program Pnf_Test
