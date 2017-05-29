@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
             case 'h':
             default:  if (rank==0) usage(argv[0]);
                       MPI_Finalize();
-                      return 0;
+                      return 1;
         }
     argc -= optind;
     argv += optind;
@@ -306,6 +306,6 @@ int main(int argc, char** argv) {
     }
 
     MPI_Finalize();
-    return nerrs;
+    return (nerrs > 0);
 }
 

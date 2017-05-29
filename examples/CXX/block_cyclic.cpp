@@ -116,7 +116,7 @@ int main(int argc, char** argv)
             case 'h':
             default:  if (rank==0) usage(argv[0]);
                       MPI_Finalize();
-                      return 0;
+                      return 1;
         }
     argc -= optind;
     argv += optind;
@@ -283,6 +283,7 @@ int main(int argc, char** argv)
     }
     catch(NcmpiException& e) {
        cout << e.what() << " error code=" << e.errorCode() << " Error!\n";
+       return 1;
     }
 
     /* check if there is any PnetCDF internal malloc residue */

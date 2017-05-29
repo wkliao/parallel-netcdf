@@ -179,11 +179,15 @@
           call check(err, 'In nfmpi_put_vara_int_all: ')
 
           err = nfmpi_inq_var_fill(ncid, fix_varid, no_fill, fill_value)
-          if (no_fill .NE. 0)
-     +        print*,"Error: expecting no_fill to be 0"
-          if (fill_value .NE. NF_FILL_INT)
-     +        print*,"Error: expecting no_fill to be ",NF_FILL_INT,
+          if (no_fill .NE. 0) then
+              print*,"Error: expecting no_fill to be 0"
+              stop 2
+          endif
+          if (fill_value .NE. NF_FILL_INT) then
+              print*,"Error: expecting no_fill to be ",NF_FILL_INT,
      +               " but got ", fill_value
+              stop 2
+          endif
 
           ! fill the 1st record of the record variable
           starts(2) = 1
