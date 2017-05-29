@@ -25,7 +25,7 @@
 
 #include <testutils.h>
 
-#define EXP_ERR(expect_err,itype,etype) { \
+#define EXP_ERR_N_TYPE(expect_err,itype,etype) { \
     if (err != expect_err) { \
         printf("Error at line %d in %s: itype=%9s etype=%-9s err=%s\n", \
                __LINE__,__FILE__,itype,etype_name(etype),ncmpi_strerrno(err)); \
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 
     for (i=0; i<1024; i++) buf[i]=i;
     err = ncmpi_put_att_text(ncid, NC_GLOBAL, "att_text", 3, (char*)buf); CHECK_ERR
-    EXP_ERR(NC_NOERR, "text", NC_CHAR)
+    EXP_ERR_N_TYPE(NC_NOERR, "text", NC_CHAR)
 
     for (i=0; i<1024; i++) buf[i]=0;
     for (i=NC_BYTE; i<=NC_UINT64; i++) {
@@ -107,34 +107,34 @@ int main(int argc, char* argv[])
 
         sprintf(attname,"att_uchar_for_var_%s",varname[i]);
         err = ncmpi_put_att_uchar    (ncid, NC_GLOBAL, attname, i, 3, (unsigned char*)      buf);
-        EXP_ERR(expect_err, "uchar", i)
+        EXP_ERR_N_TYPE(expect_err, "uchar", i)
         sprintf(attname,"att_schar_for_var_%s",varname[i]);
         err = ncmpi_put_att_schar    (ncid, NC_GLOBAL, attname, i, 3, (signed char*)        buf);
-        EXP_ERR(expect_err, "schar", i)
+        EXP_ERR_N_TYPE(expect_err, "schar", i)
         sprintf(attname,"att_short_for_var_%s",varname[i]);
         err = ncmpi_put_att_short    (ncid, NC_GLOBAL, attname, i, 3, (short*)              buf);
-        EXP_ERR(expect_err, "short", i)
+        EXP_ERR_N_TYPE(expect_err, "short", i)
         sprintf(attname,"att_int_for_var_%s",varname[i]);
         err = ncmpi_put_att_int      (ncid, NC_GLOBAL, attname, i, 3, (int*)                buf);
-        EXP_ERR(expect_err, "int", i)
+        EXP_ERR_N_TYPE(expect_err, "int", i)
         sprintf(attname,"att_float_for_var_%s",varname[i]);
         err = ncmpi_put_att_float    (ncid, NC_GLOBAL, attname, i, 3, (float*)              buf);
-        EXP_ERR(expect_err, "float", i)
+        EXP_ERR_N_TYPE(expect_err, "float", i)
         sprintf(attname,"att_double_for_var_%s",varname[i]);
         err = ncmpi_put_att_double   (ncid, NC_GLOBAL, attname, i, 3, (double*)             buf);
-        EXP_ERR(expect_err, "double", i)
+        EXP_ERR_N_TYPE(expect_err, "double", i)
         sprintf(attname,"att_ushort_for_var_%s",varname[i]);
         err = ncmpi_put_att_ushort   (ncid, NC_GLOBAL, attname, i, 3, (unsigned short*)     buf);
-        EXP_ERR(expect_err, "ushort", i)
+        EXP_ERR_N_TYPE(expect_err, "ushort", i)
         sprintf(attname,"att_uint_for_var_%s",varname[i]);
         err = ncmpi_put_att_uint     (ncid, NC_GLOBAL, attname, i, 3, (unsigned int*)       buf);
-        EXP_ERR(expect_err, "uint", i)
+        EXP_ERR_N_TYPE(expect_err, "uint", i)
         sprintf(attname,"att_longlong_for_var_%s",varname[i]);
         err = ncmpi_put_att_longlong (ncid, NC_GLOBAL, attname, i, 3, (long long*)          buf);
-        EXP_ERR(expect_err, "longlong", i)
+        EXP_ERR_N_TYPE(expect_err, "longlong", i)
         sprintf(attname,"att_ulonglong_for_var_%s",varname[i]);
         err = ncmpi_put_att_ulonglong(ncid, NC_GLOBAL, attname, i, 3, (unsigned long long*) buf);
-        EXP_ERR(expect_err, "ulonglong", i)
+        EXP_ERR_N_TYPE(expect_err, "ulonglong", i)
     }
 
     for (i=NC_BYTE; i<=NC_UINT64; i++) {
@@ -144,34 +144,34 @@ int main(int argc, char* argv[])
 
         sprintf(attname,"att_uchar_for_var_%s",varname[i]);
         err = ncmpi_get_att_uchar    (ncid, NC_GLOBAL, attname, (unsigned char*)      buf);
-        EXP_ERR(expect_err, "uchar", i)
+        EXP_ERR_N_TYPE(expect_err, "uchar", i)
         sprintf(attname,"att_schar_for_var_%s",varname[i]);
         err = ncmpi_get_att_schar    (ncid, NC_GLOBAL, attname, (signed char*)        buf);
-        EXP_ERR(expect_err, "schar", i)
+        EXP_ERR_N_TYPE(expect_err, "schar", i)
         sprintf(attname,"att_short_for_var_%s",varname[i]);
         err = ncmpi_get_att_short    (ncid, NC_GLOBAL, attname, (short*)              buf);
-        EXP_ERR(expect_err, "short", i)
+        EXP_ERR_N_TYPE(expect_err, "short", i)
         sprintf(attname,"att_int_for_var_%s",varname[i]);
         err = ncmpi_get_att_int      (ncid, NC_GLOBAL, attname, (int*)                buf);
-        EXP_ERR(expect_err, "int", i)
+        EXP_ERR_N_TYPE(expect_err, "int", i)
         sprintf(attname,"att_float_for_var_%s",varname[i]);
         err = ncmpi_get_att_float    (ncid, NC_GLOBAL, attname, (float*)              buf);
-        EXP_ERR(expect_err, "float", i)
+        EXP_ERR_N_TYPE(expect_err, "float", i)
         sprintf(attname,"att_double_for_var_%s",varname[i]);
         err = ncmpi_get_att_double   (ncid, NC_GLOBAL, attname, (double*)             buf);
-        EXP_ERR(expect_err, "double", i)
+        EXP_ERR_N_TYPE(expect_err, "double", i)
         sprintf(attname,"att_ushort_for_var_%s",varname[i]);
         err = ncmpi_get_att_ushort   (ncid, NC_GLOBAL, attname, (unsigned short*)     buf);
-        EXP_ERR(expect_err, "ushort", i)
+        EXP_ERR_N_TYPE(expect_err, "ushort", i)
         sprintf(attname,"att_uint_for_var_%s",varname[i]);
         err = ncmpi_get_att_uint     (ncid, NC_GLOBAL, attname, (unsigned int*)       buf);
-        EXP_ERR(expect_err, "uint", i)
+        EXP_ERR_N_TYPE(expect_err, "uint", i)
         sprintf(attname,"att_longlong_for_var_%s",varname[i]);
         err = ncmpi_get_att_longlong (ncid, NC_GLOBAL, attname, (long long*)          buf);
-        EXP_ERR(expect_err, "longlong", i)
+        EXP_ERR_N_TYPE(expect_err, "longlong", i)
         sprintf(attname,"att_ulonglong_for_var_%s",varname[i]);
         err = ncmpi_get_att_ulonglong(ncid, NC_GLOBAL, attname, (unsigned long long*) buf);
-        EXP_ERR(expect_err, "ulonglong", i)
+        EXP_ERR_N_TYPE(expect_err, "ulonglong", i)
     }
 
     err = ncmpi_close(ncid); CHECK_ERR

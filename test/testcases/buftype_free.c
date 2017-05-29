@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
     for (i=0; i<4; i++) {
         for (j=0; j<(NY+4)*(NX+4); j++) {
             if (buf[i][j] != rank+10) {
-                printf("Error: user put buffer[%d][%d] altered from %d to %d\n",
-                       i,j, rank+10, buf[i][j]);
+                printf("Error at line %d in %s: user put buffer[%d][%d] altered from %d to %d\n",
+                       __LINE__,__FILE__,i,j, rank+10, buf[i][j]);
                 nerrs++;
             }
         }

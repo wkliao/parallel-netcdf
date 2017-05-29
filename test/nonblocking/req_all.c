@@ -136,13 +136,13 @@ int main(int argc, char** argv)
     for (i=0; i<NY; i++)
         for (j=0; j<NX; j++) {
              if (buf_int[i][j] != rank+10) {
-                 printf("Error at line %d: expecting buffer[%d][%d]=%d but got %d\n",
-                       __LINE__,i,j,rank+10,buf_int[i][j]);
+                 printf("Error at line %d in %s: expecting buffer[%d][%d]=%d but got %d\n",
+                       __LINE__,__FILE__,i,j,rank+10,buf_int[i][j]);
                  nerrs++;
              }
              if (buf_flt[i][j] != 10.5 + rank) {
-                 printf("Error at line %d: expecting buffer[%d][%d]=%f but got %f\n",
-                       __LINE__,i,j,10.5+rank,buf_flt[i][j]);
+                 printf("Error at line %d in %s: expecting buffer[%d][%d]=%f but got %f\n",
+                       __LINE__,__FILE__,i,j,10.5+rank,buf_flt[i][j]);
                  nerrs++;
              }
         }

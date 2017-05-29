@@ -74,7 +74,7 @@
     int _i; \
     for (_i=0; _i<(n); _i++) { \
         if ((a)[_i] != NC_NOERR) { \
-            printf("Error: line %d in %s: err[%d] %s\n", __LINE__, __FILE__, _i, \
+            printf("Error at line %d in %s: err[%d] %s\n", __LINE__, __FILE__, _i, \
                    ncmpi_strerrno((a)[_i])); \
             nerrs++; \
         } \
@@ -82,9 +82,9 @@
 }
 
 static
-void clear_file_contents(int ncid, int *varid)
+int clear_file_contents(int ncid, int *varid)
 {
-    int i, err, rank;
+    int i, err, nerrs=0, rank;
     long long *w_buffer = (long long*) malloc(NY*NX * sizeof(long long));
     for (i=0; i<NY*NX; i++) w_buffer[i] = -1;
 
@@ -92,16 +92,17 @@ void clear_file_contents(int ncid, int *varid)
 
     for (i=0; i<4; i++) {
         err = ncmpi_put_var_longlong_all(ncid, varid[i], w_buffer);
-        if (err != NC_NOERR) printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));
+        CHECK_ERR
     }
     free(w_buffer);
+    return nerrs;
 }
 
 static
 int check_contents_for_fail(int ncid, int *varid, int lineno)
 {
     /* all processes read entire variables back and check contents */
-    int i, j, err, nprocs;
+    int i, j, err, nerrs=0, nprocs;
     long long expected[4][NY*NX] = {{13, 13, 13, 11, 11, 10, 10, 12, 11, 11,
                                      10, 12, 12, 12, 13, 11, 11, 12, 12, 12,
                                      11, 11, 12, 13, 13, 13, 10, 10, 11, 11,
@@ -127,36 +128,35 @@ int check_contents_for_fail(int ncid, int *varid, int lineno)
     for (i=0; i<4; i++) {
         for (j=0; j<NY*NX; j++) r_buffer[j] = -1;
         err = ncmpi_get_var_longlong_all(ncid, varid[i], r_buffer);
-        if (err != NC_NOERR) printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));
+        CHECK_ERR
 
         /* check if the contents of buf are expected */
         for (j=0; j<NY*NX; j++) {
             if (expected[i][j] >= nprocs) continue;
             if (r_buffer[j] != expected[i][j]) {
-                printf("Error from line %d: Expected read buf[%d][%d]=%lld, but got %lld\n",
-                       lineno,i,j,expected[i][j],r_buffer[j]);
-                free(r_buffer);
-                return 1;
+                printf("Error at line %d in %s: Expected read buf[%d][%d]=%lld, but got %lld\n",
+                       lineno,__FILE__,i,j,expected[i][j],r_buffer[j]);
+                nerrs++;
             }
         }
     }
     free(r_buffer);
-    return 0;
+    return nerrs;
 }
 
 static int
 check_num_pending_reqs(int ncid, int expected, int lineno)
 /* check if PnetCDF can reports expected number of pending requests */
 {
-    int err, n_pendings;
+    int err, nerrs=0, n_pendings;
     err = ncmpi_inq_nreqs(ncid, &n_pendings);
-    if (err != NC_NOERR) printf("Error at line=%d: %s\n", __LINE__, ncmpi_strerror(err));
+    CHECK_ERR
     if (n_pendings != expected) {
-        printf("Error at line %d: expect %d pending requests but got %d\n",
-               lineno, expected, n_pendings);
-        return 1;
+        printf("Error at line %d in %s: expect %d pending requests but got %d\n",
+               lineno, __FILE__, expected, n_pendings);
+        nerrs++;
     }
-    return 0;
+    return nerrs;
 }
 
 /* swap two rows, a and b, of a 2D array */
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
-    clear_file_contents(ncid, varid);
+    nerrs += clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
     CHECK_ERR
@@ -337,7 +337,8 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
             if (buffer[i][j] != rank+10) {
-                printf("Error: put buffer altered buffer[%d][%d]=%lld\n", i,j,buffer[i][j]);
+                printf("Error at line %d in %s: put buffer altered buffer[%d][%d]=%lld\n",
+                       __LINE__,__FILE__,i,j,buffer[i][j]);
                 nerrs++;
             }
         }
@@ -377,7 +378,7 @@ int main(int argc, char** argv)
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
-    clear_file_contents(ncid, varid);
+    nerrs += clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
     CHECK_ERR
@@ -387,7 +388,8 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
             if (cbuffer[i][j] != rank+10) {
-                printf("Error: put buffer altered buffer[%d][%d]=%lld\n", i,j,cbuffer[i][j]);
+                printf("Error at line %d in %s: put buffer altered buffer[%d][%d]=%lld\n",
+                       __LINE__,__FILE__,i,j,cbuffer[i][j]);
                 nerrs++;
             }
         }
@@ -437,7 +439,7 @@ int main(int argc, char** argv)
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
-    clear_file_contents(ncid, varid);
+    nerrs += clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs*2, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
     CHECK_ERR
@@ -447,7 +449,8 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
             if (buffer[i][j] != rank+10) {
-                printf("Error: put buffer altered buffer[%d][%d]=%lld\n", i,j,buffer[i][j]);
+                printf("Error at line %d in %s: put buffer altered buffer[%d][%d]=%lld\n",
+                       __LINE__,__FILE__,i,j,buffer[i][j]);
                 nerrs++;
             }
         }
@@ -466,8 +469,8 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
             if (cbuffer[i][j] != rank+10) {
-                printf("Error at line %d: expecting cbuffer[%d][%d]=%d but got %lld\n",
-                       __LINE__,i,j,rank+10,cbuffer[i][j]);
+                printf("Error at line %d in %s: expecting cbuffer[%d][%d]=%d but got %lld\n",
+                       __LINE__,__FILE__,i,j,rank+10,cbuffer[i][j]);
                 nerrs++;
             }
         }
@@ -531,7 +534,7 @@ int main(int argc, char** argv)
 
     /* clear the file contents using a blocking API, before commit the
      * nonblocking requests posted in define mode */
-    clear_file_contents(ncid, varid);
+    nerrs += clear_file_contents(ncid, varid);
     nerrs += check_num_pending_reqs(ncid, nreqs*3, __LINE__);
     err = ncmpi_wait_all(ncid, nreqs, reqs, sts);
     CHECK_ERR
@@ -549,13 +552,13 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]*2; j++) {
             if (j%2 && rbuffer[i][j] != -1) {
-                printf("Error at line %d: expecting rbuffer[%d][%d]=-1 but got %lld\n",
-                       __LINE__,i,j,rbuffer[i][j]);
+                printf("Error at line %d in %s: expecting rbuffer[%d][%d]=-1 but got %lld\n",
+                       __LINE__,__FILE__,i,j,rbuffer[i][j]);
                 nerrs++;
             }
             if (j%2 == 0 && rbuffer[i][j] != rank+10) {
-                printf("Error at line %d: expecting rbuffer[%d][%d]=%d but got %lld\n",
-                       __LINE__,i,j,rank+10,rbuffer[i][j]);
+                printf("Error at line %d in %s: expecting rbuffer[%d][%d]=%d but got %lld\n",
+                       __LINE__,__FILE__,i,j,rank+10,rbuffer[i][j]);
                 nerrs++;
             }
         }
@@ -570,8 +573,8 @@ int main(int argc, char** argv)
     for (i=0; i<nreqs; i++) {
         for (j=0; j<req_lens[i]; j++) {
             if (cbuffer[i][j] != rank+10) {
-                printf("Error at line %d: expecting buffer[%d][%d]=%d but got %lld\n",
-                       __LINE__,i,j,rank+10,cbuffer[i][j]);
+                printf("Error at line %d in %s: expecting buffer[%d][%d]=%d but got %lld\n",
+                       __LINE__,__FILE__,i,j,rank+10,cbuffer[i][j]);
                 nerrs++;
             }
         }

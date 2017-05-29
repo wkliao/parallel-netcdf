@@ -60,8 +60,6 @@
 #include <pnetcdf.h>
 #include <testutils.h>
 
-#define ERR_EXPECT(exp) if (err!=exp) {printf("Error at line %d: expect error %s but got %s\n", __LINE__,nc_err_code_name(exp),nc_err_code_name(err)); nerrs++;}
-
 int main(int argc, char** argv)
 {
     char filename[256];
@@ -103,7 +101,7 @@ int main(int argc, char** argv)
     /* max dimension size for CDF-1 file is 2^31-3 = 2147483647 - 3 */
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", INT_MAX, &dimid[0]);
-    ERR_EXPECT(NC_EDIMSIZE)
+    EXP_ERR(NC_EDIMSIZE)
     err = ncmpi_def_dim(ncid, "Y", INT_MAX-3, &dimid[0]); CHECK_ERR
     err = ncmpi_close(ncid); CHECK_ERR
     err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
@@ -126,7 +124,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var1", NC_INT,  1, &dimid[1], &varid); CHECK_ERR
     /* for cdf-1, adding var1 after var0 will cause NC_EVARSIZE */
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     /* use the max dimension size - 1024 to define a 1D variableis, followed
      * by another variable to make the file size < 2147483647 */
@@ -148,7 +146,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var1", NC_CHAR,  1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     /* define two variables to make the file size just < 2147483647 */
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
@@ -165,7 +163,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     /* create a new CDF-2 file ----------------------------------------------*/
     cmode = NC_CLOBBER | NC_64BIT_OFFSET;
@@ -173,7 +171,7 @@ int main(int argc, char** argv)
     /* max dimension size for CDF-2 file is 2^32-3 = 4294967295 - 3 */
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", UINT_MAX, &dimid[0]);
-    ERR_EXPECT(NC_EDIMSIZE)
+    EXP_ERR(NC_EDIMSIZE)
     err = ncmpi_def_dim(ncid, "Y", UINT_MAX-3, &dimid[0]); CHECK_ERR
     err = ncmpi_close(ncid); CHECK_ERR
     err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); CHECK_ERR
@@ -207,7 +205,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var0", NC_SHORT, 1, &dimid[0], &varid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var1", NC_INT,   1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     /* define 2 int 1D variables of dimension size > max */
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
@@ -216,7 +214,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", INT_MAX/2+1, &dimid[0]); CHECK_ERR
@@ -224,7 +222,7 @@ int main(int argc, char** argv)
     err = ncmpi_def_var(ncid, "var0", NC_INT, 1, &dimid[0], &varid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var1", NC_INT, 1, &dimid[1], &varid); CHECK_ERR
     err = ncmpi_close(ncid);
-    ERR_EXPECT(NC_EVARSIZE)
+    EXP_ERR(NC_EVARSIZE)
 
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); CHECK_ERR
     err = ncmpi_def_dim(ncid, "Y", INT_MAX/2, &dimid[0]); CHECK_ERR

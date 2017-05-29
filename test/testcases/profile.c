@@ -332,7 +332,8 @@ static int test_ivarn(int ncid)
     if (err != NC_NOERR) {
         for (i=0; i<4; i++) {
             if (st[i] != NC_NOERR) {
-                printf("Error in %s at line %d: st[%d] %s\n",__FILE__,__LINE__,i,ncmpi_strerror(st[i]));
+                printf("Error at line %d in %s: st[%d] %s\n",
+                __FILE__,__LINE__,i,ncmpi_strerror(st[i]));
             }
         }
     }

@@ -138,8 +138,8 @@ int get_var_and_verify(int ncid,
     for (j=0; j<count[0]; j++) {
         for (i=0; i<count[1]; i++)
             if (buf[j][i] != ncbuf[(j+2)*(count[1]+4)+(i+2)]) {
-                printf("Error at line %d: expecting ncbuf[%d][%d]=%d but got %d\n",
-                       __LINE__,j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
+                printf("Error at line %d in %s: expecting ncbuf[%d][%d]=%d but got %d\n",
+                       __LINE__,__FILE__,j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
                 nerrs++;
             }
     }
@@ -271,8 +271,8 @@ int main(int argc, char **argv) {
      * file header */
     if (rank == 0) expected_put_size += (format == NC_FORMAT_CDF5) ? 8 : 4;
     if (expected_put_size != new_put_size - put_size) {
-        printf("Error: unexpected put size (%lld) reported, expecting %d\n",
-               new_put_size-put_size, expected_put_size);
+        printf("Error at line %d in %s: unexpected put size (%lld) reported, expecting %d\n",
+               __LINE__,__FILE__,new_put_size-put_size, expected_put_size);
         nerrs++;
     }
 
@@ -291,8 +291,8 @@ int main(int argc, char **argv) {
     err = ncmpi_inq_put_size(ncid, &new_put_size); CHECK_ERR
     expected_put_size = buftype_size;
     if (expected_put_size != new_put_size - put_size) {
-        printf("Error: unexpected put size (%lld) reported, expecting %d\n",
-               new_put_size-put_size, expected_put_size);
+        printf("Error at line %d in %s: unexpected put size (%lld) reported, expecting %d\n",
+               __LINE__,__FILE__,new_put_size-put_size, expected_put_size);
         nerrs++;
     }
 

@@ -96,7 +96,8 @@ int main(int argc, char **argv)
         for (j=0; j<4; j++) {
             if (rh[j][i] != k) {
 #ifdef PRINT_ERR_ON_SCREEN
-                printf("Error: expecting rh[%d][%d]=%f but got %f\n",j,i,k,rh[j][i]);
+                printf("Error at line %d in %s: expecting rh[%d][%d]=%f but got %f\n",
+                __LINE__,__FILE__,j,i,k,rh[j][i]);
 #endif
                 nerrs++;
                 break;
@@ -168,7 +169,8 @@ int main(int argc, char **argv)
             if (varT[j][i] != j*6+i + 50) {
 #ifdef PRINT_ERR_ON_SCREEN
                 /* this error is a pntecdf internal error, if occurs */
-                printf("Error: expecting varT[%d][%d]=%d but got %d\n",j,i,j*6+i + 50,varT[j][i]);
+                printf("Error at line %d in %s: expecting varT[%d][%d]=%d but got %d\n",
+                __LINE__,__FILE__,j,i,j*6+i + 50,varT[j][i]);
 #endif
                 nerrs++;
                 break;

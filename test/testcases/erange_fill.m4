@@ -29,14 +29,6 @@
 
 #define LEN 10
 
-#define ERR_EXPECT(expect) { \
-    if (err != expect) { \
-        printf("Error at %s line %d: expect %s but got %s\n", \
-               __func__,__LINE__,nc_err_code_name(NC_ERANGE),nc_err_code_name(err)); \
-        nerrs++; \
-    } \
-}
-
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
 
@@ -190,9 +182,9 @@ int test_erange_put_$1_$2(char* filename) {
     $2 wbuf[LEN];
     for (i=0; i<LEN; i++) wbuf[i] = ($2) ifelse(index(`$1',`u'), 0, `-1', `XTYPE_MAX($2)');
     err = PUT_VAR($2)(ncid, varid1, wbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`EXP_ERR(NC_ERANGE)')',`EXP_ERR(NC_ERANGE)')
     err = PUT_VAR($2)(ncid, varid2, wbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`EXP_ERR(NC_ERANGE)')',`EXP_ERR(NC_ERANGE)')
 
     err = ncmpi_close(ncid); CHECK_ERR
 
@@ -266,7 +258,7 @@ int test_erange_get_$1_$2(char* filename) {
     /* get data with ERANGE values */
     $2 rbuf[LEN];
     err = GET_VAR($2)(ncid, varid, rbuf);
-    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`ERR_EXPECT(NC_ERANGE)')',`ERR_EXPECT(NC_ERANGE)')
+    ifelse(`$1',`schar',`ifelse(`$2',`uchar',`if (cdf == NC_FORMAT_CDF2) CHECK_ERR',`EXP_ERR(NC_ERANGE)')',`EXP_ERR(NC_ERANGE)')
 
     for (i=0; i<LEN; i++) {
         $2 expect = ($2)NC_FILL_VALUE($2);

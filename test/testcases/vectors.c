@@ -17,6 +17,7 @@
 #define VECCOUNT 4
 #define BLOCKLEN  3
 #define STRIDE   5
+
 int main(int argc, char ** argv)
 {
     int ncid, dimid, varid, rank, nprocs;

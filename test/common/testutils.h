@@ -19,7 +19,16 @@
 #define CHECK_ERR { \
     if (err != NC_NOERR) { \
         nerrs++; \
-        printf("Error: line %d in %s (%s)\n", __LINE__,__FILE__,nc_err_code_name(err)); \
+        printf("Error at line %d in %s: (%s)\n", \
+        __LINE__,__FILE__,ncmpi_strerrno(err)); \
+    } \
+}
+
+#define EXP_ERR(exp) { \
+    if (err != exp) { \
+        nerrs++; \
+        printf("Error at line %d in %s: expecting %s but got %s\n", \
+        __LINE__,__FILE__,ncmpi_strerrno(exp), ncmpi_strerrno(err)); \
     } \
 }
 

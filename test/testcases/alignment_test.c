@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
             /* check if user put buffer contents altered */
             for (j=0; j<NX; j++) {
                 if (buf[j] != rank*1000 + i*10 + j) {
-                    printf("Error: user put buffer[%d] altered from %d to %d\n",
-                           j, rank*1000 + i*10 + j, buf[j]);
+                    printf("Error at line %d in %s: user put buffer[%d] altered from %d to %d\n",
+                           __LINE__,__FILE__,j, rank*1000 + i*10 + j, buf[j]);
                     nerrs++;
                 }
             }
@@ -119,8 +119,8 @@ int main(int argc, char** argv) {
             /* check if user put buffer contents altered */
             for (j=0; j<NX; j++) {
                 if (buf[j] != rank*1000 + 100 + i*10 + j) {
-                    printf("Error: user put buffer[%d] altered from %d to %d\n",
-                           j, rank*1000 + 100 + i*10 + j, buf[j]);
+                    printf("Error at line %d in %s: user put buffer[%d] altered from %d to %d\n",
+                           __LINE__,__FILE__,j, rank*1000 + 100 + i*10 + j, buf[j]);
                     nerrs++;
                 }
             }
@@ -241,8 +241,8 @@ int main(int argc, char** argv) {
             /* check if user put buffer contents altered */
             for (j=0; j<NX; j++) {
                 if (buf[j] != -1 * (i*10 + j)) {
-                    printf("Error: user put buffer[%d] altered from %d to %d\n",
-                           j, -1 * (i*10 + j), buf[j]);
+                    printf("Error at line %d in %s: user put buffer[%d] altered from %d to %d\n",
+                           __LINE__,__FILE__,j, -1 * (i*10 + j), buf[j]);
                     nerrs++;
                 }
             }
@@ -259,8 +259,8 @@ int main(int argc, char** argv) {
             /* check if user put buffer contents altered */
             for (j=0; j<NX; j++) {
                 if (buf[j] != -1 * (100 + i*10 + j)) {
-                    printf("Error: user put buffer[%d] altered from %d to %d\n",
-                           j, -1 * (100 + i*10 + j), buf[j]);
+                    printf("Error at line %d in %s: user put buffer[%d] altered from %d to %d\n",
+                           __LINE__,__FILE__,j, -1 * (100 + i*10 + j), buf[j]);
                     nerrs++;
                 }
             }

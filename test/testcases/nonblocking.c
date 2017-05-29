@@ -109,7 +109,8 @@ int main(int argc, char **argv) {
     for (j=0; j<NY; j++)
         for (i=0; i<NX; i++)
             if (buf[j][i] != j)
-                printf("Error: buf[%d][%d]=%d != %d\n",j,i,buf[j][i],j);
+                printf("Error at line %d in %s: buf[%d][%d]=%d != %d\n",
+                __LINE__,__FILE__,j,i,buf[j][i],j);
  
     /* check if root process can write to file header in data mode */
     err = ncmpi_rename_var(ncid, varid, "VAR"); CHECK_ERR

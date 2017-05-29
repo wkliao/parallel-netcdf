@@ -19,14 +19,6 @@
 
 #include <testutils.h>
 
-#define EXP_ERR(exp) { \
-    if (err != exp) { \
-        nerrs++; \
-        fprintf(stderr, "Error at line %d in %s: expect %s but got %s\n", \
-                __LINE__, __FILE__, ncmpi_strerrno(exp), ncmpi_strerrno(err)); \
-    } \
-}
-
 int main(int argc, char **argv) {
     char filename[256];
     int  err, nerrs=0, ncid, cmode, rank, nprocs;

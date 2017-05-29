@@ -156,8 +156,8 @@ int main(int argc, char **argv)
         for (j=0; j<nprocs; j++) {
             for (k=0; k<NX; k++) {
                 if (buf[i*nprocs*NX+j*NX+k] != j+10) {
-                    printf("Error at line %d: expected buffer[%d]=%d but got %d\n",
-                           __LINE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
+                    printf("Error at line %d in %s: expected buffer[%d]=%d but got %d\n",
+                           __LINE__,__FILE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
                     nerrs++;
                 }
             }
@@ -179,8 +179,8 @@ int main(int argc, char **argv)
         for (j=0; j<nprocs; j++) {
             for (k=0; k<NX; k++) {
                 if (buf[i*nprocs*NX+j*NX+k] != j+10) {
-                    printf("Error at line %d: expected buffer[%d]=%d but got %d\n",
-                           __LINE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
+                    printf("Error at line %d in %s: expected buffer[%d]=%d but got %d\n",
+                           __LINE__,__FILE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
                     nerrs++;
                 }
             }
@@ -202,8 +202,8 @@ int main(int argc, char **argv)
         for (k=0; k<NX; k++) {
             for (j=0; j<nprocs; j++) {
                 if (buf[i*nprocs*NX+k*nprocs+j] != j+10) {
-                    printf("Error at line %d: expected buffer[%d]=%d but got %d\n",
-                           __LINE__,i*nprocs*NX+k*nprocs+j, j+10, buf[i*nprocs*NX+k*nprocs+j]);
+                    printf("Error at line %d in %s: expected buffer[%d]=%d but got %d\n",
+                           __LINE__,__FILE__,i*nprocs*NX+k*nprocs+j, j+10, buf[i*nprocs*NX+k*nprocs+j]);
                     nerrs++;
                 }
             }
@@ -225,8 +225,8 @@ int main(int argc, char **argv)
         for (j=0; j<nprocs; j++) {
             for (k=0; k<NX; k++) {
                 if (buf[i*nprocs*NX+j*NX+k] != j+10) {
-                    printf("Error at line %d: expected buffer[%d]=%d but got %d\n",
-                           __LINE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
+                    printf("Error at line %d in %s: expected buffer[%d]=%d but got %d\n",
+                           __LINE__,__FILE__,i*nprocs*NX+j*NX+k, j+10, buf[i*nprocs*NX+j*NX+k]);
                     nerrs++;
                 }
             }
@@ -248,8 +248,8 @@ int main(int argc, char **argv)
         for (k=0; k<NX; k++) {
             for (j=0; j<nprocs; j++) {
                 if (buf[i*nprocs*NX+k*nprocs+j] != j+10) {
-                    printf("Error at line %d: expected buffer[%d]=%d but got %d\n",
-                           __LINE__,i*nprocs*NX+k*nprocs+j, j+10, buf[i*nprocs*NX+k*nprocs+j]);
+                    printf("Error at line %d in %s: expected buffer[%d]=%d but got %d\n",
+                           __LINE__,__FILE__,i*nprocs*NX+k*nprocs+j, j+10, buf[i*nprocs*NX+k*nprocs+j]);
                     nerrs++;
                 }
             }

@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     /* check the contents of put buffer */
     for (i=0; i<buffer_len; i++) {
         if (buf_zy[i] != rank+10) {
-            printf("Error put buffer[%d] is altered\n",i);
+            printf("Error at line %d in %s: put buffer[%d] is altered\n",__LINE__,__FILE__,i);
             nerrs++;
         }
     }
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
     /* check the contents of put buffer */
     for (i=0; i<buffer_len; i++) {
         if (buf_yx[i] != rank+10) {
-            printf("Error iput buffer[%d]=%f is altered\n",i,buf_yx[i]);
+            printf("Error at line %d in %s: iput buffer[%d]=%f is altered\n",__LINE__,__FILE__,i,buf_yx[i]);
             nerrs++;
         }
     }

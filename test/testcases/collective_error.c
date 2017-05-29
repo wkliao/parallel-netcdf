@@ -30,13 +30,6 @@
 
 #include <testutils.h>
 
-#define EXP_ERR(e) { \
-    if (err!=e) { \
-        printf("Error at line %d in %s: expecting %s but got %s\n",__LINE__,__FILE__,ncmpi_strerrno(e),ncmpi_strerrno(err)); \
-        nerrs++; \
-    } \
-}
-
 static
 int test_collective_error(char *filename, int safe_mode)
 {
@@ -80,13 +73,13 @@ int test_collective_error(char *filename, int safe_mode)
 
     /* check if user put buffer contents altered */
     if (buf[0] != 1.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               0, 1.0, buf[0]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,0, 1.0, buf[0]);
         nerrs++;
     }
     if (buf[1] != 2.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               1, 2.0, buf[1]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,1, 2.0, buf[1]);
         nerrs++;
     }
 
@@ -96,13 +89,13 @@ int test_collective_error(char *filename, int safe_mode)
 
     /* check if user put buffer contents altered */
     if (buf[0] != 1.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               0, 1.0, buf[0]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,0, 1.0, buf[0]);
         nerrs++;
     }
     if (buf[1] != 2.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               1, 2.0, buf[1]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,1, 2.0, buf[1]);
         nerrs++;
     }
 
@@ -116,13 +109,13 @@ int test_collective_error(char *filename, int safe_mode)
 
     /* check if user put buffer contents altered */
     if (buf[0] != 1.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               0, 1.0, buf[0]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,0, 1.0, buf[0]);
         nerrs++;
     }
     if (buf[1] != 2.0) {
-        printf("Error: user put buffer[%d] altered from %f to %f\n",
-               1, 2.0, buf[1]);
+        printf("Error at line %d in %s: user put buffer[%d] altered from %f to %f\n",
+               __LINE__,__FILE__,1, 2.0, buf[1]);
         nerrs++;
     }
 

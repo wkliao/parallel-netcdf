@@ -161,8 +161,8 @@ int main(int argc, char **argv) {
     for (j=0; j<count[0]; j++) {
         for (i=0; i<count[1]; i++)
             if (buf[j][i] != ncbuf[(j+2)*(count[1]+4)+(i+2)]) {
-                printf("Error: expecting ncbuf[%d][%d]=%d but got %d\n",
-                       j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
+                printf("Error at line %d in %s: expecting ncbuf[%d][%d]=%d but got %d\n",
+                       __LINE__,__FILE__,j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
                 nerrs++;
             }
     }
@@ -174,8 +174,8 @@ int main(int argc, char **argv) {
     for (j=0; j<count[0]; j++) {
         for (i=0; i<count[1]; i++)
             if (buf[j][i] != ncbuf[(j+2)*(count[1]+4)+(i+2)]) {
-                printf("Error: expecting ncbuf[%d][%d]=%d but got %d\n",
-                       j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
+                printf("Error at line %d in %s: expecting ncbuf[%d][%d]=%d but got %d\n",
+                       __LINE__,__FILE__,j,i,buf[j][i],ncbuf[(j+2)*(count[1]+4)+(i+2)]);
                 nerrs++;
             }
     }

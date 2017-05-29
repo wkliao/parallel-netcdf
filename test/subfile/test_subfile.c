@@ -266,23 +266,27 @@ int main(int argc, char **argv)
 
 	sprintf(varname, "var0_%d", i);
         if (strcmp(name, varname)) {
-            printf("Error: unexpected var[%d] name %s, should be %s\n",i,name,varname);
+            printf("Error at line %d in %s: unexpected var[%d] name %s, should be %s\n",
+            __LINE__,__FILE__,i,name,varname);
             nerrs++;
             continue;
         }
         if (typep != NC_INT) {
-            printf("Error: unexpected var[%d] type %d, should be %d\n",i,typep,NC_INT);
+            printf("Error at line %d in %s: unexpected var[%d] type %d, should be %d\n",
+            __LINE__,__FILE__,i,typep,NC_INT);
             nerrs++;
             continue;
         }
         if (ndimsp != ndims) {
-            printf("Error: unexpected var[%d] ndims %d, should be %d\n",i,ndimsp,ndims);
+            printf("Error at line %d in %s: unexpected var[%d] ndims %d, should be %d\n",
+            __LINE__,__FILE__,i,ndimsp,ndims);
             nerrs++;
             continue;
         }
         for (j=0; j<ndims; j++) {
             if (dimids[j] != dimids0[j]) {
-                printf("Error: unexpected var[%d] dimids[%d] %d, should be %d\n",i,j,dimids0[j],dimids[j]);
+                printf("Error at line %d in %s: unexpected var[%d] dimids[%d] %d, should be %d\n",
+            __LINE__,__FILE__,i,j,dimids0[j],dimids[j]);
                 nerrs++;
                 continue;
             }

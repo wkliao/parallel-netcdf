@@ -36,8 +36,6 @@
 
 #include <testutils.h>
 
-#define EXPECT_ERR if (err != NC_ERANGE) {printf("Error at line %d in %s: expecting NC_ERANGE, but got %s\n",__LINE__,__FILE__,ncmpi_strerrno(err));nerrs++;}
-
 static
 int test_cdf2(char *filename)
 {
@@ -97,7 +95,7 @@ int test_cdf2(char *filename)
 
     /* expect NC_ERANGE */
     si[0] = -129;
-    err = ncmpi_put_var_int_all(ncid, vid, si); EXPECT_ERR
+    err = ncmpi_put_var_int_all(ncid, vid, si); EXP_ERR(NC_ERANGE)
     if (si[0] != -129) { /* check if put buffer content is altered */
         printf("Error at line %d: put buffer content altered %d (expecting -128)\n",__LINE__,si[0]);
         nerrs++;
@@ -105,7 +103,7 @@ int test_cdf2(char *filename)
 
     /* expect NC_ERANGE */
     si[0] = 256;
-    err = ncmpi_put_var_int_all(ncid, vid, si); EXPECT_ERR
+    err = ncmpi_put_var_int_all(ncid, vid, si); EXP_ERR(NC_ERANGE)
     if (si[0] != 256) { /* check if put buffer content is altered */
         printf("Error at line %d: put buffer content altered %d (expecting 256)\n",__LINE__,si[0]);
         nerrs++;
@@ -144,10 +142,10 @@ int test_cdf5(char *filename)
     err = ncmpi_put_att_uchar(ncid, NC_GLOBAL, "att1", NC_UBYTE, 1, uc); CHECK_ERR
 
     /* in CDF-5, get 255 to a schar buffer should result in NC_ERANGE */
-    err = ncmpi_get_att_schar(ncid, NC_GLOBAL, "att1", sc); EXPECT_ERR
+    err = ncmpi_get_att_schar(ncid, NC_GLOBAL, "att1", sc); EXP_ERR(NC_ERANGE)
 
     sc[0] = -1; /* a value should cause NC_ERANGE */
-    err = ncmpi_put_att_schar(ncid, NC_GLOBAL, "att2", NC_UBYTE, 1, sc); EXPECT_ERR
+    err = ncmpi_put_att_schar(ncid, NC_GLOBAL, "att2", NC_UBYTE, 1, sc); EXP_ERR(NC_ERANGE)
 
     err = ncmpi_def_dim(ncid, "x", 1, &dimid); CHECK_ERR
     err = ncmpi_def_var(ncid, "var_ubyte", NC_UBYTE, 1, &dimid, &uc_vid); CHECK_ERR
@@ -158,18 +156,18 @@ int test_cdf5(char *filename)
     err = ncmpi_put_var_uchar_all(ncid, uc_vid, uc); CHECK_ERR
 
     /* in CDF-5, get 255 to an schar should result in NC_ERANGE */
-    err = ncmpi_get_var_schar_all(ncid, uc_vid, sc); EXPECT_ERR
+    err = ncmpi_get_var_schar_all(ncid, uc_vid, sc); EXP_ERR(NC_ERANGE)
 
     sc[0] = -1; /* in CDF-5, put -1 to an uchar should result in NC_ERANGE */
-    err = ncmpi_put_var_schar_all(ncid, uc_vid, sc); EXPECT_ERR
+    err = ncmpi_put_var_schar_all(ncid, uc_vid, sc); EXP_ERR(NC_ERANGE)
 
     uc[0] = 255; /* in CDF-5, put 255 to a schar should result in NC_ERANGE */
-    err = ncmpi_put_var_uchar_all(ncid, sc_vid, uc); EXPECT_ERR
+    err = ncmpi_put_var_uchar_all(ncid, sc_vid, uc); EXP_ERR(NC_ERANGE)
 
     sc[0] = -1;
     err = ncmpi_put_var_schar_all(ncid, sc_vid, sc); CHECK_ERR
     uc[0] = 0; /* in CDF-5, get -1 to an uchar should result in NC_ERANGE */
-    err = ncmpi_get_var_uchar_all(ncid, sc_vid, uc); EXPECT_ERR
+    err = ncmpi_get_var_uchar_all(ncid, sc_vid, uc); EXP_ERR(NC_ERANGE)
 
     err = ncmpi_close(ncid); CHECK_ERR
 

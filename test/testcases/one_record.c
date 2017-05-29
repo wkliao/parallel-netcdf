@@ -87,7 +87,8 @@ int main(int argc, char **argv)
     /* check the contents */
     for (i=0; i<NUM_VALS; i++)
       if (strncmp(data[i], data_in+i*STR_LEN, STR_LEN)) {
-          printf("Error: expecting %s but got %s\n", data[i],data_in+i*STR_LEN);
+          printf("Error at line %d in %s: expecting %s but got %s\n",
+          __LINE__,__FILE__,data[i],data_in+i*STR_LEN);
           nerrs++;
       }
 

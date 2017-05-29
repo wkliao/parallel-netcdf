@@ -90,8 +90,8 @@ int main(int argc, char **argv) {
     for (j=0; j<4; j++)
         for (i=0; i<6; i++) {
             if (var[j][i] != 50.5 + j*6+i) {
-                printf("Error: put buffer[%d][%d]=%f altered, should be %f\n",
-                       j,i,var[j][i],50.5+j*6+i);
+                printf("Error at line %d in %s: put buffer[%d][%d]=%f altered, should be %f\n",
+                       __LINE__,__FILE__,j,i,var[j][i],50.5+j*6+i);
                 nerrs++;
             }
         }
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
     for (j=0; j<4; j++)
         for (i=0; i<6; i++) {
             if (var[j][i] != 50.5 + j*6+i) {
-                printf("Error: put buffer[%d][%d]=%f altered, should be %f\n",
-                       j,i,var[j][i],50.5+j*6+i);
+                printf("Error at line %d in %s: put buffer[%d][%d]=%f altered, should be %f\n",
+                       __LINE__,__FILE__,j,i,var[j][i],50.5+j*6+i);
                 nerrs++;
             }
         }
@@ -113,11 +113,10 @@ int main(int argc, char **argv) {
     err = ncmpi_wait_all(ncid, 2, req, status); CHECK_ERR
 
     /* check each bput status */
-    for (i=0; i<2; i++)
-        if (status[i] != NC_NOERR) {
-            printf("Error at line %d: err=%d %s\n", __LINE__, status[i], ncmpi_strerror(err));
-            nerrs++;
-        }
+    for (i=0; i<2; i++) {
+        err = status[i];
+        CHECK_ERR
+    }
 
     err = ncmpi_buffer_detach(ncid); CHECK_ERR
 
@@ -136,8 +135,8 @@ int main(int argc, char **argv) {
         for (i=0; i<6; i++) {
             if (var[j][i] != 50.5+j*6+i) {
                 /* this error is a pntecdf internal error, if occurs */
-                printf("Error: put buffer[%d][%d]=%f altered, should be %f\n",
-                       j,i,var[j][i],50.5+j*6+i);
+                printf("Error at line %d in %s: put buffer[%d][%d]=%f altered, should be %f\n",
+                       __LINE__,__FILE__,j,i,var[j][i],50.5+j*6+i);
                 nerrs++;
                 break;
             }

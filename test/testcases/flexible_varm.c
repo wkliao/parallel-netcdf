@@ -73,15 +73,15 @@
             if (i < GHOST || GHOST+array_of_subsizes[0] <= i || \
                 j < GHOST || GHOST+array_of_subsizes[1] <= j) { \
                 if (buf[i][j] != -1) { \
-                    printf("Error: put buffer altered buffer[%d][%d]=%d\n", \
-                           i,j,buf[i][j]); \
+                    printf("Error at line %d in %s: put buffer altered buffer[%d][%d]=%d\n", \
+                           __LINE__,__FILE__,i,j,buf[i][j]); \
                     nerrs++; \
                 } \
             } \
             else { \
                 if (buf[i][j] != (i-GHOST)*array_of_subsizes[1]+(j-GHOST)) { \
-                    printf("Error: put buffer altered buffer[%d][%d]=%d\n", \
-                           i,j,buf[i][j]); \
+                    printf("Error at line %d in %s: put buffer altered buffer[%d][%d]=%d\n", \
+                           __LINE__,__FILE__,i,j,buf[i][j]); \
                     nerrs++; \
                 } \
             } \

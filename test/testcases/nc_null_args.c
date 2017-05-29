@@ -18,9 +18,9 @@
 #define EXP_ERR(exp,msg) { \
     if (err != exp) { \
         nerrs++; \
-        fprintf(stderr, "Error at line %d in %s: %s expect %s but got %s\n", \
+        fprintf(stderr, "Error at line %d in %s: %s expect (%s) but got (%s)\n", \
                 __LINE__, __FILE__, msg, \
-                ncmpi_strerrno(exp), ncmpi_strerrno(err)); \
+                nc_strerror(exp), nc_strerror(err)); \
     } \
 }
 
@@ -240,6 +240,6 @@ int main(int argc, char **argv)
     err = nc_close(ncid);
     EXP_ERR(NC_NOERR, "close")
 
-    return 0;
+    return (nerrs > 0);
 }
 

@@ -25,17 +25,10 @@
 
 #include <testutils.h>
 
-#define EXPECT_ERR(err_no) \
-    if (err != err_no) { \
-        nerrs++; \
-        printf("Error line %d in %s: expect error code %s but got %s\n", \
-               __LINE__,__FILE__, ncmpi_strerrno(err_no),ncmpi_strerrno(err)); \
-    }
-
 #define EXPECT_ERR2(err_no1, err_no2) \
     if (err != err_no1 && err != err_no2) { \
         nerrs++; \
-        printf("Error line %d in %s: expect error code %s or %s but got %s\n", \
+        printf("Error at line %d in %s: expect error code %s or %s but got %s\n", \
                __LINE__,__FILE__,ncmpi_strerrno(err_no1),ncmpi_strerrno(err_no2),ncmpi_strerrno(err)); \
     }
 
@@ -58,13 +51,13 @@ int check_modes(char *filename)
     cmode |= NC_64BIT_OFFSET | NC_64BIT_DATA;
 
     err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, MPI_INFO_NULL, &ncid);
-    EXPECT_ERR(NC_EINVAL_CMODE)
+    EXP_ERR(NC_EINVAL_CMODE)
 
     /* The file should not be created */
     if (rank == 0) {
         if (access(filename, F_OK) == 0) {
-            printf("Error at line %d: file (%s) should not be created\n",
-                   __LINE__, filename);
+            printf("Error at line %d in %s: file (%s) should not be created\n",
+                   __LINE__,__FILE__, filename);
             nerrs++;
             /* delete the file and ignore error */
             unlink(filename);
@@ -93,8 +86,8 @@ int check_modes(char *filename)
         /* The file should not be created */
         if (rank == 0) {
             if (access(filename, F_OK) == 0) {
-                printf("Error at line %d: file (%s) should not be created\n",
-                       __LINE__, filename);
+                printf("Error at line %d in %s: file (%s) should not be created\n",
+                       __LINE__,__FILE__, filename);
                 nerrs++;
                 /* delete the file and ignore error */
                 unlink(filename);
@@ -124,8 +117,8 @@ int check_modes(char *filename)
         /* The file should not be created */
         if (rank == 0) {
             if (access(filename, F_OK) == 0) {
-                printf("Error at line %d: file (%s) should not be created\n",
-                       __LINE__, filename);
+                printf("Error at line %d in %s: file (%s) should not be created\n",
+                       __LINE__,__FILE__, filename);
                 nerrs++;
                 /* delete the file and ignore error */
                 unlink(filename);

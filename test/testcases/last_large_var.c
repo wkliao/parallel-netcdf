@@ -95,10 +95,7 @@ int check_fix_var(char *filename)
     err = ncmpi_def_var(ncid, "var4", NC_INT,   1, dimid, &varid); CHECK_ERR
 
     err = ncmpi_close(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
 
     /* create a new CDF-2 file ----------------------------------------------*/
     cmode = NC_CLOBBER | NC_64BIT_OFFSET;
@@ -141,15 +138,10 @@ int check_fix_rec_var(char *filename)
     err = ncmpi_def_var(ncid, "var_last", NC_FLOAT, 2, dimid+2, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
+
     err = ncmpi_close(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
 
     return nerrs;
 }
@@ -211,10 +203,7 @@ int check_rec_var(char *filename, int cmode)
 
     err = ncmpi_close(ncid);
     if (cmode & NC_64BIT_OFFSET || cmode & NC_64BIT_DATA) CHECK_ERR
-    else if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    else EXP_ERR(NC_EVARSIZE)
 
     return nerrs;
 }
@@ -245,16 +234,11 @@ int check_not_last_var(char *filename)
     err = ncmpi_def_var(ncid, "var",       NC_INT,   1, dimid+1, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
 
     err = ncmpi_close(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
+
     return nerrs;
 }
 
@@ -283,16 +267,11 @@ int check_add_var(char *filename)
     err = ncmpi_def_var(ncid, "var_new", NC_INT, 2, dimid, &varid); CHECK_ERR
 
     err = ncmpi_enddef(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
 
     err = ncmpi_close(ncid);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
+
     return nerrs;
 }
 
@@ -316,10 +295,7 @@ int check_var_offset(char *filename)
 
     /* make the file header size larger than 2 GiB */
     err = ncmpi__enddef(ncid, 2147483648LL, 1, 1, 1);
-    if (err != NC_EVARSIZE) {
-        printf("\nError at line=%d: expecting error code NC_EVARSIZE but got %s\n",__LINE__,nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_EVARSIZE)
 
     err = ncmpi_close(ncid); CHECK_ERR
     return nerrs;

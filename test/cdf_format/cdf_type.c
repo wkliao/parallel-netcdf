@@ -36,7 +36,8 @@ int test_attr_types(char *filename,
         sprintf(name, "gattr_%d", i);
         err = ncmpi_put_att_int(ncid, NC_GLOBAL, name, xtype[i], 1, &attr);
         if (err != NC_ESTRICTCDF2) {
-            printf("Error (line=%d): expecting NC_ESTRICTCDF2 but got %s\n", __LINE__,nc_err_code_name(err));
+            printf("Error at line %d in %s: expecting NC_ESTRICTCDF2 but got %s\n",
+            __LINE__,__FILE__,ncmpi_strerrno(err));
             nerrs++;
         }
     }

@@ -61,7 +61,8 @@ int test_only_record_var_1D(char *filename)
 
     err = ncmpi_inq_dimlen(ncid, dimid, &length); CHECK_ERR
     if (length != 2) {
-        printf("Error: expecting 2 records, but got %lld record(s)\n",length);
+        printf("Error at line %d in %s: expecting 2 records, but got %lld record(s)\n",
+        __LINE__,__FILE__,length);
         nerrs++;
     }
 
@@ -79,8 +80,8 @@ int test_only_record_var_1D(char *filename)
 
         err = ncmpi_inq_dimlen(ncid, dimid, &length); CHECK_ERR
         if (length != 4) {
-            printf("Error: expecting 4 records, but got %lld record(s)\n",
-                   length);
+            printf("Error at line %d in %s: expecting 4 records, but got %lld record(s)\n",
+                   __LINE__,__FILE__,length);
             nerrs++;
         }
         err = ncmpi_end_indep_data(ncid); CHECK_ERR
@@ -121,7 +122,8 @@ int test_only_record_var_3D(char *filename)
 
     err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
     if (length != 2) {
-        printf("Error: expecting 2 records, but got %lld record(s)\n",length);
+        printf("Error at line %d in %s: expecting 2 records, but got %lld record(s)\n",
+        __LINE__,__FILE__,length);
         nerrs++;
     }
 
@@ -139,8 +141,8 @@ int test_only_record_var_3D(char *filename)
 
         err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
         if (length != 4) {
-            printf("Error: expecting 4 records, but got %lld record(s)\n",
-                   length);
+            printf("Error at line %d in %s: expecting 4 records, but got %lld record(s)\n",
+                   __LINE__,__FILE__,length);
             nerrs++;
         }
         err = ncmpi_end_indep_data(ncid); CHECK_ERR
@@ -180,7 +182,8 @@ int test_two_record_var(char *filename)
 
     err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
     if (length != 2) {
-        printf("Error: expecting 2 records, but got %lld record(s)\n",length);
+        printf("Error at line %d in %s: expecting 2 records, but got %lld record(s)\n",
+        __LINE__,__FILE__,length);
         nerrs++;
     }
 
@@ -198,8 +201,8 @@ int test_two_record_var(char *filename)
 
         err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
         if (length != 4) {
-            printf("Error: expecting 4 records, but got %lld record(s)\n",
-                   length);
+            printf("Error at line %d in %s: expecting 4 records, but got %lld record(s)\n",
+                   __LINE__,__FILE__,length);
             nerrs++;
         }
         err = ncmpi_end_indep_data(ncid); CHECK_ERR
@@ -219,7 +222,8 @@ int test_two_record_var(char *filename)
 
     err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
     if (length != 4) {
-        printf("Error: expecting 4 records, but got %lld record(s)\n",length);
+        printf("Error at line %d in %s: expecting 4 records, but got %lld record(s)\n",
+        __LINE__,__FILE__,length);
         nerrs++;
     }
 
@@ -237,8 +241,8 @@ int test_two_record_var(char *filename)
 
         err = ncmpi_inq_dimlen(ncid, dimid[0], &length); CHECK_ERR
         if (length != 4) {
-            printf("Error: expecting 4 records, but got %lld record(s)\n",
-                   length);
+            printf("Error at line %d in %s: expecting 4 records, but got %lld record(s)\n",
+                   __LINE__,__FILE__,length);
             nerrs++;
         }
         err = ncmpi_end_indep_data(ncid); CHECK_ERR

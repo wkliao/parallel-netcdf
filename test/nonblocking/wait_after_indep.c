@@ -79,8 +79,8 @@ int main(int argc, char** argv)
     for (i=0; i<NY; i++)
         for (j=0; j<NX; j++) {
             if (buffer[i][j] != rank+10) {
-                printf("Error: put buffer[%d][%d]=%hhu altered, should be %d\n",
-                       i,j,buffer[i][j],rank+10);
+                printf("Error at line %d in %s: put buffer[%d][%d]=%hhu altered, should be %d\n",
+                       __LINE__,__FILE__,i,j,buffer[i][j],rank+10);
                 nerrs++;
             }
         }
@@ -94,8 +94,8 @@ int main(int argc, char** argv)
     for (i=0; i<NY; i++)
         for (j=0; j<NX; j++) {
             if (buffer[i][j] != rank+10) {
-                printf("Error: put buffer[%d][%d]=%hhu altered, should be %d\n",
-                       i,j,buffer[i][j],rank+10);
+                printf("Error at line %d in %s: put buffer[%d][%d]=%hhu altered, should be %d\n",
+                       __LINE__,__FILE__,i,j,buffer[i][j],rank+10);
                 nerrs++;
             }
         }
