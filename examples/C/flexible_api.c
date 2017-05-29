@@ -82,7 +82,7 @@
 #define NY 5
 #define NX 5
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -167,7 +167,8 @@ int main(int argc, char** argv)
     /* check the contents of put buffer */
     for (i=0; i<buffer_len; i++) {
         if (buf_zy[i] != rank)
-            printf("Error put buffer[%d] is altered\n",i);
+            printf("Error at line %d in %s: put buffer[%d] is altered\n",
+            __LINE__,__FILE__,i);
     }
 
     for (i=0; i<buffer_len; i++) buf_zy[i] = -1;
@@ -223,7 +224,8 @@ int main(int argc, char** argv)
     /* check the contents of put buffer */
     for (i=0; i<buffer_len; i++) {
         if (buf_yx[i] != rank)
-            printf("Error iput buffer[%d]=%f is altered\n",i,buf_yx[i]);
+            printf("Error at line %d in %s: iput buffer[%d]=%f is altered\n",
+            __LINE__,__FILE__,i,buf_yx[i]);
     }
 
     for (i=0; i<buffer_len; i++) buf_yx[i] = -1;

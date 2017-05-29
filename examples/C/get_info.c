@@ -43,7 +43,7 @@
 #include <mpi.h>
 #include <pnetcdf.h>
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER|NC_64BIT_DATA,
                        MPI_INFO_NULL, &ncid);
     if (err != NC_NOERR) {
-        printf("Error: ncmpi_create() file %s (%s)\n",filename,ncmpi_strerror(err));
+        ERR
         MPI_Abort(MPI_COMM_WORLD, -1);
         exit(1);
     }

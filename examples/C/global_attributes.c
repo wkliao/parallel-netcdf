@@ -41,7 +41,7 @@
 
 #define ERR { \
     if(err!=NC_NOERR) { \
-        printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err)); \
+        printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err)); \
         nerrs++; \
         goto fn_exit; \
     } \
@@ -126,8 +126,8 @@ int main(int argc, char** argv)
 
     err = 0;
     if (ngatts != 2) {
-        printf("Error: expected number of global attributes is 2, but got %d\n",
-               ngatts);
+        printf("Error at line %d in %s: expected number of global attributes is 2, but got %d\n",
+               __LINE__,__FILE__,ngatts);
         err = -1;
     }
     MPI_Allreduce(MPI_IN_PLACE, &err, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
@@ -139,8 +139,8 @@ int main(int argc, char** argv)
 
     err = 0;
     if (strncmp(att_name, "history", strlen("history"))) {
-        printf("Error: expected attribute name \"history\", but got %s\n",
-               att_name);
+        printf("Error at line %d in %s: expected attribute name \"history\", but got %s\n",
+               __LINE__,__FILE__,att_name);
         err = -1;
     }
     MPI_Allreduce(MPI_IN_PLACE, &err, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
@@ -156,8 +156,8 @@ int main(int argc, char** argv)
 
     err = 0;
     if (strncmp(att_name, "digits", strlen("digits"))) {
-        printf("Error: expected attribute name \"digits\", but got %s\n",
-               att_name);
+        printf("Error at line %d in %s: expected attribute name \"digits\", but got %s\n",
+               __LINE__,__FILE__,att_name);
         err = -1;
     }
     MPI_Allreduce(MPI_IN_PLACE, &err, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);

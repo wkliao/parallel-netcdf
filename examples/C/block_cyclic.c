@@ -81,7 +81,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #endif
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -202,8 +202,8 @@ int main(int argc, char** argv) {
     /* check status of all requests */
     for (i=0; i<num_reqs; i++)
         if (sts[i] != NC_NOERR)
-            printf("Error: nonblocking write fails on request %d (%s)\n",
-                   i, ncmpi_strerror(sts[i]));
+            printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
+                   __LINE__,__FILE__,i, ncmpi_strerror(sts[i]));
 
     err = ncmpi_close(ncid);
     ERR
@@ -276,8 +276,8 @@ int main(int argc, char** argv) {
     /* check status of all requests */
     for (i=0; i<num_reqs; i++)
         if (sts[i] != NC_NOERR)
-            printf("Error: nonblocking read fails on request %d (%s)\n",
-                   i, ncmpi_strerror(sts[i]));
+            printf("Error at line %d in %s: nonblocking read fails on request %d (%s)\n",
+                   __LINE__,__FILE__,i, ncmpi_strerror(sts[i]));
 
     err = ncmpi_close(ncid);
     ERR

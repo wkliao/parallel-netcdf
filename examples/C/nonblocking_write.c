@@ -42,7 +42,7 @@
 #define NDIMS    3
 #define NUM_VARS 10
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -150,7 +150,8 @@ int main(int argc, char **argv)
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER|NC_64BIT_DATA,
                        info, &ncid);
     if (err != NC_NOERR) {
-        printf("Error: ncmpi_create() file %s (%s)\n",filename,ncmpi_strerror(err));
+        printf("Error at line %d in %s: ncmpi_create() file %s (%s)\n",
+        __LINE__,__FILE__,filename,ncmpi_strerror(err));
         MPI_Abort(MPI_COMM_WORLD, -1);
         exit(1);
     }
@@ -190,8 +191,8 @@ int main(int argc, char **argv)
     ERR
     for (i=0; i<NUM_VARS; i++) {
         if (st[i] != NC_NOERR)
-            printf("Error: nonblocking write fails on request %d (%s)\n",
-                   i, ncmpi_strerror(st[i]));
+            printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
+            __LINE__,__FILE__,i, ncmpi_strerror(st[i]));
     }
 
     /* write one variable at a time using bput */
@@ -212,8 +213,8 @@ int main(int argc, char **argv)
     ERR
     for (i=0; i<NUM_VARS; i++) {
         if (st[i] != NC_NOERR)
-            printf("Error: nonblocking write fails on request %d (%s)\n",
-                   i, ncmpi_strerror(st[i]));
+            printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
+            __LINE__,__FILE__,i, ncmpi_strerror(st[i]));
     }
 
     /* detach the temporary buffer */

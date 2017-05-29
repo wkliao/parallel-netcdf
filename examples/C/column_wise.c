@@ -68,7 +68,7 @@
 #define NY 10
 #define NX 4
 
-#define ERR {if(err!=NC_NOERR){printf("Error at line=%d of %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
+#define ERR {if(err!=NC_NOERR){printf("Error at line %d in %s: %s\n", __LINE__,__FILE__, ncmpi_strerror(err));nerrs++;}}
 
 static void
 usage(char *argv0)
@@ -174,8 +174,8 @@ int main(int argc, char** argv)
     /* check status of all requests */
     for (i=0; i<num_reqs; i++)
         if (sts[i] != NC_NOERR)
-            printf("Error: nonblocking write fails on request %d (%s)\n",
-                   i, ncmpi_strerror(sts[i]));
+            printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
+                   __LINE__,__FILE__,i, ncmpi_strerror(sts[i]));
 
     /* read back using the same access pattern */
     for (i=0; i<myNX; i++)
@@ -198,13 +198,14 @@ int main(int argc, char** argv)
     /* check status of all requests */
     for (i=0; i<num_reqs; i++)
         if (sts[i] != NC_NOERR)
-            printf("Error: nonblocking write fails on request %d (%s)\n",
-                   i, ncmpi_strerror(sts[i]));
+            printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
+                   __LINE__,__FILE__,i, ncmpi_strerror(sts[i]));
 
     for (i=0; i<myNX; i++) {
         for (j=0; j<NY; j++)
             if (buf[i][j] != rank)
-                printf("Error: expect buf[%d][%d]=%d but got %d\n",i,j,rank,buf[i][j]);
+                printf("Error at line %d in %s: expect buf[%d][%d]=%d but got %d\n",
+                __LINE__,__FILE__,i,j,rank,buf[i][j]);
     }
 
     err = ncmpi_close(ncid);
