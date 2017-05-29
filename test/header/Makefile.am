@@ -35,7 +35,7 @@ TESTS_ENVIRONMENT += TESTSEQRUN="$(TESTSEQRUN)" ; export TESTSEQRUN;
 TESTS_ENVIRONMENT += TESTOUTDIR="$(TESTOUTDIR)" ; export TESTOUTDIR;
 
 # consistency check should be run on more than one process
-TESTS = seq_runs.sh
+# TESTS = seq_runs.sh
 
 EXTRA_DIST = seq_runs.sh
 
