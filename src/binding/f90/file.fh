@@ -353,3 +353,12 @@ function nf90mpi_inq_path(ncid, pathlen, path)
   nf90mpi_inq_path = nfmpi_inq_path(ncid, pathlen, path)
 end function nf90mpi_inq_path
 
+! -------
+function nf90mpi_inq_file_format(path, format)
+  character (len = *), intent( in) :: path
+  integer,             intent(out) :: format
+  integer                          :: nf90mpi_inq_file_format
+
+  nf90mpi_inq_file_format = nfmpi_inq_file_format(path, format)
+end function nf90mpi_inq_file_format
+
