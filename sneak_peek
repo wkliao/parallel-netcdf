@@ -20,8 +20,17 @@ This is essentially a placeholder for the next release note ...
       OpenMPI: https://github.com/open-mpi/ompi/issues/3195
       We suggest to use other MPI libraries to build PnetCDF on 32-bit machines.
     * The maximum number of files that can be simultaneously opened by an MPI
-      process is now limited to 1024 (a constant NC_MAX_NFILES defined in
-      pnetcdf.h).
+      process is now limited to 1024 (a new constant NC_MAX_NFILES defined in
+      pnetcdf.h). When this limit is reached, error code NC_ENFILE will be
+      thrown.
+
+  o New constants
+    * NC_FORMAT_UNKNOWN, NF_FORMAT_UNKNOWN, and NF90_FORMAT_UNKNOWN are new
+      constants that are one of the returned values of argument formatp in the
+      API ncmpi_inq_file_format when the file under inquiry is unrecognizable
+      by PnetCDF library.
+    * NC_MAX_NFILES, NF_MAX_NFILES, and NF90_MAX_NFILES define the maximum
+      number of files that can be kept opened by an MPI process.
 
   o New APIs
     * none
