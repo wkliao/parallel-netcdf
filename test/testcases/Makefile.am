@@ -61,6 +61,7 @@ TESTPROGRAMS = ncmpi_vars_null_stride \
                test_erange \
                scalar \
                null_args \
+               tst_dimsizes \
                redef1
 
 M4_SRCS  = erange_fill.m4

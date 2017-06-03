@@ -75,6 +75,8 @@ This is essentially a placeholder for the next release note ...
     * doc/README.Ubuntu provides build instructions for Ubuntu Linux OS.
 
   o New test program
+    * test/testcases/tst_dimsizes.c - borrowed from netCDF library to test
+      define/inquire the maximum allowable dimension sizes
     * test/testcases/null_args.c - tests whether the correct error codes can
       be returned when using NULL arguments for start, count, stride, or imap
 
