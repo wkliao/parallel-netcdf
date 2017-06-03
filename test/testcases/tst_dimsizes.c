@@ -70,6 +70,8 @@ main(int argc, char **argv)
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER, MPI_INFO_NULL, &ncid); CHECK_ERR
     dimsize = DIMMAXCLASSIC;
     err = ncmpi_def_dim(ncid, "testdim", dimsize, &dimid); CHECK_ERR
+    dimsize = DIMMAXCLASSIC+1;
+    err = ncmpi_def_dim(ncid, "testdim1", dimsize, &dimid); EXP_ERR(NC_EDIMSIZE)
     err = ncmpi_close(ncid); CHECK_ERR
 
     /* Reading Max Dimension Size For NC_CLASSIC */
@@ -86,6 +88,8 @@ main(int argc, char **argv)
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER | NC_64BIT_OFFSET, MPI_INFO_NULL, &ncid); CHECK_ERR
     dimsize = DIMMAX64OFFSET;
     err = ncmpi_def_dim(ncid, "testdim", dimsize, &dimid); CHECK_ERR
+    dimsize = DIMMAX64OFFSET+1;
+    err = ncmpi_def_dim(ncid, "testdim1", dimsize, &dimid); EXP_ERR(NC_EDIMSIZE)
     err = ncmpi_close(ncid); CHECK_ERR
 
     /* Reading Max Dimension Size For NC_64BIT_OFFSET */
@@ -102,6 +106,8 @@ main(int argc, char **argv)
     err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER | NC_64BIT_DATA, MPI_INFO_NULL, &ncid); CHECK_ERR
     dimsize = DIMMAX64DATA;
     err = ncmpi_def_dim(ncid, "testdim", dimsize, &dimid); CHECK_ERR
+    dimsize = DIMMAX64DATA+1;
+    err = ncmpi_def_dim(ncid, "testdim1", dimsize, &dimid); EXP_ERR(NC_EDIMSIZE)
     err = ncmpi_close(ncid); CHECK_ERR
 
     /* Reading Max Dimension Size For NC_64BIT_DATA */
