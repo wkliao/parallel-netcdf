@@ -1066,7 +1066,7 @@ ncmpii_subfile_getput_vars(NC               *ncp,
     stime = MPI_Wtime();
     */
     array_of_statuses = (int *)NCI_Malloc((size_t)nasyncios * SIZEOF_INT);
-    status = ncmpiio_wait(ncp_sf, COLL_IO, nasyncios, array_of_requests, array_of_statuses);
+    status = ncmpii_wait(ncp_sf, nasyncios, array_of_requests, array_of_statuses, COLL_IO);
     TEST_HANDLE_ERR(status)
     NCI_Free(array_of_statuses);
     NCI_Free(array_of_requests);

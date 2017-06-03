@@ -717,10 +717,6 @@ ncmpii_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
                 int isSameGroup);
 
 extern int
-ncmpiio_wait(NC *ncp, int io_method, int num_reqs, int *req_ids,
-                int *statuses);
-
-extern int
 ncmpii_inq_files_opened(int *num, int *ncids);
 
 extern MPI_Datatype

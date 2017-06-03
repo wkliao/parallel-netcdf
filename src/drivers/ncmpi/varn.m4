@@ -168,6 +168,8 @@ ncmpii_getput_varn(NC                *ncp,
         status = ncmpii_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
                                      NULL, bufp, buflen, ptype, &req_id,
                                      rw_flag, 0, isSameGroup);
+        /* req_id is reused because requests in a varn is considered in the
+         * same group */
         if (status != NC_NOERR) goto err_check;
 
         /* use isSamegroup so we end up with one nonblocking request (only the
@@ -212,7 +214,7 @@ err_check:
            calls in wait_all */
         num = 0;
 
-    err = ncmpiio_wait(ncp, io_method, num, &req_id, &st);
+    err = ncmpii_wait(ncp, num, &req_id, &st, io_method);
 
     /* unpack to user buf, if buftype is noncontiguous */
     if (status == NC_NOERR && rw_flag == READ_REQ && free_cbuf) {
