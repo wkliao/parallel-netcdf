@@ -237,6 +237,9 @@ ncmpii_in_swapn(void       *buf,
                 MPI_Offset  nelems,  /* number of elements in buf[] */
                 int         esize)   /* byte size of each element */
 {
+#ifdef WORDS_BIGENDIAN
+    return;
+#else
     int i;
 
     if (esize <= 1 || nelems <= 0) return;  /* no need */
@@ -276,6 +279,7 @@ ncmpii_in_swapn(void       *buf,
             op += esize;
         }
     }
+#endif
 }
 
 dnl
