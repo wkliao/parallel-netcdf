@@ -2172,6 +2172,7 @@ NCX_PUT1F(uint64, double)
 
 int
 APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
+/* This subroutine is used only in NetCDF. not PnetCDF */
 {
 	/* similar to put_ix_int() */
 	uchar *cp = (uchar *) *xpp;
@@ -2188,13 +2189,17 @@ APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
 
 int
 APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
+/* This subroutine is used only in NetCDF. not PnetCDF */
 {
 	/* similar to get_ix_int */
 	const uchar *cp = (const uchar *) *xpp;
 
-	*ulp  = (size_t)(*cp++ << 24);
-	*ulp |= (size_t)(*cp++ << 16);
-	*ulp |= (size_t)(*cp++ << 8);
+	/* X_SIZEOF_SIZE_T is 4 bytes and size_t may be 8 bytes, thus
+         * we must type cast xpp to unsigned int (4 bytes) */
+
+	*ulp  = (unsigned)(*cp++ << 24);
+	*ulp |= (*cp++ << 16);
+	*ulp |= (*cp++ << 8);
 	*ulp |= *cp;
 
 	*xpp = (const void *)((const char *)(*xpp) + X_SIZEOF_SIZE_T);
@@ -2205,6 +2210,7 @@ APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
 
 int
 APIPrefix`x_put_off_t'(void **xpp, const off_t *lp, size_t sizeof_off_t)
+/* This subroutine is used only in NetCDF. not PnetCDF */
 {
 	/* No negative offsets stored in netcdf */
 	if (*lp < 0) {
@@ -2251,6 +2257,7 @@ APIPrefix`x_put_off_t'(void **xpp, const off_t *lp, size_t sizeof_off_t)
 
 int
 APIPrefix`x_get_off_t'(const void **xpp, off_t *lp, size_t sizeof_off_t)
+/* This subroutine is used only in NetCDF. not PnetCDF */
 {
 	/* similar to get_ix_int() */
 	const uchar *cp = (const uchar *) *xpp;
