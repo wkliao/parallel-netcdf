@@ -202,10 +202,9 @@ CANDIDATE_MPICXX+=" mpiicpc icpc"
 CANDIDATE_MPIF77+=" mpiifort mpiifc ifort"
 CANDIDATE_MPIF90+=" mpiifort mpiifc ifort"
 
-dnl if MPICC or CC has not been set by users, then search from CANDIDATE_MPICC
-if test "x${MPICC}" = x ; then
-   UD_MPI_PATH_PROGS([MPICC], [$CANDIDATE_MPICC])
-fi
+dnl find the full path of MPICC from CANDIDATE_MPICC and MPI_INSTALL
+UD_MPI_PATH_PROGS([MPICC], [$CANDIDATE_MPICC])
+
 if test "x${MPICC}" = x ; then
    AC_MSG_ERROR([
    -----------------------------------------------------------------------
@@ -277,10 +276,8 @@ UD_MSG_DEBUG(enable_cxx=$enable_cxx)
 
 dnl Must check MPI C++ compiler, because AC_PROG_CXX cannot be called
 dnl conditionally in Automake. If MPICXX or CXX has not been set by users, then
-dnl search from CANDIDATE_MPICXX
-if test "x${MPICXX}" = x ; then
-   UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
-fi
+dnl search from CANDIDATE_MPICXX and find the full path of MPICXX
+UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
 
 dnl must invoke AC_PROG_CXX here otherwise got "error: conditional
 dnl "am__fastdepCXX" was never defined."
@@ -373,15 +370,12 @@ AC_ARG_ENABLE(fortran,
 
 if test "x${enable_fortran}" != xno ; then
    dnl if MPIF77 or F77 has not been set by users, then search from
-   dnl CANDIDATE_MPIF77
-   if test "x${MPIF77}" = x ; then
-      UD_MPI_PATH_PROGS([MPIF77], [$CANDIDATE_MPIF77])
-   fi
+   dnl CANDIDATE_MPIF77, and find the full path of MPIF77
+   UD_MPI_PATH_PROGS([MPIF77], [$CANDIDATE_MPIF77])
+
    dnl if MPIF90 or F90 has not been set by users, then search from
-   dnl CANDIDATE_MPIF90
-   if test "x${MPIF90}" = x ; then
-      UD_MPI_PATH_PROGS([MPIF90], [$CANDIDATE_MPIF90])
-   fi
+   dnl CANDIDATE_MPIF90, and find the full path of MPIF90
+   UD_MPI_PATH_PROGS([MPIF90], [$CANDIDATE_MPIF90])
 fi
 if test "x${enable_fortran}" = xyes ; then
    dnl user explicitly requests to build Fortran APIs
