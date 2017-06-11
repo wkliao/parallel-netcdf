@@ -977,6 +977,9 @@ ncmpii_wait(void *ncdp,
 #ifdef ENABLE_REQ_AGGREGATION
     return ncmpiio_wait((NC*)ncdp, num_reqs, req_ids, statuses, io_method);
 #else
+    /* If request aggregation is disabled, we call an independent wait() for
+     * each request
+     */
     NC *ncp = (NC*)ncdp;
     int i, status=NC_NOERR, err, *reqids=NULL;
 

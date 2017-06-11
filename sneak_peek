@@ -76,7 +76,8 @@ This is essentially a placeholder for the next release note ...
 
   o New test program
     * test/testcases/tst_dimsizes.c - borrowed from netCDF library to test
-      define/inquire the maximum allowable dimension sizes
+      define/inquire the maximum allowable dimension sizes. This test program
+      is similar to (or a subset of) test/cdf_format/dim_cdf12.c
     * test/testcases/null_args.c - tests whether the correct error codes can
       be returned when using NULL arguments for start, count, stride, or imap
 
