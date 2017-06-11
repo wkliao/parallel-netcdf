@@ -310,13 +310,13 @@ if test "x${enable_cxx}" != xno ; then
          if test "x${enable_cxx}" = xyes ; then
             AC_MSG_ERROR([
             ----------------------------------------------------------
-               Explicitly requesting C++ support, but the MPI C++ library
-               does not support MPI-IO. Abort.
+               Explicitly requesting C++ support, but "${MPICXX}"
+               is not a working MPI C++ compiler. Abort.
             ----------------------------------------------------------])
          else dnl in case enable_cxx is auto
             AC_MSG_WARN([
             ----------------------------------------------------------
-               MPI C++ library does not support MPI-IO.
+               "${MPICXX}" is not a working MPI C++ compiler
                C++ feature is disabled.
             ----------------------------------------------------------])
          fi
@@ -453,7 +453,7 @@ if test "x${enable_fortran}" != xno ; then
          fi
          AC_MSG_WARN([
             ------------------------------------------------------------
-              Invalid MPI Fortran 90 compiler: "${MPIF90}"
+              "${MPIF90}" is not a working MPI Fortran 90 compiler
               Fortran feature is disabled
             ------------------------------------------------------------])
          enable_fortran=no
@@ -515,7 +515,7 @@ if test "x${enable_fortran}" != xno ; then
          fi
          AC_MSG_WARN([
             ------------------------------------------------------------
-              MPI Fortran header file mpif.h is not valid:
+              "${MPIF77}" is not a working MPI Fortran 77 compiler
               Fortran feature is disabled
             ------------------------------------------------------------])
          enable_fortran=no
