@@ -94,6 +94,7 @@ This is essentially a placeholder for the next release note ...
     * Rename configure-time variables TEST_SEQRUN, TEST_MPIRUN, and TEST_OUTDIR
       to TESTSEQRUN, TESTMPIRUN, and TESTOUTDIR, respectively. This change
       avoids conflict to the name convention reserved by automake.
+    * Fix TESTMPIRUN default value to use full path under MPI_INSTALL.
 
   o Bug fixes
     * Fix F90 APIs for reading and writing scalar variables, i.e. number of
