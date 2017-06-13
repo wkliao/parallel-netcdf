@@ -652,6 +652,14 @@ ncmpii_def_var(void       *ncdp,
         goto err_check;
     }
 
+    /* Check against max number of dimensions per variable.
+     * There is no error code for this, thus we use NC_EINVAL
+     */
+    if (ndims > NC_MAX_VAR_DIMS) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
+        goto err_check;
+    }
+
     /* there is an upperbound for the number of variables defined in a file */
     if (ncp->vars.ndefined >= NC_MAX_VARS) {
         DEBUG_ASSIGN_ERROR(err, NC_EMAXVARS)
