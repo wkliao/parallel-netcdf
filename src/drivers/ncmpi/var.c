@@ -625,8 +625,13 @@ ncmpii_def_var(void       *ncdp,
         goto err_check;
     }
 
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
+    if (name == NULL || *name == 0) {
         DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (strlen(name) > NC_MAX_NAME) {
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
         goto err_check;
     }
 
@@ -930,8 +935,13 @@ ncmpii_rename_var(void       *ncdp,
         goto err_check;
     }
 
-    if (newname == NULL || *newname == 0 || strlen(newname) > NC_MAX_NAME) {
+    if (newname == NULL || *newname == 0) {
         DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (strlen(newname) > NC_MAX_NAME) {
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
         goto err_check;
     }
 
