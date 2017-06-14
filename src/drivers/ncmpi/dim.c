@@ -427,10 +427,12 @@ ncmpii_def_dim(void       *ncdp,    /* IN:  NC object */
         }
     }
 
-    /* TODO: We should not limit the number of dimensions, as CDF file formats 
-     * impose no such limit */
-    /* check if number of dimensions exceeds the upper bound */
-    if (ncp->dims.ndefined >= NC_MAX_DIMS) {
+    /* Note we no longer limit the number of dimensions, as CDF file formats
+     * impose no such limit. Thus, the value of NC_MAX_DIMS has been changed
+     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signd int and so is
+     * ndims argument in ncmpi_inq_varndims()
+     */
+    if (ncp->dims.ndefined == NC_MAX_DIMS) {
         DEBUG_ASSIGN_ERROR(err, NC_EMAXDIMS)
         goto err_check;
     }

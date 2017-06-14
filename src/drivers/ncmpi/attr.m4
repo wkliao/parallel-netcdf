@@ -685,7 +685,12 @@ ncmpii_copy_att(void       *ncdp_in,
             DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
             goto err_check;
         }
-        if (ncap_out->ndefined >= NC_MAX_ATTRS) {
+        /* Note we no longer limit the number of attributes, as CDF file formats
+         * impose no such limit. Thus, the value of NC_MAX_ATTRS has been
+         * changed NC_MAX_INT, as NC_attrarray.ndefined is of type signd int and
+         * so is natts argument in ncmpi_inq_varnatts()
+         */
+        if (ncap_out->ndefined == NC_MAX_ATTRS) {
             DEBUG_ASSIGN_ERROR(err, NC_EMAXATTS)
             goto err_check;
         }
@@ -1299,7 +1304,12 @@ ncmpii_put_att_$1(void       *ncdp,
             DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
             goto err_check;
         }
-        if (ncap->ndefined >= NC_MAX_ATTRS) {
+        /* Note we no longer limit the number of attributes, as CDF file formats
+         * impose no such limit. Thus, the value of NC_MAX_ATTRS has been
+         * changed NC_MAX_INT, as NC_attrarray.ndefined is of type signd int and
+         * so is natts argument in ncmpi_inq_varnatts()
+         */
+        if (ncap->ndefined == NC_MAX_ATTRS) {
             DEBUG_ASSIGN_ERROR(err, NC_EMAXATTS)
             goto err_check;
         }

@@ -120,11 +120,11 @@
 ! implementation limits:
 !
       integer, parameter, public :: &
-      nf_max_nfiles   = 1024, &
-      nf_max_dims     = 1024, &
-      nf_max_attrs    = 8192, &
-      nf_max_vars     = 8192, &
-      nf_max_name     = 256, &
+      nf_max_name     = 256,        &
+      nf_max_nfiles   = 1024,       &
+      nf_max_dims     = 2147483647, &
+      nf_max_attrs    = 2147483647, &
+      nf_max_vars     = 2147483647, &
       nf_max_var_dims = nf_max_dims
 
 !

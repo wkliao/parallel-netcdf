@@ -165,18 +165,18 @@
 !
 ! implementation limits:
 !
+      integer nf_max_name
       integer nf_max_nfiles
       integer nf_max_dims
       integer nf_max_attrs
       integer nf_max_vars
-      integer nf_max_name
       integer nf_max_var_dims
 
+      parameter (nf_max_name   = 256)
       parameter (nf_max_nfiles = 1024)
-      parameter (nf_max_dims = 1024)
-      parameter (nf_max_attrs = 8192)
-      parameter (nf_max_vars = 8192)
-      parameter (nf_max_name = 256)
+      parameter (nf_max_dims   = 2147483647)
+      parameter (nf_max_attrs  = 2147483647)
+      parameter (nf_max_vars   = 2147483647)
       parameter (nf_max_var_dims = nf_max_dims)
 
 !

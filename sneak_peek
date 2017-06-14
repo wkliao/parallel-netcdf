@@ -23,6 +23,14 @@ This is essentially a placeholder for the next release note ...
       process is now limited to 1024 (a new constant NC_MAX_NFILES defined in
       pnetcdf.h). When this limit is reached, error code NC_ENFILE will be
       thrown.
+    * NC_MAX_VAR_DIMS, the maximum number of dimensions per variable is lifted
+      to 2147483647, i.e. NC_MAX_INT
+    * NC_MAX_DIMS, the maximum number of dimensions per file is lifted to
+      2147483647, i.e. NC_MAX_INT
+    * NC_MAX_ATTRS, the maximum number of attributes per file is lifted to
+      2147483647, i.e. NC_MAX_INT
+    * NC_MAX_VARS, the maximum number of variables per file is lifted to
+      2147483647, i.e. NC_MAX_INT
 
   o New constants
     * NC_FORMAT_UNKNOWN, NF_FORMAT_UNKNOWN, and NF90_FORMAT_UNKNOWN are new
