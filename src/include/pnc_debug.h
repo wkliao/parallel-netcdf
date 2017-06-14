@@ -7,6 +7,11 @@
 #ifndef _PNC_DEBUG_H
 #define _PNC_DEBUG_H
 
+/* The two defines below are to be set manually.
+#define PNETCDF_TRACE_MPI_COMM
+#define PNETCDF_TRACE_MPI_IO
+ */
+
 /* C macros for TRACE MPI calls */
 #ifdef PNETCDF_TRACE_MPI_COMM
 #define TRACE_COMM(x) printf("TRACE-MPI-COMM: FILE %s FUNC %s() LINE %d calling %s()\n",__FILE__,__func__,__LINE__,#x),mpireturn=x
