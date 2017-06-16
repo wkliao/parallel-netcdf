@@ -107,8 +107,7 @@ int main(int argc, char** argv)
     MPI_Info_set(info, "nc_var_align_size", "1");
 
     cmode = NC_CLOBBER;
-    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid);
-    ERR
+    err = ncmpi_create(MPI_COMM_WORLD, filename, cmode, info, &ncid); ERR
 
     MPI_Info_free(&info);
 
@@ -118,14 +117,10 @@ int main(int argc, char** argv)
     myNX  = NX;
     if (verbose) printf("%2d: myOff=%3d myNX=%3d\n",rank,myOff,myNX);
 
-    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]);
-    ERR
-    err = ncmpi_def_dim(ncid, "X", G_NX, &dimid[1]);
-    ERR
-    err = ncmpi_def_var(ncid, "var", NC_INT, 2, dimid, &varid);
-    ERR
-    err = ncmpi_enddef(ncid);
-    ERR
+    err = ncmpi_def_dim(ncid, "Y", NY, &dimid[0]); ERR
+    err = ncmpi_def_dim(ncid, "X", G_NX, &dimid[1]); ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 2, dimid, &varid); ERR
+    err = ncmpi_enddef(ncid); ERR
 
     /* initialize the buffer with rank ID */
     buf = (int**) malloc(myNX * sizeof(int*));
@@ -146,10 +141,15 @@ int main(int argc, char** argv)
         ERR
         start[1] += nprocs;
     }
-    err = ncmpi_wait_all(ncid, NC_REQ_ALL, NULL, NULL);
-    ERR
+    err = ncmpi_wait_all(ncid, NC_REQ_ALL, NULL, NULL); ERR
+
+    err = ncmpi_close(ncid); ERR
 
     /* read back using the same access pattern */
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
+
+    err = ncmpi_inq_varid(ncid, "var", &varid); ERR
+
     for (i=0; i<myNX; i++)
         for (j=0; j<NY; j++) buf[i][j] = -1;
 
@@ -162,8 +162,7 @@ int main(int argc, char** argv)
         ERR
         start[1] += nprocs;
     }
-    err = ncmpi_wait_all(ncid, NC_REQ_ALL, NULL, NULL);
-    ERR
+    err = ncmpi_wait_all(ncid, NC_REQ_ALL, NULL, NULL); ERR
 
     /* check contents of read data of all requests */
     for (i=0; i<myNX; i++) {
@@ -173,8 +172,7 @@ int main(int argc, char** argv)
                 __LINE__,__FILE__,i,j,rank,buf[i][j]);
     }
 
-    err = ncmpi_close(ncid);
-    ERR
+    err = ncmpi_close(ncid); ERR
 
     for (i=0; i<myNX; i++) free(buf[i]);
     free(buf);

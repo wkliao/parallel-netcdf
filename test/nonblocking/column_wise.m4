@@ -208,6 +208,13 @@ int test_column_wise_$1(char *filename, int cdf)
         }
     }
 
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, MPI_INFO_NULL, &ncid);
+    CHECK_ERR
+
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
+
     /* read back using the same access pattern */
     for (i=0; i<myNX; i++)
         for (j=0; j<NY; j++) buf[i][j] = ($1)99;

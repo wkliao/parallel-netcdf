@@ -75,6 +75,12 @@ int main(int argc, char **argv)
 
     if (nprocs > 1) MPI_Barrier(MPI_COMM_WORLD);
 
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, MPI_INFO_NULL, &ncid); CHECK_ERR
+
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
+
     /* read the variable back in the matrix transposed way, rh is 4 x 6 */
      count[0] = 6;  count[1] = 4;
     stride[0] = 1; stride[1] = 1;
@@ -121,6 +127,12 @@ int main(int argc, char **argv)
            [ 2]:   2.0  6.0 10.0 14.0 18.0 22.0
            [ 3]:   3.0  7.0 11.0 15.0 19.0 23.0
      */
+
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_WRITE, MPI_INFO_NULL, &ncid); CHECK_ERR
+
+    err = ncmpi_inq_varid(ncid, "var", &varid); CHECK_ERR
 
     /* testing get_varm(), first zero-out the variable in the file */
     memset(&var[0][0], 0, 6*4*sizeof(int));

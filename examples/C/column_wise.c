@@ -177,7 +177,13 @@ int main(int argc, char** argv)
             printf("Error at line %d in %s: nonblocking write fails on request %d (%s)\n",
                    __LINE__,__FILE__,i, ncmpi_strerror(sts[i]));
 
+    err = ncmpi_close(ncid); ERR
+
     /* read back using the same access pattern */
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, info, &ncid); ERR
+
+    err = ncmpi_inq_varid(ncid, "var", &varid); ERR
+
     for (i=0; i<myNX; i++)
         for (j=0; j<NY; j++) buf[i][j] = -1;
 

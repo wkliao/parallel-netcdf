@@ -80,6 +80,12 @@ int main(int argc, char **argv)
     err = ncmpi_put_varm_int_all(ncid, varid, start, count, stride, imap, &buf); CHECK_ERR
     err = ncmpi_put_varm_int_all(ncid, varid, NULL, NULL, NULL, NULL, &buf); CHECK_ERR
 
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, MPI_INFO_NULL, &ncid); CHECK_ERR
+
+    err = ncmpi_inq_varid(ncid, "scalar_var", &varid); CHECK_ERR
+
     /* get */
     err = ncmpi_get_var1_int_all(ncid, varid, NULL,  &buf); CHECK_ERR
     err = ncmpi_get_var1_int_all(ncid, varid, start, &buf); CHECK_ERR
