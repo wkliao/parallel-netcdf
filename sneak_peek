@@ -90,6 +90,10 @@ This is essentially a placeholder for the next release note ...
       be returned when using NULL arguments for start, count, stride, or imap
 
   o Other updates:
+    * When using OpenMPI 2.1.0 built with Intel compilers 17.0.0, the test
+      program nonblocking/mcoll_testf.f90 fails with Segmentation fault. This
+      is due to a bug in OpenMPI. See
+      https://github.com/open-mpi/ompi/issues/3695
     * All build recipes (README files) have been moved to folder doc. Most of
       the recipes have been updated with instructions for building shared
       libraries.
