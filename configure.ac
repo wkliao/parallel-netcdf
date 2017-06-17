@@ -325,11 +325,18 @@ if test "x${enable_cxx}" != xno ; then
    if test "x${has_mpicxx}" = xyes ; then
       UD_CHECK_MPI_CPP_SEEK_SET
       UD_MSG_DEBUG(ac_cv_CHECK_MPI_CPP_SEEK_SET=$ac_cv_CHECK_MPI_CPP_SEEK_SET)
+      dnl When using older version Intel compilers 4.x, SEEK_SET will be
+      dnl reported as redefined. We need to add the following C++ preprocessor
+      dnl flags. See doc/README.INTEL
+      if test "x${ac_cv_CHECK_MPI_CPP_SEEK_SET}" = xyes ; then
+         SEEK_SET_REDEFINED=yes
+      fi
    fi
 fi
 AC_SUBST(has_mpicxx)
 UD_MSG_DEBUG(has_mpicxx=$has_mpicxx)
 AM_CONDITIONAL(HAS_MPICXX, [test x$has_mpicxx = xyes])
+AM_CONDITIONAL(SEEK_SET_REDEFINED, [test x$ac_cv_CHECK_MPI_CPP_SEEK_SET = xyes])
 
 dnl compute canonical system types
 AC_CANONICAL_BUILD

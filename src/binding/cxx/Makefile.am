@@ -10,6 +10,10 @@ SUFFIXES = .o .cpp .hpp
 
 AM_CPPFLAGS = -I$(top_builddir)/src/include
 
+if SEEK_SET_REDEFINED
+AM_CPPFLAGS += -DMPICH_IGNORE_CXX_SEEK -DMPICH_SKIP_MPICXX
+endif
+
 CXX_HEADER = pnetcdf
 
 nodist_include_HEADERS = $(CXX_HEADER)
