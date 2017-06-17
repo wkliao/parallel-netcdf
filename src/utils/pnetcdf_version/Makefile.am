@@ -17,8 +17,8 @@ XDEFS += -DMPICXX="\"$(MPICXX)\"" -DCXXFLAGS="\"$(CXXFLAGS)\""
 endif
 
 if HAS_FORTRAN
-XDEFS += -DMPIF77="\"$(MPIF77)\"" -DF77FLAGS="\"$(F77FLAGS)\""
-XDEFS += -DMPIF90="\"$(MPIF90)\"" -DF90FLAGS="\"$(F90FLAGS)\""
+XDEFS += -DMPIF77="\"$(MPIF77)\"" -DFFLAGS="\"$(FFLAGS)\""
+XDEFS += -DMPIF90="\"$(MPIF90)\"" -DFCFLAGS="\"$(FCFLAGS)\""
 endif
 
 pnetcdf_version$(EXEEXT): pnetcdf_version.c

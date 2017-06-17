@@ -78,26 +78,34 @@ int main( int argc, char *argv[] )
         printf( "PnetCDF configure: \t%s\n", CONFIGURE_ARGS_CLEAN);
     }
     if (flags[Compilers]) {
+#ifdef CFLAGS
         if (strcmp(CFLAGS, ""))
             printf( "MPICC:  %s %s\n", MPICC, CFLAGS);
         else
+#endif
             printf( "MPICC:  %s\n", MPICC);
 #ifdef MPICXX
+#ifdef CXXFLAGS
         if (strcmp(CXXFLAGS, ""))
             printf( "MPICXX: %s %s\n", MPICXX, CXXFLAGS);
         else
+#endif
             printf( "MPICXX: %s\n", MPICXX);
 #endif
 #ifdef MPIF77
-        if (strcmp(F77FLAGS, ""))
-            printf( "MPIF77: %s %s\n", MPIF77, F77FLAGS);
+#ifdef FFLAGS
+        if (strcmp(FFLAGS, ""))
+            printf( "MPIF77: %s %s\n", MPIF77, FFLAGS);
         else
+#endif
             printf( "MPIF77: %s\n", MPIF77);
 #endif
 #ifdef MPIF90
-        if (strcmp(F90FLAGS, ""))
-            printf( "MPIF90: %s %s\n", MPIF90, F90FLAGS);
+#ifdef FCFLAGS
+        if (strcmp(FCFLAGS, ""))
+            printf( "MPIF90: %s %s\n", MPIF90, FCFLAGS);
         else
+#endif
             printf( "MPIF90: %s\n", MPIF90);
 #endif
     }
