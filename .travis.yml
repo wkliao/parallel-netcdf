@@ -12,8 +12,8 @@ addons:
       name: "wkliao/parallel-netcdf"
       description: "PnetCDF nightly build submitted via Travis CI"
     notification_email: wkliao@eecs.northwestern.edu
-    build_command_prepend: "./configure ; make clean"
-    build_command:   "make -s LIBTOOLFLAGS=--silent ; make -s LIBTOOLFLAGS=--silent tests"
+    build_command_prepend: ./configure ; make clean
+    build_command: make -s V=1 LIBTOOLFLAGS=--silent tests
     branch_pattern: am
 
 before_install:
@@ -39,18 +39,22 @@ before_install:
   - DateStr=`date -r configure.ac +"%F %T %z (%a, %d %b %Y)"` ; sed -e "s/LastChangedDate/LastChangedDate $DateStr /g" -i configure
 
 script:
-  - ./configure
-  - make -s V=1 LIBTOOLFLAGS=--silent tests
+  # continue the above "build_command" to build static library only
   - make -s V=1 LIBTOOLFLAGS=--silent distcheck DISTCHECK_CONFIGURE_FLAGS=--silent
   - make -s V=1 LIBTOOLFLAGS=--silent distclean
+  # build both static and shared libraries
   - ./configure --silent --enable-shared LDFLAGS="-Wl,--allow-shlib-undefined"
+  - make -s V=1 LIBTOOLFLAGS=--silent tests
   - make -s V=1 LIBTOOLFLAGS=--silent distcheck DISTCHECK_CONFIGURE_FLAGS="--silent --enable-shared LDFLAGS='-Wl,--allow-shlib-undefined'"
   - make -s V=1 LIBTOOLFLAGS=--silent distclean
-  - ./configure --silent --enable-shared --disable-static LDFLAGS="-Wl,--allow-shlib-undefined"
-  - make -s V=1 LIBTOOLFLAGS=--silent tests
-  - make -s V=1 LIBTOOLFLAGS=--silent distclean
-  
+  # build shared library only
+  # - ./configure --silent --enable-shared --disable-static LDFLAGS="-Wl,--allow-shlib-undefined"
+  # - make -s V=1 LIBTOOLFLAGS=--silent tests
+  # - make -s V=1 LIBTOOLFLAGS=--silent distcheck DISTCHECK_CONFIGURE_FLAGS="--silent --enable-shared --disable-static LDFLAGS='-Wl,--allow-shlib-undefined'"
+  # - make -s V=1 LIBTOOLFLAGS=--silent distclean
+
 after_failure:
+  - cat /home/travis/build/wkliao/parallel-netcdf/cov-int/build-log.txt
   - cat ./config.log
 
 notifications:
