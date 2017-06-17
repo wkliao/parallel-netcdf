@@ -31,13 +31,12 @@
 #include <testutils.h>
 
 static
-void check_num_vars(int  ncid,
+int check_num_vars(int  ncid,
                     int  expected_nvars,
                     int  expected_num_rec_vars,
-                    int  expected_num_fix_vars,
-                    int *nerrs)
+                    int  expected_num_fix_vars)
 {
-    int err, nvars, num_rec_vars, num_fix_vars;
+    int err, nerrs=0, nvars, num_rec_vars, num_fix_vars;
 
     err = ncmpi_inq_nvars(ncid, &nvars); CHECK_ERR
     err = ncmpi_inq_num_rec_vars(ncid, &num_rec_vars); CHECK_ERR
@@ -46,18 +45,19 @@ void check_num_vars(int  ncid,
     if (nvars != expected_nvars) {
         printf("Error at line %d in %s: expecting %d number of variables defined, but got %d\n",
         __LINE__,__FILE__,expected_nvars, nvars);
-        (*nerrs)++;
+        nerrs++;
     }
     if (num_rec_vars != expected_num_rec_vars) {
         printf("Error at line %d in %s: expecting %d number of record variables defined, but got %d\n",
         __LINE__,__FILE__,expected_num_rec_vars, num_rec_vars);
-        (*nerrs)++;
+        nerrs++;
     }
     if (num_fix_vars != expected_num_fix_vars) {
         printf("Error at line %d in %s: expecting %d number of fixed-size variables defined, but got %d\n",
         __LINE__,__FILE__,expected_num_fix_vars, num_fix_vars);
-        (*nerrs)++;
+        nerrs++;
     }
+    return nerrs;
 }
 
 int main(int argc, char** argv) {
@@ -102,17 +102,17 @@ int main(int argc, char** argv) {
     err = ncmpi_def_var(ncid, "REC_VAR_3", NC_INT, 2, dimid, &varid[2]); CHECK_ERR
     err = ncmpi_def_var(ncid, "REC_VAR_4", NC_INT, 1, dimid, &varid[3]); CHECK_ERR
 
-    check_num_vars(ncid, 4, 4, 0, &nerrs);
+    nerrs += check_num_vars(ncid, 4, 4, 0);
 
     err = ncmpi_def_var(ncid, "FIX_VAR_1", NC_INT, 2, dimid+1, &varid[4]); CHECK_ERR
     err = ncmpi_def_var(ncid, "FIX_VAR_2", NC_INT, 1, dimid+1, &varid[5]); CHECK_ERR
     err = ncmpi_def_var(ncid, "FIX_VAR_3", NC_INT, 1, dimid+2, &varid[6]); CHECK_ERR
 
-    check_num_vars(ncid, 7, 4, 3, &nerrs);
+    nerrs += check_num_vars(ncid, 7, 4, 3);
 
     err = ncmpi_enddef(ncid); CHECK_ERR
 
-    check_num_vars(ncid, 7, 4, 3, &nerrs);
+    nerrs += check_num_vars(ncid, 7, 4, 3);
 
     err = ncmpi_close(ncid); CHECK_ERR
 
