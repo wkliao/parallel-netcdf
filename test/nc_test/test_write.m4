@@ -1598,7 +1598,7 @@ TestFunc(rename_var)(VarArgs)
             error("expecting NC_ENAMEINUSE but got %s", nc_err_code_name(err));
         ELSE_NOK
         strcpy(name, "new_");
-        strcat(name, var_name[i]);
+        strncat(name, var_name[i], sizeof(name) - strlen(name) - 1);
         err = APIFunc(rename_var)(ncid, i, name);
         IF (err != NC_NOERR)
             error("rename_var: %s", APIFunc(strerror)(err));
@@ -1617,7 +1617,7 @@ TestFunc(rename_var)(VarArgs)
         error("enddef: %s", APIFunc(strerror)(err));
     for (i = 0; i < numVars; i++) {
         strcpy(name, "even_longer_");
-        strcat(name, var_name[i]);
+        strncat(name, var_name[i], sizeof(name) - strlen(name) - 1);
         err = APIFunc(rename_var)(ncid, i, name);
         IF (err != NC_ENOTINDEFINE)
             error("expecting NC_ENOTINDEFINE but got %s", nc_err_code_name(err));
@@ -1934,7 +1934,7 @@ TestFunc(rename_att)(AttVarArgs)
                 error("expecting NC_ENOTATT but got %s", nc_err_code_name(err));
             ELSE_NOK
             strcpy(newname, "new_");
-            strcat(newname, attname);
+            strncat(newname, attname, sizeof(newname) - strlen(newname) - 1);
             err = APIFunc(rename_att)(ncid, varid, attname, newname);
             IF (err != NC_NOERR)
                 error("rename_att: %s", APIFunc(strerror)(err));
@@ -1962,7 +1962,7 @@ TestFunc(rename_att)(AttVarArgs)
             atttype = ATT_TYPE(i,j);
             attlength = ATT_LEN(i,j);
             strcpy(newname, "new_");
-            strcat(newname, attname);
+            strncat(newname, attname, sizeof(newname) - strlen(newname) - 1);
             err = APIFunc(inq_attname)(ncid, varid, j, name);
             IF (err != NC_NOERR)
                 error("inq_attname: %s", APIFunc(strerror)(err));
@@ -2009,9 +2009,9 @@ TestFunc(rename_att)(AttVarArgs)
         for (j = 0; j < NATTS(i); j++) {
             attname = ATT_NAME(i,j);
             strcpy(oldname, "new_");
-            strcat(oldname, attname);
+            strncat(oldname, attname, sizeof(oldname) - strlen(oldname) - 1);
             strcpy(newname, "even_longer_");
-            strcat(newname, attname);
+            strncat(newname, attname, sizeof(newname) - strlen(newname) - 1);
             err = APIFunc(rename_att)(ncid, varid, oldname, newname);
             IF (err != NC_ENOTINDEFINE)
                 error("expecting NC_ENOTINDEFINE but got %s", nc_err_code_name(err));
