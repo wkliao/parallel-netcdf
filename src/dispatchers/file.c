@@ -95,7 +95,7 @@ PNC_check_id(int ncid, PNC **pncp)
 {
     assert(pncp != NULL);
 
-    if (pnc_numfiles == 0 || ncid < 0 || ncid > NC_MAX_NFILES)
+    if (pnc_numfiles == 0 || ncid < 0 || ncid >= NC_MAX_NFILES)
         DEBUG_RETURN_ERROR(NC_EBADID)
 
     *pncp = pnc_filelist[ncid];
