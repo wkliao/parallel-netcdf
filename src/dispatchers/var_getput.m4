@@ -218,11 +218,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
                                         &reqs[i],
                                         API_KIND($2),
                                         itype);
-        if (status != NC_NOERR) status = err;
+        if (status == NC_NOERR) status = err;
     }
 
     err = pncp->dispatch->wait(pncp->ncp, nvars, reqs, NULL, CollIndep($4));
-    if (status != NC_NOERR) status = err;
+    if (status == NC_NOERR) status = err;
     free(reqs);
 
     return status;
