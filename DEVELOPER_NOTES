@@ -503,6 +503,9 @@ Following the instructions in https://scan.coverity.com/travis_ci
 The modeling file ./coverity_model.c is for Coverity Scan used in the Analysis
 Setting.
 
+Change the branch for scan:
+Under "coverity_scan:". change "branch_pattern:" to the branch name
+
 ==============================================================================
 Testing with valgrind
 ==============================================================================
