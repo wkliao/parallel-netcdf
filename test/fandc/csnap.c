@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   double file_size;
   double rates_l[4], rates_g[4];
   int i, rank;
-  char filename[256];
+  char filename[256]={'\0'};
 
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&totpes);

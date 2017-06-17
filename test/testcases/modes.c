@@ -133,7 +133,7 @@ int check_modes(char *filename)
 
 int main(int argc, char** argv)
 {
-    char filename[256];
+    char filename[256]={'\0'};
     int rank, err, nerrs=0;
 
     MPI_Init(&argc, &argv);
