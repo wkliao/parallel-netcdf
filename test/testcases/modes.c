@@ -133,7 +133,7 @@ int check_modes(char *filename)
 
 int main(int argc, char** argv)
 {
-    char filename[256]={'\0'};
+    char filename[256];
     int rank, err, nerrs=0;
 
     MPI_Init(&argc, &argv);
@@ -153,6 +153,12 @@ int main(int argc, char** argv)
         sprintf(cmd_str, "*** TESTING C   %s for file create/open modes ", basename(argv[0]));
         printf("%-66s ------ ", cmd_str); fflush(stdout);
         free(cmd_str);
+    }
+    if (filename[0] == '\0') {
+        printf(PASS_STR);
+        fprintf(stderr,"Error: invalid filename, Exiting ...\n");
+        MPI_Finalize();
+        return 1;
     }
 
     /* test under safe mode enabled */

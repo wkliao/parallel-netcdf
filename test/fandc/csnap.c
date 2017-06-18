@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   double file_size;
   double rates_l[4], rates_g[4];
   int i, rank;
-  char filename[256]={'\0'};
+  char filename[256];
 
   MPI_Init(&argc,&argv);
   MPI_Comm_size(MPI_COMM_WORLD,&totpes);
@@ -98,6 +98,12 @@ int main(int argc, char *argv[]) {
         sprintf(cmd_str, "*** TESTING C   %s for 3D array write/read ", argv[0]);
         printf("%-66s ------ ", cmd_str); fflush(stdout);
         free(cmd_str);
+    }
+    if (filename[0] == '\0') {
+        printf(PASS_STR);
+        fprintf(stderr,"Error: invalid filename, Exiting ...\n");
+        MPI_Finalize();
+        return 1;
     }
 
   verbose = 0;
