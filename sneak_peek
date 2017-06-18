@@ -83,6 +83,7 @@ This is essentially a placeholder for the next release note ...
     * doc/README.Ubuntu provides build instructions for Ubuntu Linux OS.
 
   o New test program
+    * test/testcases/put_all_kinds.m4 - tests various blocking put APIs.
     * test/testcases/tst_dimsizes.c - borrowed from netCDF library to test
       define/inquire the maximum allowable dimension sizes. This test program
       is similar to (or a subset of) test/cdf_format/dim_cdf12.c

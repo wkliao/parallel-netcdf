@@ -93,7 +93,7 @@ ncmpii_NC_computeshapes(NC *ncp)
         /* (*vpp)->len is recomputed from dimensions in ncmpii_NC_var_shape64() */
         status = ncmpii_NC_var_shape64(*vpp, &ncp->dims);
 
-        if (status != NC_NOERR) return status ;
+        if (status != NC_NOERR) return status;
 
         if (IS_RECVAR(*vpp)) {
             if (first_rec == NULL)
