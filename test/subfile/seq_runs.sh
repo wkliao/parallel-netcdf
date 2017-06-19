@@ -1,6 +1,5 @@
 #!/bin/sh
 
 for i in $TESTPROGRAMS; do ( \
-        $TESTSEQRUN ./$$i $TESTOUTDIR/testfile.nc \
+        $TESTSEQRUN ./$i -f $TESTOUTDIR/testfile.nc -s 2 \
         ; ) ; done
-
