@@ -2172,7 +2172,13 @@ NCX_PUT1F(uint64, double)
 
 int
 APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
-/* This subroutine is used only in NetCDF. not PnetCDF */
+/* This subroutine is used only in NetCDF, not PnetCDF.
+ * The name of this function is misleading, as size_t is an interanl memory
+ * type whose size may be 4 or 8 byte, depending on the systems. The usage
+ * of this function (i.e. in v1hpg.c) is actually to write a 32-bit unsigned
+ * integer from ulp to xpp. Thus, more accurate function is
+ * APIPrefix`x_put_uint32'()
+ */
 {
 	/* similar to put_ix_int() */
 	uchar *cp = (uchar *) *xpp;
@@ -2189,7 +2195,13 @@ APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
 
 int
 APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
-/* This subroutine is used only in NetCDF. not PnetCDF */
+/* This subroutine is used only in NetCDF, not PnetCDF.
+ * The name of this function is misleading, as size_t is an interanl memory
+ * type whose size may be 4 or 8 byte, depending on the systems. The usage
+ * of this function (i.e. in v1hpg.c) is actually to read a 32-bit unsigned
+ * integer from xpp to ulp. Thus, more accurate function is
+ * APIPrefix`x_get_uint32'()
+ */
 {
 	/* similar to get_ix_int */
 	const uchar *cp = (const uchar *) *xpp;
