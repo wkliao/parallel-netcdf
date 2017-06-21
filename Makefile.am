@@ -8,11 +8,8 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src man
+SUBDIRS = src man examples benchmarks test
 
-if BUILD_TESTSETS
-SUBDIRS += examples benchmarks test
-endif
 
 if BUILD_DOCS
 SUBDIRS += doc

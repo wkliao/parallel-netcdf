@@ -137,11 +137,11 @@ Here lists a few important options:
   --enable-doxygen        Enable generation of documentation.
   --disable-file-sync     Disable MPI file sync if you know your file system
                           can provide data consistency. [default: enabled]
-  --disable-testsets      don't build or run netCDF tests
   --enable-large-file-test
                           Enable testing for large (>4GB) file/variable I/O.
-                          Note "make testing" can run very slow. [default:
+                          Note "make check" can run very slow. [default:
                           disabled]
+  --enable-versioning     Enable library versioning
 
 Optional Packages:
 

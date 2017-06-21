@@ -1651,53 +1651,34 @@ AC_LANG_PUSH([C])
 
 dnl check the availability of MPI executables
 AC_DEFUN([UD_MPI_PATH_PROGS], [
+   ac_mpi_prog_$1=
    if test "x$MPI_INSTALL" != x ; then
       UD_MSG_DEBUG(--with-mpi=$MPI_INSTALL is used)
-      if test "x$$1" = x ; then
-         dnl If $1 is not defined, first search under ${MPI_INSTALL}/bin
-         if test -d "${MPI_INSTALL}/bin" ; then
-            UD_MSG_DEBUG(search possible $1 under $MPI_INSTALL/bin)
-            AC_PATH_PROGS([$1], [$2], [], [$MPI_INSTALL/bin])
-         fi
-         dnl If no valid $1 can be found under ${MPI_INSTALL}/bin, search
-         dnl under ${MPI_INSTALL}
-         if test "x$$1" = x ; then
-             UD_MSG_DEBUG(search possible $1 under $MPI_INSTALL)
-             AC_PATH_PROGS([$1], [$2], [], [$MPI_INSTALL])
-         fi
+      if test -d "${MPI_INSTALL}/bin" ; then
+         UD_MSG_DEBUG(search $2 under $MPI_INSTALL/bin)
+         AC_PATH_PROGS([ac_mpi_prog_$1], [$2], [], [$MPI_INSTALL/bin])
       else
-         dnl if $1 is defined, check whether the file exists
-         UD_MSG_DEBUG(check if file $$1 exists)
-         if ! test -f "$$1" ; then
-            dnl file does not exist in the current directory, check under
-            dnl MPI_INSTALL
-            UD_MSG_DEBUG(File $1= $$1 cannot be found ... check under $MPI_INSTALL)
-            if test -f "$MPI_INSTALL/$$1" ; then
-               UD_MSG_DEBUG(File $1= $$1 is found under $MPI_INSTALL)
-               $1="$MPI_INSTALL/$$1"
-            elif test -f "$MPI_INSTALL/bin/$$1" ; then
-               UD_MSG_DEBUG(File $1= $$1 is found under $MPI_INSTALL/bin)
-               $1="$MPI_INSTALL/bin/$$1"
-            else
-               UD_MSG_DEBUG(File $1= $$1 cannot be found under $MPI_INSTALL)
-               $1=
-            fi
-         fi
+         dnl ${MPI_INSTALL}/bin does not exist, search $MPI_INSTALL
+         UD_MSG_DEBUG(search $2 under $MPI_INSTALL)
+         AC_PATH_PROGS([ac_mpi_prog_$1], [$2], [], [$MPI_INSTALL])
       fi
    else
-       UD_MSG_DEBUG(--with-mpi=$MPI_INSTALL is NOT used)
-       UD_MSG_DEBUG([check if $1 is defined. If yes, check if file exists])
-       if test "x$$1" != x && (! test -f "$$1") ; then
-          UD_MSG_DEBUG(check if file $$1 exists under user's PATH)
-          AC_PATH_PROGS([$1], [$$1])
-       fi
+      UD_MSG_DEBUG(--with-mpi=$MPI_INSTALL is NOT used)
+      UD_MSG_DEBUG(search $2 under $PATH)
+      AC_PATH_PROGS([ac_mpi_prog_$1], [$2])
    fi
-   dnl if $$1 is not empty, then compiler file does exist
-   dnl if $$1 is empty, search under user's PATH
-   if test "x$$1" = x ; then
-      UD_MSG_DEBUG(find possible $1 under user's PATH)
-      AC_PATH_PROGS([$1], [$2])
+   UD_MSG_DEBUG([ac_mpi_prog_$1=${ac_mpi_prog_$1}])
+   if test "x${ac_mpi_prog_$1}" = x ; then
+      AC_CHECK_FILE([$2], [ac_mpi_prog_$1=$2])
+      dnl AC_CHECK_PROGS([ac_mpi_prog_$1], [$2], [], [/])
+      dnl first_token=`echo $2 | cut -d" " -f1`
+      dnl UD_MSG_DEBUG(check first token $first_token of $2)
+      dnl if test -f $first_token ; then
+         dnl UD_MSG_DEBUG(use file $first_token as it exits)
+         dnl ac_mpi_prog_$1=$2
+      dnl fi
    fi
+   $1=${ac_mpi_prog_$1}
 ])
 
 dnl Check for presence of an MPI constant.
