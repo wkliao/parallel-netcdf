@@ -11,7 +11,6 @@ addons:
     project:
       name: "wkliao/parallel-netcdf"
       description: "PnetCDF nightly build submitted via Travis CI"
-    notification_email: wkliao@eecs.northwestern.edu
     build_command_prepend: ./configure
     build_command: make -s V=1 LIBTOOLFLAGS=--silent tests
     branch_pattern: am
