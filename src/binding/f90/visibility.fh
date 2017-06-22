@@ -16,7 +16,8 @@
             nf90mpi_set_fill, nf90mpi_redef, &
             nf90mpi_enddef,   nf90mpi_sync, &
             nf90mpi_abort,    nf90mpi_close, &
-            nf90mpi_delete,   nf90mpi_set_default_format
+            nf90mpi_delete,   nf90mpi_set_default_format, &
+            nf90mpi_sync_numrecs
 
   ! File level inquiry
   public :: nf90mpi_inquire,          nf90mpi_inq_striping, &
@@ -94,6 +95,7 @@
         nfmpi_set_default_format, &
         nfmpi_inq_default_format, &
         nfmpi_sync, &
+        nfmpi_sync_numrecs, &
         nfmpi_abort, &
         nfmpi_close, &
         nfmpi_set_fill
