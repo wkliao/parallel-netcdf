@@ -24,6 +24,21 @@ define(`FUNC2ITYPE', `ifelse(`$1', `text',      `char',
 dnl
 dnl dnl dnl
 dnl
+define(`SIZEOFITYPE', `ifelse(`$1', `text',      `SIZEOF_CHAR',
+                              `$1', `schar',     `SIZEOF_SIGNED_CHAR',
+                              `$1', `uchar',     `SIZEOF_UNSIGNED_CHAR',
+                              `$1', `short',     `SIZEOF_SHORT',
+                              `$1', `ushort',    `SIZEOF_UNSIGNED_SHORT',
+                              `$1', `int',       `SIZEOF_INT',
+                              `$1', `uint',      `SIZEOF_UNSIGNED_INT',
+                              `$1', `long',      `SIZEOF_LONG',
+                              `$1', `float',     `SIZEOF_FLOAT',
+                              `$1', `double',    `SIZEOF_DOUBLE',
+                              `$1', `longlong',  `SIZEOF_LONG_LONG',
+                              `$1', `ulonglong', `SIZEOF_UNSIGNED_LONG_LONG')')dnl
+dnl
+dnl dnl dnl
+dnl
 define(`ITYPE2MPI',  `ifelse(`$1', `text',      `MPI_CHAR',
                              `$1', `schar',     `MPI_SIGNED_CHAR',
                              `$1', `uchar',     `MPI_UNSIGNED_CHAR',

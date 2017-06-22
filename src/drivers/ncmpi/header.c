@@ -1981,7 +1981,7 @@ ncmpii_comp_dims(int          safe_mode,
             NC_nametable *nameT = &local_dim->nameT[key];
             if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
                 nameT->list = (int*) NCI_Realloc(nameT->list,
-                              (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) * sizeof(int));
+                              (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
             nameT->list[nameT->num] = i;
             nameT->num++;
         }
@@ -2142,7 +2142,7 @@ ncmpii_comp_attrs(int           safe_mode,
                  * headers
                 if (fa[j] != fb[j]) {
                  */
-                if (memcmp(fa+j, fb+j, sizeof(float))) {
+                if (memcmp(fa+j, fb+j, SIZEOF_FLOAT)) {
                     msg = "%s attribute \"%s\"[%d] FLOAT (root=%f, local=%f)\n";
                     ATTR_WARN_J(msg, name, j, fa[j], fb[j])
                     DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
@@ -2159,7 +2159,7 @@ ncmpii_comp_attrs(int           safe_mode,
                  * headers
                 if (da[j] != db[j]) {
                  */
-                if (memcmp(da+j, db+j, sizeof(double))) {
+                if (memcmp(da+j, db+j, SIZEOF_DOUBLE)) {
                     msg = "%s attribute \"%s\"[%d] DOUBLE (root=%f, local=%f)\n";
                     ATTR_WARN_J(msg, name, j, da[j], db[j])
                     DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
@@ -2328,7 +2328,7 @@ ncmpii_comp_vars(int          safe_mode,
             NC_nametable *nameT = &local_var->nameT[key];
             if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
                 nameT->list = (int*) NCI_Realloc(nameT->list,
-                              (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) * sizeof(int));
+                              (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
             nameT->list[nameT->num] = i;
             nameT->num++;
         }

@@ -88,7 +88,7 @@ ncmpii_new_NC_dim(NC_dimarray  *ncap,
         /* allocate or expand the space for nameT[key].list */
         if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
             nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * sizeof(int));
+                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
 
         /* add the new variable ID to the name lookup table
          * the new varid will be ncap->ndefined
@@ -285,9 +285,9 @@ ncmpii_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
         ncap->nameT[i].num = ref->nameT[i].num;
         ncap->nameT[i].list = NULL;
         if (ncap->nameT[i].num > 0) {
-            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * sizeof(int));
+            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * SIZEOF_INT);
             memcpy(ncap->nameT[i].list, ref->nameT[i].list,
-                   (size_t)ncap->nameT[i].num * sizeof(int));
+                   (size_t)ncap->nameT[i].num * SIZEOF_INT);
         }
     }
 

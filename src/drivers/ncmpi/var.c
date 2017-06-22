@@ -133,7 +133,7 @@ ncmpii_new_NC_var(NC_vararray  *vcap,
         /* allocate or expand the space for nameT[key].list */
         if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
             nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * sizeof(int));
+                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
 
         /* add the new variable ID to the name lookup table
          * the new varid will be vcap->ndefined
@@ -193,7 +193,7 @@ ncmpii_update_name_lookup_table(NC_nametable *nameT,
      */
     if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
         nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                          (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * sizeof(int));
+                          (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
     nameT[key].list[nameT[key].num] = id;
     nameT[key].num++;
 
@@ -310,9 +310,9 @@ ncmpii_dup_NC_vararray(NC_vararray       *ncap,
         ncap->nameT[i].num = ref->nameT[i].num;
         ncap->nameT[i].list = NULL;
         if (ncap->nameT[i].num > 0) {
-            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * sizeof(int));
+            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * SIZEOF_INT);
             memcpy(ncap->nameT[i].list, ref->nameT[i].list,
-                   (size_t)ncap->nameT[i].num * sizeof(int));
+                   (size_t)ncap->nameT[i].num * SIZEOF_INT);
         }
     }
 
@@ -735,11 +735,11 @@ err_check:
 
         /* check if dimids is consistent among all processes */
         if (root_ndims > 0) {
-            int *root_dimids = (int*)NCI_Malloc((size_t)root_ndims * sizeof(int));
+            int *root_dimids = (int*)NCI_Malloc((size_t)root_ndims * SIZEOF_INT);
             if (dimids != NULL)
-                memcpy(root_dimids, dimids, (size_t)root_ndims*sizeof(int));
+                memcpy(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT);
             else
-                memset(root_dimids, 0, (size_t)root_ndims*sizeof(int));
+                memset(root_dimids, 0, (size_t)root_ndims*SIZEOF_INT);
             TRACE_COMM(MPI_Bcast)(root_dimids, root_ndims, MPI_INT, 0, ncp->nciop->comm);
             if (mpireturn != MPI_SUCCESS) {
                 if (nname != NULL) free(nname);
@@ -747,7 +747,7 @@ err_check:
                 return ncmpii_handle_error(mpireturn, "MPI_Bcast");
             }
             if (err == NC_NOERR && dimids != NULL &&
-                memcmp(root_dimids, dimids, (size_t)root_ndims*sizeof(int)))
+                memcmp(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT))
                 DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_DIMIDS)
             NCI_Free(root_dimids);
         }

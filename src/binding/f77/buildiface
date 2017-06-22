@@ -1417,7 +1417,7 @@ sub logical_array_ftoc {
 }
 sub logical_array_in_decl {
     my $count = $_[0];
-    print $OUTFD "    int *l$count = (int *)$malloc((size_t)($Array_size) * sizeof(int));\n";
+    print $OUTFD "    int *l$count = (int *)$malloc((size_t)($Array_size) * SIZEOF_INT);\n";
     $clean_up .= "    $free(l$count);\n";
 }
 sub logical_array_in_arg {
@@ -2081,7 +2081,7 @@ sub intToAintArr_ftoc {
 #ifdef HAVE_AINT_LARGER_THAN_FINT
     if ($Array_size > 0) {
         int li;
-        l$count = (MPI_Aint *)$malloc( (size_t)($Array_size) * sizeof(MPI_Aint) );
+        l$count = (MPI_Aint *)$malloc( (size_t)($Array_size) * SIZEOF_MPI_AINT );
         for (li=0; li<$Array_size; li++) 
             l$count\[li\] = v$count\[li\];
     }

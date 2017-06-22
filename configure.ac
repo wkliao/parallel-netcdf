@@ -1068,6 +1068,7 @@ AC_CHECK_TYPES([ptrdiff_t, schar, uchar, ushort, uint, longlong, ulonglong, int6
 
 AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(off_t)
+AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(signed char)
 AC_CHECK_SIZEOF(unsigned char)
 AC_CHECK_SIZEOF(short)
@@ -1081,6 +1082,12 @@ AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(unsigned long long)
 
+if test "$ac_cv_type_schar" = yes ; then 
+   AC_CHECK_SIZEOF(schar) 
+fi 
+if test "$ac_cv_type_uchar" = yes ; then 
+   AC_CHECK_SIZEOF(uchar) 
+fi 
 if test "$ac_cv_type_ushort" = yes ; then 
    AC_CHECK_SIZEOF(ushort) 
 fi 

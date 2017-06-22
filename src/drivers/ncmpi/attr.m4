@@ -1377,7 +1377,7 @@ err_check:
 
         /* check if buf contents is consistent across all processes */
         /* note xsz is aligned, thus must use the exact size of buf */
-        buf_size = (size_t)root_nelems * sizeof(FUNC2ITYPE($1));
+        buf_size = (size_t)root_nelems * SIZEOFITYPE($1);
         MPI_Comm_rank(ncp->nciop->comm, &rank);
         if (rank > 0)
             root_buf = (void*) NCI_Malloc(buf_size);

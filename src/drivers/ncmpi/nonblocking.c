@@ -343,7 +343,7 @@ void extract_reqs(NC   *ncp,
     }
 
     /* allocate ID array */
-    (*req_ids) = (int*) NCI_Malloc(*num_reqs * sizeof(int));
+    (*req_ids) = (int*) NCI_Malloc(*num_reqs * SIZEOF_INT);
 
     /* second loop fills the request IDs */
     *num_reqs = 0;

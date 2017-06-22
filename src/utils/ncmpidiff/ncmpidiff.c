@@ -450,7 +450,7 @@ int main(int argc, char **argv)
         for (i=0; i<nvars1; i++) {
             int varid;
             err = ncmpi_inq_varndims(ncid1, i, &ndims1); HANDLE_ERROR
-            dimids1 = (int*) malloc((size_t)ndims1 * sizeof(int));
+            dimids1 = (int*) malloc((size_t)ndims1 * SIZEOF_INT);
             if (!dimids1) OOM_ERROR
             err = ncmpi_inq_var(ncid1, i, name1, &type1, &ndims1, dimids1, &natts1);
             HANDLE_ERROR
@@ -464,7 +464,7 @@ int main(int argc, char **argv)
                 continue;
             }
             err = ncmpi_inq_varndims(ncid2, varid, &ndims2); HANDLE_ERROR
-            dimids2 = (int*) malloc((size_t)ndims2 * sizeof(int));
+            dimids2 = (int*) malloc((size_t)ndims2 * SIZEOF_INT);
             if (!dimids2) OOM_ERROR
             err = ncmpi_inq_var(ncid2, varid, name2, &type2, &ndims2, dimids2, &natts2);
             HANDLE_ERROR
@@ -642,12 +642,12 @@ int main(int argc, char **argv)
             continue;
         }
         err = ncmpi_inq_varndims(ncid1, varid1, &ndims1); HANDLE_ERROR
-        dimids1 = (int*) malloc((size_t)ndims1 * sizeof(int));
+        dimids1 = (int*) malloc((size_t)ndims1 * SIZEOF_INT);
         if (!dimids1) OOM_ERROR
         err = ncmpi_inq_var(ncid1, varid1, name1, &type1, &ndims1, dimids1, &natts1);
         HANDLE_ERROR
         err = ncmpi_inq_varndims(ncid2, varid2, &ndims2); HANDLE_ERROR
-        dimids2 = (int*) malloc((size_t)ndims2 * sizeof(int));
+        dimids2 = (int*) malloc((size_t)ndims2 * SIZEOF_INT);
         if (!dimids2) OOM_ERROR
         err = ncmpi_inq_var(ncid2, varid2, name2, &type2, &ndims2, dimids2, &natts2);
         HANDLE_ERROR
@@ -682,7 +682,7 @@ int main(int argc, char **argv)
         else if (!check_header && !rank && verbose)
             printf("\tSAME: number of dimensions (%d)\n",ndims1);
 
-        shape = (MPI_Offset*) calloc((size_t)ndims1 * 2, sizeof(MPI_Offset));
+        shape = (MPI_Offset*) calloc((size_t)ndims1 * 2, SIZEOF_MPI_OFFSET);
         if (!shape) OOM_ERROR
         start = shape + ndims1;
 
