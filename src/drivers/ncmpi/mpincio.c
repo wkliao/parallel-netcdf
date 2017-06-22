@@ -94,6 +94,7 @@ void ncmpiio_extract_hints(ncio     *nciop,
 {
     char value[MPI_MAX_INFO_VAL];
     int  flag;
+    MPI_Offset hint_val;
 
     /* value 0 indicates the hint is not set */
     nciop->hints.h_align                = 0;
@@ -110,19 +111,31 @@ void ncmpiio_extract_hints(ncio     *nciop,
 
     MPI_Info_get(info, "nc_header_align_size", MPI_MAX_INFO_VAL-1, value,
                  &flag);
-    if (flag) nciop->hints.h_align = strtoll(value,NULL,10);
+    if (flag) {
+        hint_val = strtoll(value,NULL,10);
+        if (errno != 0) nciop->hints.h_align = hint_val;
+    }
 
     MPI_Info_get(info, "nc_var_align_size",    MPI_MAX_INFO_VAL-1, value,
                  &flag);
-    if (flag) nciop->hints.v_align = strtoll(value,NULL,10);
+    if (flag) {
+        hint_val = strtoll(value,NULL,10);
+        if (errno != 0) nciop->hints.v_align = hint_val;
+    }
 
     MPI_Info_get(info, "nc_record_align_size", MPI_MAX_INFO_VAL-1,
                  value, &flag);
-    if (flag) nciop->hints.r_align = strtoll(value,NULL,10);
+    if (flag) {
+        hint_val = strtoll(value,NULL,10);
+        if (errno != 0) nciop->hints.r_align = hint_val;
+    }
 
     MPI_Info_get(info, "nc_header_read_chunk_size", MPI_MAX_INFO_VAL-1,
                  value, &flag);
-    if (flag) nciop->hints.header_read_chunk_size = strtoll(value,NULL,10);
+    if (flag) {
+        hint_val = strtoll(value,NULL,10);
+        if (errno != 0) nciop->hints.header_read_chunk_size = hint_val;
+    }
 
 #ifdef ENABLE_SUBFILING
     MPI_Info_get(info, "pnetcdf_subfiling", MPI_MAX_INFO_VAL-1,
@@ -132,7 +145,10 @@ void ncmpiio_extract_hints(ncio     *nciop,
 
     MPI_Info_get(info, "nc_num_subfiles", MPI_MAX_INFO_VAL-1,
                  value, &flag);
-    if (flag) nciop->hints.num_subfiles = (int)strtol(value,NULL,10);
+    if (flag) {
+        hint_val = strtoll(value,NULL,10);
+        if (errno != 0) nciop->hints.num_subfiles = hint_val;
+    }
 #endif
 
     /* nc_header_align_size, nc_var_align_size, and nciop->hints.r_align
@@ -153,8 +169,10 @@ void ncmpiio_extract_hints(ncio     *nciop,
     /* override subfile hints if env var is set */
     char *num_sf_env;
     num_sf_env = getenv("NC_NUM_SUBFILES");
-    if (num_sf_env != NULL)
+    if (num_sf_env != NULL) {
         nciop->hints.num_subfiles = (int)strtol(num_sf_env,NULL,10);
+        if (errno != 0) nciop->hints.num_subfiles = 0;
+    }
     if (nciop->hints.subfile_mode == 0)
         nciop->hints.num_subfiles = 0;
 #endif

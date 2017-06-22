@@ -1015,14 +1015,20 @@ ncmpii_inq_misc(void       *ncdp,
         MPI_Info_get(ncp->nciop->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         *striping_size = 0;
-        if (flag) *striping_size = (int)strtol(value,NULL,10);
+        if (flag) {
+            *striping_size = (int)strtol(value,NULL,10);
+            if (errno != 0) *striping_size = 0;
+        }
     }
 
     if (striping_count != NULL) {
         MPI_Info_get(ncp->nciop->mpiinfo, "striping_factor", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         *striping_count = 0;
-        if (flag) *striping_count = (int)strtol(value,NULL,10);
+        if (flag) {
+            *striping_count = (int)strtol(value,NULL,10);
+            if (errno != 0) *striping_count = 0;
+        }
     }
 
     /* the amount of writes, in bytes, committed to file system so far */
