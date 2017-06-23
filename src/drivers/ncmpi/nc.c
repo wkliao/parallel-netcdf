@@ -207,7 +207,6 @@ ncmpii_dup_NC(const NC *ref)
         ncmpii_free_NC(ncp);
         return NULL;
     }
-
     ncp->xsz       = ref->xsz;
     ncp->begin_var = ref->begin_var;
     ncp->begin_rec = ref->begin_rec;
@@ -1174,26 +1173,29 @@ ncmpii_inq_env_align_hints(MPI_Offset *h_align,
         strcpy(env_str_cpy, env_str);
         key = strtok(env_str_cpy, ";");
         while (key != NULL) {
-            MPI_Offset hint_val;
             char *val = strchr(key, '=');
             if (val == NULL) continue; /* ill-formed hint */
             *val = '\0';
             val++;
             if (strcasecmp(key, "nc_header_align_size") == 0) {
-                hint_val = strtoll(val,NULL,10);
-                if (errno != 0) *h_align = hint_val;
+                errno = 0;
+                *h_align = strtoll(val,NULL,10);
+                if (errno != 0) *h_align = 0;
             }
             else if (strcasecmp(key, "nc_var_align_size") == 0) {
-                hint_val = strtoll(val,NULL,10);
-                if (errno != 0) *v_align = hint_val;
+                errno = 0;
+                *v_align = strtoll(val,NULL,10);
+                if (errno != 0) *v_align = 0;
             }
             else if (strcasecmp(key, "nc_header_read_chunk_size") == 0) {
-                hint_val = strtoll(val,NULL,10);
-                if (errno != 0) *h_chunk = hint_val;
+                errno = 0;
+                *h_chunk = strtoll(val,NULL,10);
+                if (errno != 0) *h_chunk = 0;
             }
             else if (strcasecmp(key, "nc_record_align_size") == 0) {
-                hint_val = strtoll(val,NULL,10);
-                if (errno != 0) *r_align = hint_val;
+                errno = 0;
+                *r_align = strtoll(val,NULL,10);
+                if (errno != 0) *r_align = 0;
             }
             key = strtok(NULL, ";");
         }
@@ -1224,6 +1226,7 @@ ncmpiio_enddef(NC *ncp)
                  value, &flag);
     striping_unit = 0;
     if (flag) {
+        errno = 0;
         striping_unit = (int)strtol(value,NULL,10);
         if (errno != 0) striping_unit = 0;
     }
@@ -1304,6 +1307,7 @@ ncmpiio__enddef(NC         *ncp,
                  value, &flag);
     striping_unit = 0;
     if (flag) {
+        errno = 0;
         striping_unit = (int)strtol(value,NULL,10);
         if (errno != 0) striping_unit = 0;
     }

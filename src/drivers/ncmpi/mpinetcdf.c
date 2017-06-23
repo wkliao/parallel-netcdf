@@ -258,6 +258,7 @@ ncmpii_create(MPI_Comm     comm,
         MPI_Info_get(env_info, "nc_header_read_chunk_size", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         if (flag) {
+            errno = 0;
             chunksize = strtoll(value,NULL,10);
             if (errno != 0) chunksize = NC_DEFAULT_CHUNKSIZE;
         }
@@ -435,6 +436,7 @@ ncmpii_open(MPI_Comm    comm,
         MPI_Info_get(env_info, "nc_header_read_chunk_size", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         if (flag) {
+            errno = 0;
             chunksize = strtoll(value,NULL,10);
             if (errno != 0) chunksize = NC_DEFAULT_CHUNKSIZE;
         }
@@ -1016,6 +1018,7 @@ ncmpii_inq_misc(void       *ncdp,
                      value, &flag);
         *striping_size = 0;
         if (flag) {
+            errno = 0;
             *striping_size = (int)strtol(value,NULL,10);
             if (errno != 0) *striping_size = 0;
         }
@@ -1026,6 +1029,7 @@ ncmpii_inq_misc(void       *ncdp,
                      value, &flag);
         *striping_count = 0;
         if (flag) {
+            errno = 0;
             *striping_count = (int)strtol(value,NULL,10);
             if (errno != 0) *striping_count = 0;
         }
