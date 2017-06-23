@@ -43,6 +43,13 @@ function nf90mpi_strerrno(ncerr)
   end if
 end function nf90mpi_strerrno
 ! -------
+function nf90mpi_issyserr(ncerr)
+  integer, intent( in) :: ncerr
+  logical              :: nf90mpi_strerror
+
+  nf90mpi_issyserr = nfmpi_issyserr(ncerr)
+end function nf90mpi_strerror
+! -------
 !
 ! File level control routines:
 !

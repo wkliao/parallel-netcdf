@@ -9,7 +9,8 @@
 !
 
   ! Library version, error string
-  public :: nf90mpi_inq_libvers, nf90mpi_strerror, nf90mpi_strerrno
+  public :: nf90mpi_inq_libvers, nf90mpi_strerror, nf90mpi_strerrno, &
+            nf90mpi_issyserr
 
   ! Control routines
   public :: nf90mpi_create,   nf90mpi_open, &
