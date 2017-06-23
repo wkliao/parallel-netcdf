@@ -8,13 +8,12 @@
 !
 !
 
-! This is part of the netCDF F90 API, or. Copyright 2006 UCAR. See COPYRIGHT file
+! This is part of the netCDF F90 API. Copyright 2006 UCAR. See COPYRIGHT file
 ! for details.
 
 ! This file contains the netcdf file functions that are shared by
 ! netcdf-3 and netcdf-4.
 
-! $Id$
 ! -------
 function nf90mpi_inq_libvers()
   character(len = 80) :: nf90mpi_inq_libvers
@@ -45,10 +44,10 @@ end function nf90mpi_strerrno
 ! -------
 function nf90mpi_issyserr(ncerr)
   integer, intent( in) :: ncerr
-  logical              :: nf90mpi_strerror
+  logical              :: nf90mpi_issyserr
 
   nf90mpi_issyserr = nfmpi_issyserr(ncerr)
-end function nf90mpi_strerror
+end function nf90mpi_issyserr
 ! -------
 !
 ! File level control routines:

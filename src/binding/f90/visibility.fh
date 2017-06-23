@@ -78,6 +78,7 @@
     public :: &
         nfmpi_inq_libvers, &
         nfmpi_strerror, &
+        nfmpi_strerrno, &
         nfmpi_issyserr
 !
 ! control subroutines:

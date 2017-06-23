@@ -40,7 +40,7 @@ before_install:
 
 script:
   # dump the Coverity Scan SCM log file
-  - cat /home/travis/build/wkliao/parallel-netcdf/cov-int/scm_log.txt
+  # - cat /home/travis/build/wkliao/parallel-netcdf/cov-int/scm_log.txt
   # continue the above "build_command" for static library only (default)
   - make -s V=1 LIBTOOLFLAGS=--silent distcheck DISTCHECK_CONFIGURE_FLAGS=--silent
   - make -s distclean
