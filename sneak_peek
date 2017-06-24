@@ -10,15 +10,10 @@ This is essentially a placeholder for the next release note ...
       linking shared libraries is not recommended due to the likely performance
       degradation.
 
-  o New Limitation
+  o New Limitations
     * PnetCDF now requires the underlying MPI library define data type
       MPI_Offset to be an 8-byte integer. Configuring process of PnetCDF will
       be aborted if MPI_Offset is detected to be of size 4 bytes. See r2944.
-      It was recently found that OpenMPI versions 2.0.2 and 1.10.6 on
-      32-bit machines configure MPI_Offset as a 4-byte integer, even if the
-      32-bit machines support large files. See the discussion thread in
-      OpenMPI: https://github.com/open-mpi/ompi/issues/3195
-      We suggest to use other MPI libraries to build PnetCDF on 32-bit machines.
     * The maximum number of files that can be simultaneously opened by an MPI
       process is now limited to 1024 (a new constant NC_MAX_NFILES defined in
       pnetcdf.h). When this limit is reached, error code NC_ENFILE will be
@@ -47,7 +42,7 @@ This is essentially a placeholder for the next release note ...
     * none
 
   o Syntax changes
-    * Add C type qualifier const to argument fill_value of ncmpi_def_var_fill
+    * Add C type qualifier "const" to argument fill_value of ncmpi_def_var_fill
       to indicate the contents pointed by fill_value is immutable.
 
   o Semantics updates
@@ -90,11 +85,28 @@ This is essentially a placeholder for the next release note ...
     * test/testcases/null_args.c - tests whether the correct error codes can
       be returned when using NULL arguments for start, count, stride, or imap
 
-  o Other updates:
+  o Issues related to MPI library vendors:
     * When using OpenMPI 2.1.1 and priors built with Intel compilers 17.0.0,
       the test program nonblocking/mcoll_testf.f90 fails with segmentation
       fault. This is due to a bug in OpenMPI. See discussion in
       https://github.com/open-mpi/ompi/issues/3695
+    * OpenMPI versions 2.0.2 and 1.10.6 on 32-bit machines configure data type
+      MPI_Offset as a 4-byte integer, even if the 32-bit machines support large
+      files. See the discussion thread in OpenMPI:
+      https://github.com/open-mpi/ompi/issues/3195
+      We suggest to use other MPI libraries to build PnetCDF on 32-bit machines.
+    * Fix test program test/nc_test/test_read.m4 and test/testcases/modes.c for
+      testing whether the correct error codes can be returned when opening a
+      non-existing file. Thanks to Mark Dixon for testing various MPI
+      implementations, compilers, and file systems, we found that when using
+      MVAPICH2 2.2, its Lustre driver always adds O_CREAT flag to the open()
+      calls. Because of this behavior, the non-existing file will be created
+      with zero length, which causes PnetCDF to spew NC_ENOTNC instead of
+      NC_ENOENT. A bug report has been filed to MVAPICH. The fix shall come in
+      the next release of MVAPICH. The bug report can be found in
+      http://mailman.cse.ohio-state.edu/pipermail/mvapich-discuss/2017-February/006300.html
+
+  o Other updates:
     * All build recipes (README files) have been moved to folder doc. Most of
       the recipes have been updated with instructions for building shared
       libraries.
@@ -107,7 +119,8 @@ This is essentially a placeholder for the next release note ...
     * Rename configure-time variables TEST_SEQRUN, TEST_MPIRUN, and TEST_OUTDIR
       to TESTSEQRUN, TESTMPIRUN, and TESTOUTDIR, respectively. This change
       avoids conflict to the name convention reserved by automake.
-    * Fix TESTMPIRUN default value to use full path under MPI_INSTALL.
+    * Fix TESTMPIRUN default value to use full path specified in --with-mpi at
+      configure command line
 
   o Bug fixes
     * Fix F90 APIs for reading and writing scalar variables, i.e. number of
@@ -130,14 +143,4 @@ This is essentially a placeholder for the next release note ...
       values. See r2864. This fix is critical when PnetCDF is configured with
       option erange-fill enabled (default mode) and the target platform is a
       Little Endian.
-    * Fix test program test/nc_test/test_read.m4 and test/testcases/modes.c for
-      testing whether the correct error codes can be returned when opening a
-      non-existing file. Thanks to Mark Dixon for testing various MPI
-      implementations, compilers, and file systems, we found that when using
-      MVAPICH2 2.2, its Lustre driver always adds O_CREAT flag to the open()
-      calls. Because of this behavior, the non-existing file will be created
-      with zero length, which causes PnetCDF to spew NC_ENOTNC instead of
-      NC_ENOENT. A bug report has been filed to MVAPICH. The fix shall come in
-      the next release of MVAPICH. The bug report can be found in
-      http://mailman.cse.ohio-state.edu/pipermail/mvapich-discuss/2017-February/006300.html
 
