@@ -45,9 +45,8 @@ extern "C" {
     NC_UINT64 : unsigned long long  (for _ulonglong APIs)
  */
 
-/* to make PnetCDF error codes compatible to netCDF, below we keep an exact
- * same copy of netcdf.h and re-use their defined values
- * Sync-ed with netcdf.h of version 4.4.1.1
+/* Many constants defined in PnetCDF share the same values as NetCDF.
+ * Below we keep a portion of exact same copy of netcdf.h (version 4.4.1.1)
  */
 #ifndef _NETCDF_
 
@@ -495,7 +494,7 @@ by the desired type. */
 #endif
 /* end of #ifndef _NETCDF_ */
 
-/* Below are some constants used in PnetCDF only */
+/* Below are constants used in PnetCDF only */
 
 /* invalid nonblocking request ID and zero-length request */
 #define NC_REQ_NULL -1
@@ -4462,7 +4461,7 @@ ncmpi_mget_varm_ulonglong_all(int ncid, int num, int *varids,
 /* End Prototypes */
 
 
-/* These macros are defined in serial netcdf (3.5.0) for backwards
+/* Macros below are defined in serial netcdf (3.5.0) for backwards
  * compatibility with older netcdf code.   We aren't concerned with backwards
  * compatibility, so if your code doesn't compile with parallel-netcdf, maybe
  * this is why:
