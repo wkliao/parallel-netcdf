@@ -14,8 +14,11 @@ mpiexec -n 4 ncmpivalid
 .hy
 .ft
 .SH DESCRIPTION
-\fBncmpivalid\fP checks a netCDF file whether it conforms
-the CDF file format.
+\fBncmpivalid\fP checks a netCDF file whether it conforms the CDF file format.
+If the input file is a valid NetCDF file, then a message of successful validation
+is printed on command-line output, for example,
+File "testfile.nc" is a valid NetCDF file.
+Otherwise, a NetCDF error message is printed.
 
 .SH "SEE ALSO"
 .LP

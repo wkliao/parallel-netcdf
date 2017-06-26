@@ -26,6 +26,17 @@
 #include <ncx.h>
 #include <common.h>
 
+#ifndef EXIT_FAILURE
+#ifndef vms
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+#else
+/* In OpenVMS, success is indicated by odd values and failure by even values. */
+#define EXIT_SUCCESS 1
+#define EXIT_FAILURE 0
+#endif
+#endif
+
 /*
  * "magic number" at beginning of file: 0x43444601 (big endian) 
  */
@@ -1029,9 +1040,11 @@ prog_exit:
     close(fd);
 
     if (status == NC_NOERR)
-        printf("The netCDF file is validated!\n");
+        printf("File \"%s\" is a valid NetCDF file.\n",filename);
     else
         printf("Error: %s\n",ncmpi_strerror(status));
+
     MPI_Finalize();
-    return 0;
+
+    exit((status == NC_NOERR) ? EXIT_SUCCESS : EXIT_FAILURE);
 }

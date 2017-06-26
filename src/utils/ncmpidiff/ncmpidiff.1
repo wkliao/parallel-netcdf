@@ -27,12 +27,15 @@ files are compared.
 .IP "\fB-b\fP"
 Verbose mode - print results (same or different) for all components (file, header, or variables) in comparison
 .IP "\fB-q\fP"
-Quiet mode - print nothing when two components in comparison are the same
+Quiet mode - print nothing on the command-line output. This also disables verbose mode. When in quiet mode, users should check exit status. See below in "EXIT STATUS".
 .IP "\fB-h\fP"
 Compare file header only
 .IP "\fB-v\fP \fIvar1,...,varn\fP"
 Compare only the given list of variables
-
+.SH EXIT STATUS
+An exit status of 0 means no differences were found, and
+1 means some differences were found.
+Note on VMS-based system, the exit status values are reversed.
 .SH "SEE ALSO"
 .LP
 .BR ncmpidump (1),

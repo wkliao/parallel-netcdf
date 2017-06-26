@@ -1956,6 +1956,7 @@ ncmpii_mgetput(NC           *ncp,
     offset=0;
     err = ncmpii_file_set_view(ncp, fh, &offset, filetype);
     if (err != NC_NOERR) {
+        if (io_method == INDEP_IO) return status;
         num_reqs = 0; /* skip this request */
         if (status == NC_NOERR) status = err;
     }
@@ -1978,11 +1979,13 @@ ncmpii_mgetput(NC           *ncp,
         buf = reqs[0].xbuf;
     }
     else if (num_reqs > 1) { /* create the I/O buffer derived data type */
-        int *blocklengths = (int*) NCI_Malloc((size_t)num_reqs * SIZEOF_INT);
-        MPI_Aint *disps = (MPI_Aint*) NCI_Malloc((size_t)num_reqs*SIZEOF_MPI_AINT);
-        MPI_Aint a0=0, ai, a_last_contig;
+        int *blocklengths, last_contig_req;
+        MPI_Aint *disps, a0=0, ai, a_last_contig;
 
-        int last_contig_req = 0; /* index of the last contiguous request */
+        blocklengths = (int*) NCI_Malloc((size_t)num_reqs * SIZEOF_INT);
+        disps = (MPI_Aint*) NCI_Malloc((size_t)num_reqs * SIZEOF_MPI_AINT);
+
+        last_contig_req = 0; /* index of the last contiguous request */
         buf = NULL;
         /* process only valid requests */
         for (i=0, j=0; i<num_reqs; i++) {

@@ -137,6 +137,7 @@ char *progname;
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 #else
+/* In OpenVMS, success is indicated by odd values and failure by even values. */
 #define EXIT_SUCCESS 1
 #define EXIT_FAILURE 0
 #endif
@@ -748,25 +749,22 @@ int main(int argc, char **argv)
 
     /* summary of the difference */
     MPI_Reduce(&numVarDIFF, &varDIFF, 1, MPI_LONG_LONG_INT, MPI_SUM, 0, comm);
-    if (rank == 0) {
+    if (rank == 0 && !quiet) {
         if (check_header) {
-            if (numHeadDIFF == 0) {
-                if (!quiet) printf("Headers of two files are the same\n");
-            }
+            if (numHeadDIFF == 0)
+                printf("Headers of two files are the same\n");
             else
                 printf("Number of differences in header %lld\n",numHeadDIFF);
         }
         if (check_variable_list) {
-            if (varDIFF == 0) {
-                if (!quiet) printf("Compared variable(s) are the same\n");
-            }
+            if (varDIFF == 0)
+                printf("Compared variable(s) are the same\n");
             else
                 printf("Compared variables(s) has %lld differences\n",varDIFF);
         }
         if (check_entire_file) {
-            if (varDIFF == 0) {
-                if (!quiet) printf("All variables of two files are the same\n");
-            }
+            if (varDIFF == 0)
+                printf("All variables of two files are the same\n");
             else
                 printf("Number of differences in variables %lld\n",varDIFF);
         }
@@ -785,11 +783,5 @@ int main(int argc, char **argv)
     MPI_Bcast(&numDIFF, 1, MPI_LONG_LONG_INT, 0, comm);
 
     MPI_Finalize();
-#ifdef vms
-    if (quiet) exit((numDIFF == 0) ? 0 : 1);
-    else       exit(EXIT_SUCCESS);
-#else
-    if (quiet) return ((numDIFF == 0) ? 0 : 1);
-    else       return EXIT_SUCCESS;
-#endif
+    exit((numDIFF == 0) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
