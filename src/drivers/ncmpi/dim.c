@@ -636,10 +636,11 @@ ncmpii_rename_dim(void       *ncdp,
 
     /* check whether newname is already in use */
     err = ncmpii_NC_finddim(&ncp->dims, nnewname, NULL);
-    if (err != NC_EBADDIM) {
+    if (err != NC_EBADDIM) { /* expecting NC_EBADDIM */
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
     }
+    else err = NC_NOERR;  /* reset err */
 
     /* retrieve dim object */
     dimp = ncmpii_elem_NC_dimarray(&ncp->dims, dimid);

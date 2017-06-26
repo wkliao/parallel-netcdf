@@ -392,19 +392,16 @@ ncmpii_NC_findvar(const NC_vararray *ncap,
 {
     int varid;
     size_t nchars;
-    NC_var **loc;
 
     assert (ncap != NULL);
 
     if (ncap->ndefined == 0) return NC_ENOTVAR;
 
-    loc = (NC_var **) ncap->value;
-
     nchars = strlen(name);
 
-    for (varid=0; varid<ncap->ndefined; varid++, loc++) {
-        if ((*loc)->name->nchars == nchars &&
-            strncmp((*loc)->name->cp, name, nchars) == 0) {
+    for (varid=0; varid<ncap->ndefined; varid++) {
+        if (ncap->value[varid]->name->nchars == nchars &&
+            strncmp(ncap->value[varid]->name->cp, name, nchars) == 0) {
             if (varidp != NULL) *varidp = varid;
             return NC_NOERR; /* found it */
         }
@@ -960,10 +957,11 @@ ncmpii_rename_var(void       *ncdp,
     /* check whether new name is already in use, for this API (rename) the
      * name should NOT already exist */
     err = ncmpii_NC_findvar(&ncp->vars, nnewname, NULL);
-    if (err != NC_ENOTVAR) {
+    if (err != NC_ENOTVAR) { /* expecting NC_ENOTVAR */
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
     }
+    else err = NC_NOERR;  /* reset err */
 
     if (! NC_indef(ncp) && /* when file is in data mode */
         varp->name->nchars < (MPI_Offset)strlen(nnewname)) {
