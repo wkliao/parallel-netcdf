@@ -29,7 +29,9 @@ if DECL_MPI_OFFSET
    # AM_FCFLAGS += $(FC_DEFINE)HAVE_DECL_MPI_OFFSET
 endif
 
-TESTPROGRAMS = large_files large_var
+TESTPROGRAMS = large_files \
+               large_var \
+               large_dims_vars_attrs
 
 check_PROGRAMS = $(TESTPROGRAMS)
 

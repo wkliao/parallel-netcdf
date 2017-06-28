@@ -78,6 +78,8 @@ This is essentially a placeholder for the next release note ...
     * doc/README.Ubuntu provides build instructions for Ubuntu Linux OS.
 
   o New test program
+    * test/largefile/large_dims_vars_attrs.c - tests large values of number of
+      dimensions, large number of variables, and large number of attributes.
     * test/testcases/put_all_kinds.m4 - tests various blocking put APIs.
     * test/testcases/tst_dimsizes.c - borrowed from netCDF library to test
       define/inquire the maximum allowable dimension sizes. This test program
