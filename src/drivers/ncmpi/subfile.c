@@ -396,9 +396,15 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
             memcpy(vpp[i]->dimids_org, vpp[i]->dimids, (size_t)vpp[i]->ndims*SIZEOF_INT);
             vpp[i]->ndims_org = vpp[i]->ndims;
             vpp[i]->ndims = 0;
-            vpp[i]->dimids = (IS_RECVAR(vpp[i])?&vpp[i]->dimids[0]:NULL);
+            if (IS_RECVAR(vpp[i])) {
+                NCI_Free(vpp[i]->dimids);
+                vpp[i]->dimids = NULL;
+            }
+            if (vpp[i]->shape != NULL) {
+                NCI_Free(vpp[i]->shape);
+                vpp[i]->shape = NULL;
+            }
             vpp[i]->len = vpp[i]->xsz; /* size of type  */
-            vpp[i]->shape = NULL;
             vpp[i]->num_subfiles = ncp->nc_num_subfiles;
 
             status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.dimids_org",

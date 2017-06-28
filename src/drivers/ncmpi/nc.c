@@ -196,10 +196,8 @@ ncmpii_dup_NC(const NC *ref)
 {
     NC *ncp;
 
-    ncp = (NC *) NCI_Malloc(sizeof(NC));
+    ncp = (NC *) NCI_Calloc(1, sizeof(NC));
     if (ncp == NULL) return NULL;
-
-    memset(ncp, 0, sizeof(NC));
 
     if (ncmpii_dup_NC_dimarray(&ncp->dims,   &ref->dims)  != NC_NOERR ||
         ncmpii_dup_NC_attrarray(&ncp->attrs, &ref->attrs) != NC_NOERR ||

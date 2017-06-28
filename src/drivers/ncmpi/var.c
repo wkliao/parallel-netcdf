@@ -40,6 +40,10 @@ ncmpii_free_NC_var(NC_var *varp)
     if (varp->num_subfiles > 1) /* deallocate it */
         NCI_Free(varp->dimids_org);
 #endif
+    if (varp->shape  != NULL) NCI_Free(varp->shape);
+    if (varp->dsizes != NULL) NCI_Free(varp->dsizes);
+    if (varp->dimids != NULL) NCI_Free(varp->dimids);
+
     NCI_Free(varp);
 }
 
@@ -53,38 +57,17 @@ ncmpii_new_x_NC_var(NC_string *strp,
                     int        ndims)
 {
     NC_var *varp;
-    int shape_space   = M_RNDUP(ndims * SIZEOF_MPI_OFFSET);
-    int dsizes_space  = M_RNDUP(ndims * SIZEOF_MPI_OFFSET);
-    int dimids_space  = M_RNDUP(ndims * SIZEOF_INT);
-    size_t sizeof_NC_var = M_RNDUP(sizeof(NC_var));
-    size_t sz = sizeof_NC_var + (size_t)(shape_space + dsizes_space + dimids_space);
 
-    /* this function allocates a contiguous memory space to put all
-     * members of NC_var structure together:
-     * dimid_space is for dimids[],
-     * shape_space is for shape[],
-     * dsizes_space is for dsizes[]
-     * (I don't know why M_RNDUP is needed here and why they should be kept
-     * in a contiguous memory space.)
-     */
-    varp = (NC_var *) NCI_Malloc(sz);
-    if (varp == NULL ) return NULL;
-
-    memset(varp, 0, sz);
+    varp = (NC_var *) NCI_Calloc(1, sizeof(NC_var));
+    if (varp == NULL) return NULL;
 
     varp->name = strp;
     varp->ndims = ndims;
 
-    if (ndims != 0) {
-        /*
-         * NOTE: lint may complain about the next 3 lines:
-         * "pointer cast may result in improper alignment".
-         * We use the M_RNDUP() macro to get the proper alignment.
-         * roundup to a double
-         */
-        varp->shape  = (MPI_Offset *)((char *)varp + sizeof_NC_var);
-        varp->dsizes = (MPI_Offset *)((char *)varp->shape  + shape_space);
-        varp->dimids = (int *)       ((char *)varp->dsizes + dsizes_space);
+    if (ndims > 0) {
+        varp->shape  = (MPI_Offset*)NCI_Calloc(ndims, SIZEOF_MPI_OFFSET);
+        varp->dsizes = (MPI_Offset*)NCI_Calloc(ndims, SIZEOF_MPI_OFFSET);
+        varp->dimids = (int *)      NCI_Calloc(ndims, SIZEOF_INT);
     }
 
     varp->xsz = 0;

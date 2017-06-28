@@ -131,11 +131,11 @@ ncmpii_set_NC_string(NC_string *ncstrp, const char *str);
  */
 typedef struct {
     /* all xdr'd */
-    NC_string *name;
     MPI_Offset size;
+    NC_string *name;
 #ifdef ENABLE_SUBFILING
-    int range[2]; /* subfile range {start, end} */
     MPI_Offset rcount; /* subfile range count */
+    int range[2]; /* subfile range {start, end} */
     int num_subfiles;
 #endif
 } NC_dim;
@@ -220,10 +220,10 @@ ncmpii_elem_NC_dimarray(const NC_dimarray *ncap, int elem);
  * is a signed 4-byte integer.
  */
 typedef struct {
-    MPI_Offset xsz;      /* amount of space at xvalue (4-byte aligned) */
-    NC_string *name;     /* name of the attributes */
     nc_type    type;     /* the discriminant */
     MPI_Offset nelems;   /* number of attribute elements */
+    MPI_Offset xsz;      /* amount of space at xvalue (4-byte aligned) */
+    NC_string *name;     /* name of the attributes */
     void      *xvalue;   /* the actual data, in external representation */
 } NC_attr;
 
@@ -267,24 +267,24 @@ ncmpii_elem_NC_attrarray(const NC_attrarray *ncap, MPI_Offset elem);
  * NC variable: description and data
  */
 typedef struct {
-    int           xsz;    /* byte size of 1 array element */
+    int           xsz;     /* byte size of 1 array element */
+    int           ndims;   /* number of dimensions */
+    nc_type       type;    /* variable's data type */
+    int           no_fill; /* whether fill mode is disabled */
+#ifdef ENABLE_SUBFILING
+    int           num_subfiles;
+    int           ndims_org;  /* ndims before subfiling */
+    int          *dimids_org; /* dimids before subfiling */
+#endif
+    int          *dimids; /* array of dimension IDs */
     MPI_Offset   *shape;  /* dim->size of each dim */
     MPI_Offset   *dsizes; /* the right to left product of shape */
     NC_string    *name;   /* name of the variable */
-    int           ndims;  /* number of dimensions */
-    int          *dimids; /* array of dimension IDs */
-    NC_attrarray  attrs;  /* attribute array */
-    nc_type       type;   /* variable's data type */
     MPI_Offset    len;    /* this is the "vsize" defined in header format, the
                              total size in bytes of the array variable.
                              For record variable, this is the record size */
     MPI_Offset    begin;  /* starting file offset of this variable */
-    int           no_fill;
-#ifdef ENABLE_SUBFILING
-    int           ndims_org;  /* ndims before subfiling */
-    int          *dimids_org; /* dimids before subfiling */
-    int           num_subfiles;
-#endif
+    NC_attrarray  attrs;  /* attribute array */
 } NC_var;
 
 /* note: we only allow less than 2^31-1 variables defined in a file */
@@ -342,16 +342,15 @@ ncmpii_NC_lookupvar(NC *ncp, int varid, NC_var **varp);
  */
 typedef struct NC_req {
     int            id;          /* even number for write, odd for read */
-    void          *buf;         /* the original user buffer */
-    void          *xbuf;        /* the buffer used to read/write, may point to
-                                   the same address as buf */
-    MPI_Offset     num_recs;    /* number of records requested (1 for
-                                   fixed-size variable) */
     int            buftype_is_contig;
     int            need_swap_back_buf;
     int            abuf_index;  /* index in the abuf occupy_table
                                    -1 means not using attached buffer */
-
+    MPI_Offset     num_recs;    /* number of records requested (1 for
+                                   fixed-size variable) */
+    void          *buf;         /* the original user buffer */
+    void          *xbuf;        /* the buffer used to read/write, may point to
+                                   the same address as buf */
     void          *tmpBuf;      /* tmp buffer to be freed, used only by
                                    nonblocking varn when buftype is noncontig */
     void          *userBuf;     /* user buffer to be unpacked from tmpBuf. used
@@ -374,17 +373,17 @@ typedef struct NC_req {
 #define NC_ABUF_DEFAULT_TABLE_SIZE 128
 
 typedef struct NC_buf_status {
-    int        is_used;
     MPI_Aint   buf_addr;
     MPI_Offset req_size;
+    int        is_used;
 } NC_buf_status;
 
 typedef struct NC_buf {
     MPI_Offset     size_allocated;
     MPI_Offset     size_used;
     int            table_size;
-    NC_buf_status *occupy_table; /* [table_size] */
     int            tail;         /* index of last free entry */
+    NC_buf_status *occupy_table; /* [table_size] */
     void          *buf;
 } NC_buf;
 
