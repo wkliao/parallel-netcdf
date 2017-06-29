@@ -10,7 +10,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = src man examples benchmarks test
 
-
 if BUILD_DOCS
 SUBDIRS += doc
 endif
@@ -94,6 +93,15 @@ install-data-hook:
 	@echo '|      http://trac.mcs.anl.gov/projects/parallel-netcdf'
 	@echo '|'
 	@echo '+----------------------------------------------------------------------------+'
+
+# For VPATH build (parallel build), try delete all sub-directories
+RMDIRS = src/libs src/utils src man examples benchmarks test doc
+distclean-local:
+	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+	   for d in $(RMDIRS) ; do \
+	       rmdir $$d || true ; \
+	   done ; \
+	fi
 
 .PHONY: ptest ptests tests
 

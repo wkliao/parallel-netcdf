@@ -49,5 +49,13 @@ ptests:
 	done ) ; \
 	done ;
 
+# For VPATH build (parallel build), try delete all sub-directories
+distclean-local:
+	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+	   for d in C tutorial CXX F77 F90  ; do \
+	       rmdir $$d || true ; \
+	   done ; \
+	fi
+
 .PHONY: ptest ptests
 

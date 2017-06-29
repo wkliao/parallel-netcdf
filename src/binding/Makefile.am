@@ -14,3 +14,10 @@ if HAS_FORTRAN
 SUBDIRS += f77 f90
 endif
 
+# For VPATH build (parallel build), try delete all sub-directories
+distclean-local:
+	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+	   for d in cxx f77 f90 ; do \
+	       rmdir $$d || true ; \
+	   done ; \
+	fi

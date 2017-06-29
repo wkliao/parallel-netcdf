@@ -8,3 +8,10 @@
 
 SUBDIRS = include common ncmpi
 
+# For VPATH build (parallel build), try delete all sub-directories
+distclean-local:
+	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+	   for d in $(SUBDIRS) ; do \
+	       rmdir $$d || true ; \
+	   done ; \
+	fi

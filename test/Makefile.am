@@ -62,6 +62,15 @@ ptests:
 	  done ) ; \
 	done ;
 
+# For VPATH build (parallel build), try delete all sub-directories
+RMDIRS = common C fandc nc_test cdf_format header testcases nonblocking largefile CXX nf_test nf90_test F90 subfile
+distclean-local:
+	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
+	   for d in $(RMDIRS) ; do \
+	       rmdir $$d || true ; \
+	   done ; \
+	fi
+
 .PHONY: ptest ptests
 
 .NOTPARALLEL:
