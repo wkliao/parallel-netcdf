@@ -280,50 +280,57 @@ AC_ARG_ENABLE(cxx,
 )
 UD_MSG_DEBUG(enable_cxx=$enable_cxx)
 
-dnl Must check MPI C++ compiler, because AC_PROG_CXX cannot be called
-dnl conditionally in Automake. If MPICXX or CXX has not been set by users, then
+dnl If MPICXX or CXX has not been set by users, then
 dnl search from CANDIDATE_MPICXX and find the full path of MPICXX
-if test "x${ac_user_MPICXX}" = x ; then
-   UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
-else
-   UD_MPI_PATH_PROGS([MPICXX], [$ac_user_MPICXX])
-fi
-
-has_mpicxx=yes
-if test "x${MPICXX}" = x ; then
-   has_mpicxx=no
-   if test "x$ac_user_MPICXX" = x ; then
-      ERR_MSG="No MPI C++ compiler can be found"
+if test "x${enable_cxx}" != xno ; then
+   if test "x${ac_user_MPICXX}" = x ; then
+      UD_MPI_PATH_PROGS([MPICXX], [$CANDIDATE_MPICXX])
    else
-      ERR_MSG="Specified MPI C++ compiler \"$ac_user_MPICXX\" cannot be found"
+      UD_MPI_PATH_PROGS([MPICXX], [$ac_user_MPICXX])
    fi
-   if test "x$MPI_INSTALL" != x ; then
-      ERR_MSG+=" under $MPI_INSTALL"
-   fi
-   if test "x${enable_cxx}" = xyes ; then
-      dnl --enable-cxx is explicitly set at command line
-      AC_MSG_ERROR([
+   UD_MSG_DEBUG([MPICXX=$MPICXX])
+
+   if test "x${MPICXX}" = x ; then
+      if test "x$ac_user_MPICXX" = x ; then
+         ERR_MSG="No MPI C++ compiler can be found"
+      else
+         ERR_MSG="Specified MPI C++ compiler \"$ac_user_MPICXX\" cannot be found"
+      fi
+      if test "x$MPI_INSTALL" != x ; then
+         ERR_MSG+=" under $MPI_INSTALL"
+      fi
+      if test "x${enable_cxx}" = xyes ; then
+         dnl --enable-cxx is explicitly set at command line
+         AC_MSG_ERROR([
    -----------------------------------------------------------------------
      $ERR_MSG.
      Please specify the location of the MPI C++ compiler, either in the
      MPICXX environment variable or the --with-mpi configure flag. Abort.
    -----------------------------------------------------------------------])
-   else
-      dnl enable_cxx is auto, i.e. --enable-cxx is not set at command line
-      AC_MSG_WARN([
+      else
+         dnl enable_cxx is auto, i.e. --enable-cxx is not set at command line
+         AC_MSG_WARN([
    -----------------------------------------------------------------------
      $ERR_MSG.
      Thus the C++ feature is disabled.
      The location of the MPI C++ compiler can be specified either in the
      MPICXX environment variable or through the --with-mpi configure flag.
    -----------------------------------------------------------------------])
+      fi
    fi
 fi
-UD_MSG_DEBUG([MPICXX=$MPICXX])
 
-dnl must invoke AC_PROG_CXX here otherwise got "error: conditional
+if test "x${enable_cxx}" = xno || test "x${MPICXX}" = x ; then
+   dnl when cxx is explicitly disabled or no MPICXX can be found
+   has_mpicxx=no
+else
+   has_mpicxx=yes
+   CXX=${MPICXX}
+fi
+
+dnl Must invoke AC_PROG_CXX here, because AC_PROG_CXX cannot be called
+dnl conditionally in Automake, otherwise got "error: conditional
 dnl "am__fastdepCXX" was never defined."
-CXX=${MPICXX}
 AC_PROG_CXX
 dnl autoconf 2.59 has not yet implemented AC_PROG_CXX_C_O
 dnl AC_PROG_CXX_C_O
