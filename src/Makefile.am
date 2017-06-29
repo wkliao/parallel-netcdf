@@ -10,12 +10,12 @@
 # This is useful for "make -j" option, as libs should be built after all
 # sub-libraries
 SUBDIRS = include dispatchers drivers binding packaging . libs utils
+DIST_SUBDIRS = include dispatchers drivers binding packaging libs utils
 
 # For VPATH build (parallel build), try delete all sub-directories
-RMDIRS = include dispatchers drivers binding packaging
 distclean-local:
 	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
-	   for d in $(RMDIRS) ; do \
+	   for d in $(DIST_SUBDIRS) ; do \
 	       if [ "$$d" = "." ] ; then \
 	          continue ; \
 	       fi ; \

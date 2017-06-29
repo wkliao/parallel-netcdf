@@ -330,8 +330,10 @@ fi
 
 dnl Must invoke AC_PROG_CXX here, because AC_PROG_CXX cannot be called
 dnl conditionally in Automake, otherwise got "error: conditional
-dnl "am__fastdepCXX" was never defined."
+dnl "am__fastdepCXX" was never defined." So, if has_mpicxx is no, then
+dnl AC_PROG_CXX will search for g++. However, g++ will not be used at all.
 AC_PROG_CXX
+
 dnl autoconf 2.59 has not yet implemented AC_PROG_CXX_C_O
 dnl AC_PROG_CXX_C_O
 

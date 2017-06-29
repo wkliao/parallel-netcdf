@@ -7,6 +7,7 @@
 # @configure_input@
 
 SUBDIRS = pnetcdf-api
+DIST_SUBDIRS = $(SUBDIRS)
 
 EXTRA_DIST = README.CRAY \
              README.Fujitsu \
@@ -23,7 +24,7 @@ EXTRA_DIST = README.CRAY \
 # For VPATH build (parallel build), try delete all sub-directories
 distclean-local:
 	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
-	   for d in $(SUBDIRS) ; do \
+	   for d in $(DIST_SUBDIRS) ; do \
 	       rmdir $$d || true ; \
 	   done ; \
 	fi

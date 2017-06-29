@@ -7,6 +7,7 @@
 # @configure_input@
 
 SUBDIRS = C
+DIST_SUBDIRS = C FLASH-IO
 
 if HAS_FORTRAN
 if HAVE_MPI_MOD
@@ -39,7 +40,7 @@ ptest ptests:
 # For VPATH build (parallel build), try delete all sub-directories
 distclean-local:
 	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
-	   for d in C FLASH-IO ; do \
+	   for d in $(DIST_SUBDIRS) ; do \
 	       rmdir $$d || true ; \
 	   done ; \
 	fi

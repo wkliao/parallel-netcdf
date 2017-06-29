@@ -6,15 +6,19 @@
 #
 # @configure_input@
 
-SUBDIRS = common \
-          C \
-          fandc \
-          nc_test \
-          cdf_format \
-          header \
-          testcases \
-          nonblocking \
-          largefile
+C_SUBDIRS = common \
+            C \
+            fandc \
+            nc_test \
+            cdf_format \
+            header \
+            testcases \
+            nonblocking \
+            largefile
+
+DIST_SUBDIRS = $(C_SUBDIRS) CXX nf_test nf90_test F90 subfile
+
+SUBDIRS = $(C_SUBDIRS)
 
 if HAS_MPICXX
 SUBDIRS += CXX
@@ -23,8 +27,7 @@ endif
 if HAS_FORTRAN
 SUBDIRS += nf_test
 if HAVE_MPI_MOD
-SUBDIRS += nf90_test
-SUBDIRS += F90
+SUBDIRS += nf90_test F90
 endif
 endif
 
@@ -63,10 +66,9 @@ ptests:
 	done ;
 
 # For VPATH build (parallel build), try delete all sub-directories
-RMDIRS = common C fandc nc_test cdf_format header testcases nonblocking largefile CXX nf_test nf90_test F90 subfile
 distclean-local:
 	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
-	   for d in $(RMDIRS) ; do \
+	   for d in $(DIST_SUBDIRS) ; do \
 	       rmdir $$d || true ; \
 	   done ; \
 	fi

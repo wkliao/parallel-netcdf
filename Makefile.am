@@ -9,6 +9,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = src man examples benchmarks test
+DIST_SUBDIRS = src man examples benchmarks test doc
 
 if BUILD_DOCS
 SUBDIRS += doc
@@ -95,10 +96,9 @@ install-data-hook:
 	@echo '+----------------------------------------------------------------------------+'
 
 # For VPATH build (parallel build), try delete all sub-directories
-RMDIRS = src/libs src/utils src man examples benchmarks test doc
 distclean-local:
 	if [ "$(abs_builddir)" != "$(abs_srcdir)" ] ; then \
-	   for d in $(RMDIRS) ; do \
+	   for d in $(DIST_SUBDIRS) ; do \
 	       rmdir $$d || true ; \
 	   done ; \
 	fi
