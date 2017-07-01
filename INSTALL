@@ -49,7 +49,7 @@ default configuration of PnetCDF up and running.
       tar xf parallel-netcdf-1.8.0.tar
       cd parallel-netcdf-1.8.0
 
-(c) Choose an installation directory, say $HOME/PnetCDF
+(c) Choose an installation directory, for example $HOME/PnetCDF
 
 (d) Configure PnetCDF specifying the installation directory:
 
@@ -71,8 +71,9 @@ default configuration of PnetCDF up and running.
 
       make install prefix=/OTHER/INSTALL/DIRECTORY
 
-(g) Add the bin subdirectory of the installation directory to your path in your
-    startup script (.bashrc for bash, .cshrc for csh, etc.):
+(g) Add the bin subdirectory of the installation directory to your path
+    environment variable in your startup script (.bashrc for bash, .cshrc for
+    csh, etc.):
 
     for csh and tcsh:
 
@@ -105,27 +106,16 @@ options can be found using:
 
 Here lists a few important options:
 
-  --disable-largefile     omit support for large files
-  --disable-mpi-io-test   Disable check for MPI-IO support in MPI
-                          implementation, if you know your MPI implementation
-                          has MPI-IO support but the configure test fails to
-                          find it. [default: enabled]
   --disable-cxx           Turn off support for the C++ interface, if you only
                           need the C interface. [default: enabled]
-  --enable-strict         Turn on strict debugging with gcc. [default:
-                          disabled]
   --disable-fortran       Turn off support for the Fortran interface, if you
                           only need the C interface. [default: enabled]
   --enable-shared[=PKGS]  build shared libraries [default=yes]
   --enable-static[=PKGS]  build static libraries [default=yes]
-  --enable-fast-install[=PKGS]
-                          optimize for fast installation [default=yes]
   --enable-debug          Enable PnetCDF internal debug mode. This also
                           enables safe mode. [default: disabled]
   --disable-in-place-swap Disable memory in-place byte swap on Little Endian
                           machines. [default: enabled]
-  --enable-coverage       Compile with coverage support (gcc-based only).
-                          [default: disabled]
   --enable-subfiling      Enable subfiling support. [default: disabled]
   --disable-erange-fill   Disable use of fill value when out-of-range type
                           conversion causes NC_ERANGE error. [default:
@@ -134,19 +124,20 @@ Here lists a few important options:
                           Enable relaxed error NC_EINVALCOORDS to allow
                           coordinate start argument equal to dimension size
                           when argument count is zero. [default: disabled]
-  --enable-doxygen        Enable generation of documentation.
+  --enable-doxygen        Enable generation of documentation. [default:
+                          disabled]
   --disable-file-sync     Disable MPI file sync if you know your file system
                           can provide data consistency. [default: enabled]
   --enable-large-file-test
                           Enable testing for large (>4GB) file/variable I/O.
                           Note "make check" can run very slow. [default:
                           disabled]
-  --enable-versioning     Enable library versioning
+  --disable-versioning    Disable library versioning. [default: enabled]
 
 Optional Packages:
 
   --with-mpi=/path/to/implementation
-                          installation prefix for MPI implementation
+                          The installation prefix path for MPI implementation.
 
 Some influential environment variables:
   RM          Command for deleting files or directories. [default: rm]
@@ -227,6 +218,41 @@ Note on configure option "--disable-in-place-swap"
    The default setting is to enable in-place byte swap. PnetCDF tries not to
    allocate additional memory space, due to performance concern. Users are
    discouraged to use Fortran PARAMETER buffers in put APIs.
+
+----
+Note on configure option "--disable-erange-fill"
+----
+   Prior to 1.8.0, data type conversion for out-of-bound elements proceeds
+   even if the out-of-bound error is detected, and the contents (in both files
+   and read buffers) are left up to the user to handle. This behavior conforms
+   with NetCDF. See the URL below for details.
+   http://www.unidata.ucar.edu/software/netcdf/docs/group__error.html
+
+   Starting from 1.8.0, when the out-of-bound error is detected, instead of
+   proceeding the type conversion, PnetCDF fills the out-of-bound data elements
+   with their "fill values", as specified by the variable's attribute
+   "_FillValue" or default CDF fill values if the attribute is not defined.
+   Specifically, for PnetCDF put APIs, the value of attribute _FillValue, if
+   defined, will be used when writing to files. For get APIs, the default CDF
+   _FillValue corresponding to the internal data type will be used to fill the
+   read buffer. This feature can be disabled by adding option
+   "--disable-erange-fill" to the configure command line. In this case, the
+   conventional NetCDF method described above is used.
+
+----
+Note on configure option "--enable-relax-coord-bound"
+----
+   Starting from version 1.8.0, a new configure option
+   --enable-relax-coord-bound is added to provide a more relaxed boundary check
+   for argument start. Traditionally, both NetCDF and PnetCDF detect the error
+   code NC_EINVALCOORDS when the value of start is larger than or equal to the
+   defined dimension size. This can be inconvenient for some applications that
+   make a zero-length request with start being the dimension size, usually the
+   last process. The new configure option relaxes the boundary check by
+   allowing the above exception, i.e. start[i] can be the size of dimension i
+   only when count[i] is zero. The default of this feature is disabled. For
+   more detailed information, see discussion in:
+   http://lists.mcs.anl.gov/pipermail/parallel-netcdf/2016-March/001839.html
 
 -------------------------------------------------------------------------
 

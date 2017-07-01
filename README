@@ -1,19 +1,18 @@
 
 Parallel netCDF (PnetCDF) is a library providing high-performance parallel I/O
 while still maintaining file-format compatibility with Unidata's NetCDF,
-specifically the CDF and CDF-2 formats. Although NetCDF supports parallel I/O
-starting from version 4, the files must be in HDF5 format. PnetCDF is currently
-the only choice for carrying out parallel I/O on files that are in classic
-formats (CDF-1 and 2).
+specifically the classic CDF 1, 2, and 5 formats. Although NetCDF supports
+parallel I/O starting from version 4, it is built on top of HDF5 and thus the
+files must be in HDF5 format. PnetCDF is currently the only option for carrying
+out parallel I/O on files that are in classic formats.  
 
-In addition, PnetCDF supports the CDF-5 file format, an extension of CDF-2,
-that supports more data types and allows users to define large dimensions,
-attributes, and variables (>2B array elements).
+Starting from version 1.1.0, PnetCDF supports the CDF-5 file format, an
+extension of CDF-2, that supports more data types and allows users to define
+large dimensions, attributes, and variables (>2B array elements).
 
 NetCDF gives scientific programmers a space-efficient and portable means for
-storing data. However, it does so in a serial manner, making it difficult to
-achieve high I/O performance. By making some small changes to the NetCDF APIs,
-PnetCDF can use MPI-IO to achieve high-performance parallel I/O.
+storing data.  By making some small changes to the NetCDF APIs, PnetCDF can use
+MPI-IO to achieve high-performance parallel I/O.
 
 More extensive installation guides can be found in file INSTALL.  Additional
 information regarding the contents of the release can be found in the
@@ -21,7 +20,7 @@ RELEASE_NOTES file in the top-level directory.  Finally, the PnetCDF web
 sites:
     http://trac.mcs.anl.gov/projects/parallel-netcdf
     http://cucis.ece.northwestern.edu/projects/PnetCDF
-contain information on bug fixes and new releases.
+contain information on bug fixes and software releases.
 
 
 Requirements:
@@ -35,8 +34,8 @@ Requirements:
       system type.  If that happens, add a file-system prefix to your file
       name.   
       
-    - To build parallel-netcdf you will need some additional programs:
-        - autotools (autoconfig, autoreconf, m4, etc.)
+    - To build parallel-netcdf, you will need the following additional programs:
+        - autotools (autoconfig, automake, libtool, m4, etc.)
         - Optional:
              - either yacc or bison
 	     - either lex or flex

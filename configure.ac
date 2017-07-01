@@ -136,7 +136,7 @@ AC_ARG_ENABLE(echo,
 MPI_INSTALL=
 AC_ARG_WITH(mpi,
    [AS_HELP_STRING([--with-mpi=/path/to/implementation],
-                   [installation prefix for MPI implementation])],
+                   [The installation prefix path for MPI implementation.])],
    if test x"$withval" = xyes; then
       AC_MSG_ERROR(--with-mpi must be given a pathname)
    else
@@ -1287,9 +1287,9 @@ AC_SUBST(RELAX_COORD_BOUND)
 AM_CONDITIONAL([RELAX_COORD_BOUND], [test "x$RELAX_COORD_BOUND" = x1])
 
 AC_ARG_ENABLE([doxygen],
-  [AS_HELP_STRING([--enable-doxygen],
-    [Enable generation of documentation.])])
-test "x$enable_doxygen" = xyes || enable_doxygen=no
+   [AS_HELP_STRING([--enable-doxygen], [Enable generation of documentation. @<:@default: disabled@:>@])],
+   [enable_doxygen=${enableval}], [enable_doxygen=no]
+)
 AM_CONDITIONAL([BUILD_DOCS], [test "x$enable_doxygen" = xyes])
 
 AC_PATH_PROG([LATEX],  [latex])
@@ -1352,9 +1352,9 @@ fi
 
 dnl Enable creation of libtool-style versioning or no versioning
 AC_ARG_ENABLE(versioning,
-        [AC_HELP_STRING([--enable-versioning],[Enable library versioning])],,
-        [enable_versioning=yes])
-
+        [AC_HELP_STRING([--disable-versioning],[Disable library versioning. @<:@default: enabled@:>@])],
+        [enable_versioning=${enableval}], [enable_versioning=yes]
+)
 dnl For libtool ABI versioning rules see:
 dnl http://www.gnu.org/software/libtool/manual/libtool.html#Updating-version-info
 dnl Update the version information only immediately before a public release
