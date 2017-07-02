@@ -487,6 +487,7 @@ swap8b(void *dst, const void *src)
 inline static void
 swapn8b(void *dst, const void *src, IntType nn)
 {
+#if 0
 #ifdef FLOAT_WORDS_BIGENDIAN
     int i;
     uint64_t *dst_p = (uint64_t*) dst;
@@ -506,11 +507,14 @@ swapn8b(void *dst, const void *src, IntType nn)
     for (i=0; i<nn; i++) {
         /* copy over, make the below swap in-place */
         op[i] = ip[i];
-        op[i] = SWAP8(op[i]);
+        op[i] = SWAP8(op[i]); /* Using gcc/clang -fsanitize=undefined causes:
+                                 runtime error: store to misaligned address
+                                 for type 'uint64_t', which requires 8 byte
+                                 alignment */
     }
 #endif
 
-#if 0
+#else
 	char *op = dst;
 	const char *ip = src;
 
