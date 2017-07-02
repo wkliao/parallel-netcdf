@@ -1500,7 +1500,6 @@ define(`PUT_IX_FLOAT_Body',dnl
 static void
 get_ix_float(const void *xp, float *ip)
 {
-
 	if (word_align(xp) == 0)
 	{
 		const ieee_single_hi *isp = (const ieee_single_hi *) xp;
@@ -1533,7 +1532,6 @@ PUT_IX_FLOAT_Body
 static void
 get_ix_float(const void *xp, float *ip)
 {
-
 	ieee_double *idp = (ieee_double *) ip;
 
 	if (word_align(xp) == 0)
@@ -2208,23 +2206,27 @@ APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
  * The name of this function is misleading, as size_t is an interanl memory
  * type whose size may be 4 or 8 byte, depending on the systems. The usage
  * of this function (i.e. in v1hpg.c) is actually to read a 32-bit unsigned
- * integer from xpp to ulp. Thus, more accurate function is
+ * integer from xpp to ulp. Thus, more accurate function is to call
  * APIPrefix`x_get_uint32'()
  */
 {
-	/* similar to get_ix_int */
-	const uchar *cp = (const uchar *) *xpp;
+    /* similar to get_ix_int */
+    const uchar *cp = (const uchar *) *xpp;
 
-	/* X_SIZEOF_SIZE_T is 4 bytes and size_t may be 8 bytes, thus
-         * we must type cast xpp to unsigned int (4 bytes) */
+    /* X_SIZEOF_SIZE_T is always 4 bytes while size_t may be 4 or 8 bytes,
+     * thus we must read xpp into an unsigned int (4 bytes) and then type
+     * cast it to size_t */
+    uint32_t u32;
+ 
+    u32  = (uint32_t)(*cp++) << 24;
+    u32 |= (uint32_t)(*cp++) << 16;
+    u32 |= (uint32_t)(*cp++) <<  8;
+    u32 |= (uint32_t)*cp;
 
-	*ulp  = (unsigned)(*cp++) << 24;
-	*ulp |= (unsigned)(*cp++) << 16;
-	*ulp |= (unsigned)(*cp++) <<  8;
-	*ulp |= (unsigned)*cp;
+    *ulp = (size_t)u32;
 
-	*xpp = (const void *)((const char *)(*xpp) + X_SIZEOF_SIZE_T);
-	return NC_NOERR;
+    *xpp = (const void *)((const char *)(*xpp) + X_SIZEOF_SIZE_T);
+    return NC_NOERR;
 }
 
 /* x_off_t */
