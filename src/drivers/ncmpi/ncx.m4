@@ -1004,7 +1004,7 @@ get_ix_int(const void *xp, ix_int *ip)
 {
 	const uchar *cp = (const uchar *) xp;
 
-	*ip = (int)(*cp++) << 24;
+	*ip = (ix_int)(*cp++) << 24;
 #if SIZEOF_IX_INT > X_SIZEOF_INT
 	if (*ip & 0x80000000)
 	{
@@ -1012,9 +1012,9 @@ get_ix_int(const void *xp, ix_int *ip)
 		*ip |= (~(0xffffffff)); /* N.B. Assumes "twos complement" */
 	}
 #endif
-	*ip |= (int)(*cp++) << 16;
-	*ip |= (int)(*cp++) << 8;
-	*ip |= (int)*cp;
+	*ip |= (ix_int)(*cp++) << 16;
+	*ip |= (ix_int)(*cp++) << 8;
+	*ip |= (ix_int)*cp;
 }
 
 static void
