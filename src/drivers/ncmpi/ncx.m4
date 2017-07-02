@@ -622,7 +622,12 @@ define(`GETF_CheckBND',
             ifdef(`ERANGE_FILL',`*ip = FillDefaultValue($1);')
             DEBUG_RETURN_ERROR(NC_ERANGE)
         }
-	*ip = ($1)xx;')dnl
+        dnl Below handle special case: (double)LONG_MAX will be > LONG_MAX
+        dnl Otherwise, "outside the range" runtime error appears when compiled
+        dnl with option -fsanitize=undefined
+        ifelse(`$1',`long',`if (xx == (double)LONG_MAX) *ip = LONG_MAX; else')
+        *ip = ($1)xx;
+')dnl
 
 dnl
 dnl For GET APIs boudnary check for when $1 is either 'longlong' or 'ulonglong'
