@@ -2179,11 +2179,12 @@ NCX_PUT1F(uint64, double)
 
 int
 APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
-/* This subroutine is used only in NetCDF, not PnetCDF.
+/* This subroutine is used only in NetCDF, not PnetCDF, and only used for
+ * classic CDF-1 and 2 file formats where external int is 32-bit in files.
  * The name of this function is misleading, as size_t is an interanl memory
  * type whose size may be 4 or 8 byte, depending on the systems. The usage
  * of this function (i.e. in v1hpg.c) is actually to write a 32-bit unsigned
- * integer from ulp to xpp. Thus, more accurate function is
+ * integer from ulp to xpp. Thus, more accurate function is to call
  * APIPrefix`x_put_uint32'()
  */
 {
@@ -2202,7 +2203,8 @@ APIPrefix`x_put_size_t'(void **xpp, const size_t *ulp)
 
 int
 APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
-/* This subroutine is used only in NetCDF, not PnetCDF.
+/* This subroutine is used only in NetCDF, not PnetCDF, and only used for
+ * classic CDF-1 and 2 file formats where external int is 32-bit in files.
  * The name of this function is misleading, as size_t is an interanl memory
  * type whose size may be 4 or 8 byte, depending on the systems. The usage
  * of this function (i.e. in v1hpg.c) is actually to read a 32-bit unsigned
@@ -2213,9 +2215,9 @@ APIPrefix`x_get_size_t'(const void **xpp,  size_t *ulp)
     /* similar to get_ix_int */
     const uchar *cp = (const uchar *) *xpp;
 
-    /* X_SIZEOF_SIZE_T is always 4 bytes while size_t may be 4 or 8 bytes,
-     * thus we must read xpp into an unsigned int (4 bytes) and then type
-     * cast it to size_t */
+    /* X_SIZEOF_SIZE_T is always 4 bytes in CDF-1 and 2 files, while size_t
+     * in memory may be 4 or 8 bytes, thus we must read xpp into an unsigned
+     * int (4 bytes) and then type cast it to size_t */
     uint32_t u32;
  
     u32  = (uint32_t)(*cp++) << 24;
