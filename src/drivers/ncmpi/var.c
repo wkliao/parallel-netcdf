@@ -767,11 +767,12 @@ err_check:
         DEBUG_RETURN_ERROR(err)
     }
 
-    if (varidp != NULL)
-        *varidp = (int)ncp->vars.ndefined - 1; /* varid */
-        /* ncp->vars.ndefined has been increased in incr_NC_vararray() */
-
     assert(varp != NULL);
+
+    /* ncp->vars.ndefined has been increased in incr_NC_vararray() */
+    varp->varid = (int)ncp->vars.ndefined - 1; /* varid */
+
+    if (varidp != NULL) *varidp = varp->varid;
 
     /* default is NOFILL */
     varp->no_fill = 1;

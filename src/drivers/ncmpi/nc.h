@@ -267,6 +267,7 @@ ncmpii_elem_NC_attrarray(const NC_attrarray *ncap, MPI_Offset elem);
  * NC variable: description and data
  */
 typedef struct {
+    int           varid;   /* variable ID */
     int           xsz;     /* byte size of 1 array element */
     int           ndims;   /* number of dimensions */
     nc_type       type;    /* variable's data type */
