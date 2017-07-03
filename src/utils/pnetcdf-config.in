@@ -74,7 +74,6 @@ Available values for OPTION include:
   --has-c++            whether C++ API is installed
   --c++                C++ compiler
   --cxxflags           C++ compiler flags
-  --cxxppflags         C++ pre-processor flags
   --has-fortran        whether Fortran API is installed
   --f77                Fortran 77 compiler
   --fflags             Fortran 77 compiler flags
