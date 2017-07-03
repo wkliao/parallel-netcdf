@@ -39,14 +39,12 @@ static int ncmpi_default_create_format = NC_FORMAT_CLASSIC;
         printf("%s error at line %d file %s (%s)\n", func, __LINE__, __FILE__, errorString); \
     }
 
-/*----< add_to_PNCList() >---------------------------------------------------*/
+/*----< new_id_PNCList() >---------------------------------------------------*/
+/* get a new ID from the PNC list */
 static int
-add_to_PNCList(PNC *pncp,
-               int *new_id)
+new_id_PNCList(int *new_id)
 {   
     int i;
-
-    assert(pncp != NULL);
 
     *new_id = -1;
     for (i=0; i<NC_MAX_NFILES; i++) { /* find the first unused element */
@@ -55,11 +53,24 @@ add_to_PNCList(PNC *pncp,
             break;
         }
     }
-    if (*new_id == -1) /* Too many netcdf files open */
+    if (*new_id == -1) /* Too many files open */
         DEBUG_RETURN_ERROR(NC_ENFILE)
 
-    pnc_filelist[*new_id] = pncp;  /* store the pointer */
-    pnc_numfiles++;                /* increment number of files opened */
+    return NC_NOERR;
+}
+
+/*----< add_to_PNCList() >---------------------------------------------------*/
+static int
+add_to_PNCList(PNC *pncp,
+               int  new_id)
+{   
+    /* these checks below are redundant */
+    assert(pncp != NULL);
+    assert(new_id >= 0);
+    if (new_id >= NC_MAX_NFILES) return NC_ENFILE;
+
+    pnc_filelist[new_id] = pncp;  /* store the pointer */
+    pnc_numfiles++;               /* increment number of files opened */
     return NC_NOERR;
 }
 
@@ -170,11 +181,19 @@ ncmpi_create(MPI_Comm    comm,
     if (pncp != NULL) return NC_ENFILE;
 #endif
 
+    /* get a new ID from NCPList */
+    err = new_id_PNCList(ncidp);
+    if (err != NC_NOERR) return err;
+
     /* Create a PNC object and save the dispatcher pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
-    if (pncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    if (pncp == NULL) {
+        *ncidp = -1;
+        DEBUG_RETURN_ERROR(NC_ENOMEM)
+    }
     pncp->path = (char*) malloc(strlen(path)+1);
     if (pncp->path == NULL) {
+        *ncidp = -1;
         free(pncp);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
@@ -183,10 +202,11 @@ ncmpi_create(MPI_Comm    comm,
     pncp->dispatch = dispatcher;
 
     /* calling the create subroutine */
-    err = dispatcher->create(comm, path, cmode, info, &pncp->ncp);
+    err = dispatcher->create(comm, path, cmode, *ncidp, info, &pncp->ncp);
     if (status == NC_NOERR) status = err;
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_CMODE) {
+        *ncidp = -1;
         free(pncp->path);
         free(pncp);
         return status;
@@ -202,9 +222,10 @@ ncmpi_create(MPI_Comm    comm,
         pncp->format = default_format;
     }
 
-    /* add to the PNCList and obtain ncid */
-    err = add_to_PNCList(pncp, ncidp);
+    /* add to PNCList */
+    err = add_to_PNCList(pncp, *ncidp);
     if (err != NC_NOERR) {
+        *ncidp = -1;
         free(pncp->path);
         free(pncp);
         return err;
@@ -309,11 +330,19 @@ ncmpi_open(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOTNC)
     }
 
+    /* get a new ID from NCPList */
+    err = new_id_PNCList(ncidp);
+    if (err != NC_NOERR) return err;
+
     /* Create a PNC object and save its dispatcher pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
-    if (pncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    if (pncp == NULL) {
+        *ncidp = -1;
+        DEBUG_RETURN_ERROR(NC_ENOMEM)
+    }
     pncp->path = (char*) malloc(strlen(path)+1);
     if (pncp->path == NULL) {
+        *ncidp = -1;
         free(pncp);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
@@ -322,10 +351,11 @@ ncmpi_open(MPI_Comm    comm,
     pncp->dispatch = dispatcher;
 
     /* calling the open subroutine */
-    err = dispatcher->open(comm, path, omode, info, &pncp->ncp);
+    err = dispatcher->open(comm, path, omode, *ncidp, info, &pncp->ncp);
     if (status == NC_NOERR) status = err;
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_OMODE) {
+        *ncidp = -1;
         free(pncp->path);
         free(pncp);
         return status;
@@ -333,9 +363,10 @@ ncmpi_open(MPI_Comm    comm,
 
     pncp->format = format;
 
-    /* add to the PNCList and obtain ncid */
-    err = add_to_PNCList(pncp, ncidp);
+    /* add to the PNCList */
+    err = add_to_PNCList(pncp, *ncidp);
     if (err != NC_NOERR) {
+        *ncidp = -1;
         free(pncp->path);
         free(pncp);
         return err;

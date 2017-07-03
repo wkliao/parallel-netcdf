@@ -159,6 +159,7 @@ int
 ncmpii_create(MPI_Comm     comm,
               const char  *path,
               int          cmode,
+              int          ncid,
               MPI_Info     info,
               void       **ncpp)
 {
@@ -347,6 +348,8 @@ ncmpii_create(MPI_Comm     comm,
     }
 #endif
 
+    ncp->ncid = ncid;
+
     *ncpp = (void*)ncp;
 
     return NC_NOERR;
@@ -357,6 +360,7 @@ int
 ncmpii_open(MPI_Comm    comm,
             const char *path,
             int         omode,
+            int         ncid,
             MPI_Info    info,
             void       **ncpp)
 {
@@ -572,6 +576,8 @@ ncmpii_open(MPI_Comm    comm,
         nameT->num++;
     }
 #endif
+
+    ncp->ncid = ncid;
 
     *ncpp = (void*)ncp;
 

@@ -27,8 +27,8 @@ typedef enum {
 
 struct PNC_Dispatch {
     /* APIs manipulate files */
-    int (*create)(MPI_Comm, const char*, int, MPI_Info, void**);
-    int (*open)(MPI_Comm, const char*, int, MPI_Info, void**);
+    int (*create)(MPI_Comm, const char*, int, int, MPI_Info, void**);
+    int (*open)(MPI_Comm, const char*, int, int, MPI_Info, void**);
     int (*close)(void*);
     int (*enddef)(void*);
     int (*_enddef)(void*,MPI_Offset,MPI_Offset,MPI_Offset,MPI_Offset);

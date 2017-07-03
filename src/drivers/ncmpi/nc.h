@@ -391,14 +391,7 @@ typedef struct NC_buf {
 /* chunk size for allocating read/write nonblocking request lists */
 #define NC_REQUEST_CHUNK 1024
 
-struct NC {
-#ifdef ENABLE_SUBFILING
-    int nc_num_subfiles; /* # of subfiles */
-    int ncid_sf; /* ncid of subfile */
-#endif
-    /* contains the previous NC during redef. */
-    struct NC *old;
-    /* flags */
+/* various file modes stored in flags */
 #define NC_INDEP  0x10000   /* in independent data mode, cleared by endindep */
 #define NC_CREAT  0x20000   /* in create phase, cleared by enddef */
 #define NC_INDEF  0x80000   /* in define mode, cleared by enddef */
@@ -406,14 +399,19 @@ struct NC {
 #define NC_HSYNC  0x200000  /* synchronise whole header on change */
 #define NC_NDIRTY 0x400000  /* numrecs has changed */
 #define NC_HDIRTY 0x800000  /* header info has changed */
-/* NC_NOFILL is defined in netcdf.h, historical interface */
-    int           format;   /* 1, 2, or 5 corresponding to CDF-1, 2, or 5 */
+struct NC {
+    int           ncid;         /* file ID */
     int           flags;
+    int           format;       /* 1, 2, or 5 corresponding to CDF-1, 2, or 5 */
     int           safe_mode;    /* 0 or 1, for parameter consistency check */
     int           subfile_mode; /* 0 or 1, for disable/enable subfiling */
-    ncio         *nciop;
-    MPI_Offset    chunk;    /* largest extent this layer will request from
-                               ncio->get() */
+#ifdef ENABLE_SUBFILING
+    int           nc_num_subfiles; /* number of subfiles */
+    int           ncid_sf;         /* ncid of subfile */
+#endif
+    int           numGetReqs;  /* number of pending nonblocking get requests */
+    int           numPutReqs;  /* number of pending nonblocking put requests */
+    MPI_Offset    chunk;    /* chunk size for reading header */
     MPI_Offset    xsz;      /* external size of this header, <= var[0].begin */
     MPI_Offset    begin_var;/* file offset of the first (non-record) var */
     MPI_Offset    begin_rec;/* file offset of the first 'record' */
@@ -424,11 +422,12 @@ struct NC {
     NC_dimarray   dims;     /* dimensions defined */
     NC_attrarray  attrs;    /* global attributes defined */
     NC_vararray   vars;     /* variables defined */
-    int           numGetReqs;  /* number of pending nonblocking get requests */
-    int           numPutReqs;  /* number of pending nonblocking put requests */
-    NC_req       *get_list;    /* list of nonblocking read requests */
-    NC_req       *put_list;    /* list of nonblocking write requests */
-    NC_buf       *abuf;        /* attached buffer, used by bput APIs */
+    NC_req       *get_list; /* list of nonblocking read requests */
+    NC_req       *put_list; /* list of nonblocking write requests */
+    NC_buf       *abuf;     /* attached buffer, used by bput APIs */
+
+    ncio         *nciop;
+    struct NC    *old;      /* contains the previous NC during redef. */
 };
 
 #define NC_readonly(ncp) \
