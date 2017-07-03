@@ -391,9 +391,6 @@ typedef struct NC_buf {
 #define NC_REQUEST_CHUNK 1024
 
 struct NC {
-    /* linked list of currently opened netcdf files */
-    struct NC *next;
-    struct NC *prev;
 #ifdef ENABLE_SUBFILING
     int nc_num_subfiles; /* # of subfiles */
     int ncid_sf; /* ncid of subfile */
