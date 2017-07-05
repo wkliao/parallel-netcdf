@@ -4,18 +4,18 @@
  */
 /* $Id$ */
 
-#ifndef _NCMPI_DISPATCH_H
-#define _NCMPI_DISPATCH_H
+#ifndef _NCMPIO_DISPATCH_H
+#define _NCMPIO_DISPATCH_H
 
 #include <mpi.h>
 #include <pnetcdf.h>
 #include <dispatch.h>
 
 extern int
-ncmpii_create(MPI_Comm comm, const char *path, int cmode, MPI_Info info, void **ncdp);
+ncmpii_create(MPI_Comm comm, const char *path, int cmode, int ncid, MPI_Info info, void **ncdp);
 
 extern int
-ncmpii_open(MPI_Comm comm, const char *path, int omode, MPI_Info info, void **ncdp);
+ncmpii_open(MPI_Comm comm, const char *path, int omode, int ncid, MPI_Info info, void **ncdp);
 
 extern int
 ncmpii_close(void *ncdp);
