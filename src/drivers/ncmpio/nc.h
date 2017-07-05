@@ -15,7 +15,7 @@
 #include <sys/types.h>  /* off_t */
 
 #include <dispatch.h>
-#include "mpio_dispatch.h"
+#include "ncmpio_dispatch.h"
 #include "ncio.h"       /* ncio */
 #include "fbits.h"
 

@@ -4,8 +4,8 @@
  */
 /* $Id$ */
 
-#ifndef _MPIO_DISPATCH_H
-#define _MPIO_DISPATCH_H
+#ifndef _NCMPIO_DISPATCH_H
+#define _NCMPIO_DISPATCH_H
 
 #include <mpi.h>
 #include <pnetcdf.h>

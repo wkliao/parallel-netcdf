@@ -9,10 +9,10 @@
 #endif
 
 #include <dispatch.h>
-#include <mpio_dispatch.h>
+#include <ncmpio_dispatch.h>
 #include <nc.h>
 
-static PNC_Dispatch mpio_dispatcher = {
+static PNC_Dispatch ncmpio_dispatcher = {
     /* FILE APIs */
     ncmpii_create,
     ncmpii_open,
@@ -71,7 +71,7 @@ static PNC_Dispatch mpio_dispatcher = {
     ncmpii_cancel
 };
 
-PNC_Dispatch* mpio_inq_dispatcher(void) {
-    return &mpio_dispatcher;
+PNC_Dispatch* ncmpio_inq_dispatcher(void) {
+    return &ncmpio_dispatcher;
 }
 

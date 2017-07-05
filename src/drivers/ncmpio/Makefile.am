@@ -16,7 +16,7 @@ if PNETCDF_DEBUG
    AM_CPPFLAGS += -DPNETCDF_DEBUG
 endif
 
-noinst_LTLIBRARIES = libmpio.la
+noinst_LTLIBRARIES = libncmpio.la
 
 M4FLAGS += -I${top_srcdir}/m4
 if ENABLE_ERANGE_FILL
@@ -33,7 +33,7 @@ M4_SRCS   = getput.m4 \
             attr.m4 \
             convert_swap.m4
 
-H_SRCS = mpio_dispatch.h \
+H_SRCS = ncmpio_dispatch.h \
          fbits.h \
          nc.h \
          ncio.h \
@@ -42,7 +42,7 @@ H_SRCS = mpio_dispatch.h \
          macro.h \
          subfile.h
 
-C_SRCS = mpio_dispatch.c \
+C_SRCS = ncmpio_dispatch.c \
          mpinetcdf.c \
          header.c \
          mpincio.c \
@@ -68,8 +68,8 @@ $(M4_SRCS:.m4=.c): Makefile
 ncx.h: ncx_h.m4 Makefile
 	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
 
-libmpio_la_SOURCES = $(C_SRCS) $(H_SRCS)
-nodist_libmpio_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
+libncmpio_la_SOURCES = $(C_SRCS) $(H_SRCS)
+nodist_libncmpio_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 
 # automake says "... BUILT_SOURCES is honored only by 'make all', 'make check',
 # and 'make install'. This means you cannot build a specific target (e.g.,
@@ -77,7 +77,7 @@ nodist_libmpio_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 BUILT_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
 
 if ENABLE_SUBFILING
-libmpio_la_SOURCES += subfile.c
+libncmpio_la_SOURCES += subfile.c
 endif
 
 CLEANFILES = $(M4_SRCS:.m4=.c) ncx.h *.gcno

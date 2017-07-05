@@ -171,9 +171,9 @@ ncmpi_create(MPI_Comm    comm,
      * inconsistency error, if there is any */
 
     /* TODO: Use cmode to tell the file format which is later used to select
-     * the right dispatcher. For now, we have only one dispatcher, mpio.
+     * the right dispatcher. For now, we have only one dispatcher, ncmpio.
      */
-    dispatcher = mpio_inq_dispatcher();
+    dispatcher = ncmpio_inq_dispatcher();
 
 #if 0 /* refer to netCDF library's USE_REFCOUNT */
     /* check whether this path is already opened */
@@ -313,10 +313,10 @@ ncmpi_open(MPI_Comm    comm,
     if (format == NC_FORMAT_CLASSIC ||
         format == NC_FORMAT_CDF2 ||
         format == NC_FORMAT_CDF5) {
-        /* TODO: currently we only have mpio dispatcher. Need to add other
+        /* TODO: currently we only have ncmpio dispatcher. Need to add other
          * dispatchers once they are available
          */
-        dispatcher = mpio_inq_dispatcher();
+        dispatcher = ncmpio_inq_dispatcher();
     }
     else if (format == NC_FORMAT_NETCDF4_CLASSIC) {
         fprintf(stderr,"NC_FORMAT_NETCDF4_CLASSIC is not yet supported\n");
