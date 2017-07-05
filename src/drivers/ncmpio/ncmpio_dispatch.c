@@ -9,7 +9,7 @@
 #endif
 
 #include <dispatch.h>
-#include <ncmpi_dispatch.h>
+#include <ncmpio_dispatch.h>
 #include <nc.h>
 
 static PNC_Dispatch ncmpi_dispatcher = {

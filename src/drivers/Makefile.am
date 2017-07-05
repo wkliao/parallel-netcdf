@@ -6,7 +6,7 @@
 #
 # @configure_input@
 
-SUBDIRS = include common ncmpi
+SUBDIRS = include common ncmpio
 DIST_SUBDIRS = $(SUBDIRS)
 
 # For VPATH build (parallel build), try delete all sub-directories
