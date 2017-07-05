@@ -11,7 +11,7 @@ SUFFIXES = .a .o .c .h
 AM_DEFAULT_SOURCE_EXT = .c
 AM_CPPFLAGS  = -I$(top_srcdir)/src/include
 AM_CPPFLAGS += -I$(top_builddir)/src/include
-AM_CPPFLAGS += -I$(top_builddir)/src/drivers/ncmpio
+AM_CPPFLAGS += -I$(top_builddir)/src/drivers/ncmpi
 
 bin_PROGRAMS = ncmpigen
 ncmpigen_SOURCES = main.c load.c escapes.c getfill.c init.c genlib.c ncmpigentab.c

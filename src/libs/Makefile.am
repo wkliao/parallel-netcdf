@@ -12,7 +12,7 @@ libpnetcdf_la_LDFLAGS = $(ABIVERSIONFLAGS)
 libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD  = ../dispatchers/libdispatchers.la
 libpnetcdf_la_LIBADD += ../drivers/common/libcommon.la
-libpnetcdf_la_LIBADD += ../drivers/ncmpio/libncmpio.la
+libpnetcdf_la_LIBADD += ../drivers/ncmpi/libncmpi.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
 
 if HAS_MPICXX
@@ -43,8 +43,8 @@ endif
 ../drivers/common/libcommon.la:
 	set -e; cd ../drivers/common && $(MAKE) $(MFLAGS)
 
-../drivers/ncmpio/libncmpio.la:
-	set -e; cd ../drivers/ncmpio && $(MAKE) $(MFLAGS)
+../drivers/ncmpi/libncmpi.la:
+	set -e; cd ../drivers/ncmpi && $(MAKE) $(MFLAGS)
 
 ../binding/cxx/libcxx.la:
 	set -e; cd ../binding/cxx && $(MAKE) $(MFLAGS)

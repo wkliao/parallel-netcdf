@@ -7,9 +7,9 @@
 # @configure_input@
 
 AM_CPPFLAGS  = -I${top_srcdir}/src/include
-AM_CPPFLAGS += -I$(top_srcdir)/src/drivers/ncmpio
+AM_CPPFLAGS += -I$(top_srcdir)/src/drivers/ncmpi
 AM_CPPFLAGS += -I$(top_srcdir)/src/drivers/include
-AM_CPPFLAGS += -I$(top_builddir)/src/drivers/ncmpio
+AM_CPPFLAGS += -I$(top_builddir)/src/drivers/ncmpi
 AM_CPPFLAGS += -I$(top_builddir)/src/include
 
 bin_PROGRAMS = ncmpivalid
