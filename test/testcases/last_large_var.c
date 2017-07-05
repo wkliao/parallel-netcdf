@@ -297,7 +297,12 @@ int check_var_offset(char *filename)
     err = ncmpi__enddef(ncid, 2147483648LL, 1, 1, 1);
     EXP_ERR(NC_EVARSIZE)
 
-    err = ncmpi_close(ncid); CHECK_ERR
+    /* the above error keeps the program in define mode, thus close will
+     * call enddef again
+     */
+    err = ncmpi_close(ncid);
+    EXP_ERR(NC_EVARSIZE)
+
     return nerrs;
 }
 
