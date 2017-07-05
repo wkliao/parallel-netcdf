@@ -71,7 +71,7 @@ static PNC_Dispatch mpio_dispatcher = {
     ncmpii_cancel
 };
 
-PNC_Dispatch* ncmpii_inq_dispatcher(void) {
-    return &ncmpi_dispatcher;
+PNC_Dispatch* mpio_inq_dispatcher(void) {
+    return &mpio_dispatcher;
 }
 
