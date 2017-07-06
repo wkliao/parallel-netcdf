@@ -17,4 +17,6 @@
 #define	M_RNDUP(x) 	_RNDUP(x, M_RND_UNIT)
 #define	M_RNDDOWN(x)	__RNDDOWN(x, M_RND_UNIT)
 
+#define D_RNDUP(x, align) _RNDUP(x, (off_t)(align))
+
 #endif

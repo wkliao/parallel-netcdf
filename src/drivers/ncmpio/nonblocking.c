@@ -1095,7 +1095,7 @@ ncmpii_flatten(int          ndim,    /* number of dimensions */
     *nseg = 0;
     if (ndim < 0) return *nseg;
 
-    if (ndim == 0) {  /* 1D record variable */
+    if (ndim == 0) {  /* scalar record variable */
         *nseg = 1;
         seg->off      = offset;
         seg->len      = el_size;

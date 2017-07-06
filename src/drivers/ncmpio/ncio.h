@@ -29,20 +29,6 @@
 
 
 /*
- * I/O hints used by PnetCDF, but MPI-IO
- */
-typedef struct {
-    MPI_Offset h_align; /* file alignment size for header */
-    MPI_Offset v_align; /* file alignment size for each fixed variable */
-    MPI_Offset r_align; /* file alignment size for record variable section */
-    MPI_Offset header_read_chunk_size;
-#ifdef ENABLE_SUBFILING
-    int subfile_mode;
-    int num_subfiles;
-#endif
-} nc_hints;
-
-/*
  * netcdf i/o abstraction
  */
 typedef struct {
@@ -64,8 +50,6 @@ typedef struct {
     int mpioflags;       /* MPI_COLLECTIVE_FH or MPI_INDEPENDENT_FH */
     int striping_unit;   /* file stripe size of the file */
 
-    nc_hints hints;      /* I/O hints used by PnetCDF only */
-
     /*
      * A copy of the 'path' argument passed in to ncmpiio_open()
      * or ncmpiio_create(). Used by ncabort() to remove (unlink)
@@ -76,12 +60,6 @@ typedef struct {
     MPI_Offset put_size;  /* amount of writes committed so far in bytes */
     MPI_Offset get_size;  /* amount of reads  committed so far in bytes */
 } ncio;
-
-extern ncio *
-ncmpiio_new(const char *path, int ioflags);
-
-extern void
-ncmpiio_free(ncio *nciop);
 
 extern int
 ncmpiio_close(ncio *nciop, int doUnlink);

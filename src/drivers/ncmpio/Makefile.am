@@ -43,9 +43,9 @@ H_SRCS = ncmpio_dispatch.h \
          subfile.h
 
 C_SRCS = ncmpio_dispatch.c \
-         mpinetcdf.c \
+         ncmpio_file.c \
+         ncmpio_enddef.c \
          header.c \
-         mpincio.c \
          dim.c \
          error.c \
          nc.c \

@@ -1728,6 +1728,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
         /* get [var ...] */
         for (i=0; i<ndefined; i++) {
             status = hdr_get_NC_var(gbp, ncap->value + i);
+            ncap->value[i]->varid = i;
             if (status != NC_NOERR) { /* Error: fail to get the next var */
                 ncap->ndefined = i;
                 ncmpii_free_NC_vararray(ncap);
@@ -2355,7 +2356,7 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
 {
     int err, status=NC_NOERR;
     char magic[sizeof(ncmagic1)]; /* root's file format signature */
-    MPI_Offset nrecs=0, chunksize=NC_DEFAULT_CHUNKSIZE;
+    MPI_Offset nrecs=0;
     MPI_Aint pos_addr, base_addr;
     NC *root_ncp;
 
@@ -2392,7 +2393,8 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     }
 
     /* allocate a header object and fill it with root's header */
-    root_ncp = ncmpii_new_NC(&chunksize);
+    root_ncp = (NC*) NCI_Calloc(1, sizeof(NC));
+    if (root_ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* in safe_mode, consistency of magic numbers have already been checked in
      * ncmpi_create()
