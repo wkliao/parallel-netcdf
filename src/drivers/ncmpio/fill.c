@@ -840,9 +840,10 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
                                 MPI_INFO_NULL);
     if (k > 0) MPI_Type_free(&filetype);
 
-    if (buf_len != (int)buf_len)
-        if (status == NC_NOERR)
-            status = NC_EINTOVERFLOW;
+    if (buf_len != (int)buf_len) {
+        if (status == NC_NOERR) status = NC_EINTOVERFLOW;
+        buf_len = 0; /* skip this write */
+    }
 
     /* write to variable collectively */
     TRACE_IO(MPI_File_write_at_all)(fh, 0, buf, (int)buf_len, MPI_BYTE, &mpistatus);
@@ -851,13 +852,11 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
 
     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, MPI_BYTE, "native",
                                 MPI_INFO_NULL);
-
-    if (status != NC_NOERR) return status;
-
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
+        if (status == NC_NOERR)
+            status = ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
 
-    return NC_NOERR;
+    return status;
 }
 
 /*----< ncmpii_fill_vars() >-------------------------------------------------*/
