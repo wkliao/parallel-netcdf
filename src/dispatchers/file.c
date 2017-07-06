@@ -114,6 +114,48 @@ PNC_check_id(int ncid, PNC **pncp)
     return NC_NOERR;
 }
 
+/*----< construct_info() >---------------------------------------------------*/
+static void
+combine_env_hints(MPI_Info  user_info,
+                  MPI_Info *new_info)
+{
+    char *env_str;
+
+    /* take hints from the environment variable PNETCDF_HINTS
+     * a string of hints separated by ";" and each hint is in the
+     * form of hint=value. E.g. cb_nodes=16;cb_config_list=*:6
+     * If this environment variable is set, it overrides any values that
+     * were set by using calls to MPI_Info_set in the application code.
+     */
+    if (user_info != MPI_INFO_NULL)
+        MPI_Info_dup(user_info, new_info); /* ignore error */
+    else
+        *new_info = MPI_INFO_NULL;
+
+    /* get environment variable PNETCDF_HINTS */
+    if ((env_str = getenv("PNETCDF_HINTS")) != NULL) {
+        if (*new_info == MPI_INFO_NULL)
+            MPI_Info_create(new_info); /* ignore error */
+
+        char *env_str_cpy, *key;
+        env_str_cpy = (char*) malloc(strlen(env_str)+1);
+        strcpy(env_str_cpy, env_str);
+        key = strtok(env_str_cpy, ";");
+        while (key != NULL) {
+            char *val;
+            val = strchr(key, '=');
+            if (val == NULL) continue; /* ill-formed hint */
+            *val = '\0';
+            val++;
+            /* printf("env hint: key=%s val=%s\n",key,val); */
+            MPI_Info_set(*new_info, key, val); /* override or add */
+            key = strtok(NULL, ";");
+        }
+        free(env_str_cpy);
+    }
+    /* return no error as all hints are advisory */
+}
+
 /*----< ncmpi_create() >-----------------------------------------------------*/
 /* This is a collective subroutine. */
 int
@@ -126,6 +168,7 @@ ncmpi_create(MPI_Comm    comm,
     int default_format, rank, status=NC_NOERR, err;
     int safe_mode=0, mpireturn, root_cmode;
     char *env_str;
+    MPI_Info combined_info=MPI_INFO_NULL;
     PNC *pncp;
     PNC_Dispatch *dispatcher;
 
@@ -201,9 +244,14 @@ ncmpi_create(MPI_Comm    comm,
     pncp->mode = cmode;
     pncp->dispatch = dispatcher;
 
+    /* combine user's info and PNETCDF_HINTS env variable */
+    combine_env_hints(info, &combined_info);
+
     /* calling the create subroutine */
-    err = dispatcher->create(comm, path, cmode, *ncidp, info, &pncp->ncp);
+    err = dispatcher->create(comm, path, cmode, *ncidp, combined_info,
+                             &pncp->ncp);
     if (status == NC_NOERR) status = err;
+    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_CMODE) {
         *ncidp = -1;
@@ -245,6 +293,7 @@ ncmpi_open(MPI_Comm    comm,
     int rank, format, msg[2], status=NC_NOERR, err;
     int safe_mode=0, mpireturn, root_omode;
     char *env_str;
+    MPI_Info combined_info=MPI_INFO_NULL;
     PNC *pncp;
     PNC_Dispatch *dispatcher;
 
@@ -350,9 +399,14 @@ ncmpi_open(MPI_Comm    comm,
     pncp->mode = omode;
     pncp->dispatch = dispatcher;
 
+    /* combine user's info and PNETCDF_HINTS env variable */
+    combine_env_hints(info, &combined_info);
+
     /* calling the open subroutine */
-    err = dispatcher->open(comm, path, omode, *ncidp, info, &pncp->ncp);
+    err = dispatcher->open(comm, path, omode, *ncidp, combined_info,
+                           &pncp->ncp);
     if (status == NC_NOERR) status = err;
+    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_OMODE) {
         *ncidp = -1;
