@@ -964,6 +964,14 @@ AC_CHECK_FUNCS([MPI_Info_dup \
                 MPI_Type_create_resized \
                 MPI_Type_get_extent])
 
+if test "$ac_cv_func_MPI_Info_dup" = no ; then
+   AC_MSG_ERROR([
+   -----------------------------------------------------------------------
+     Function MPI_Info_dup required by PnetCDF is missing from the MPI
+     library.  Please use an MPI library that supports MPI_Info_dup. Abort.
+   -----------------------------------------------------------------------])
+fi
+
 dnl Check presence of MPI COMBINERS. These are of type int.
 AC_CHECK_DECLS([MPI_COMBINER_DUP,
                 MPI_COMBINER_HVECTOR_INTEGER,
