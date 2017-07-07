@@ -136,7 +136,6 @@ typedef struct {
 #ifdef ENABLE_SUBFILING
     MPI_Offset rcount; /* subfile range count */
     int range[2]; /* subfile range {start, end} */
-    int num_subfiles;
 #endif
 } NC_dim;
 
@@ -409,8 +408,8 @@ struct NC {
     int           numPutReqs;   /* number of pending nonblocking put requests */
 #ifdef ENABLE_SUBFILING
     int           subfile_mode; /* 0 or 1, for disable/enable subfiling */
-    int           nc_num_subfiles; /* number of subfiles */
-    int           ncid_sf;         /* ncid of subfile */
+    int           num_subfiles; /* number of subfiles */
+    int           ncid_sf;      /* ncid of subfile */
 #endif
     MPI_Offset    chunk;       /* chunk size for reading header */
     MPI_Offset    h_align;     /* file alignment for header */
@@ -705,9 +704,6 @@ ncmpii_nc2mpitype(nc_type type);
 extern nc_type
 ncmpii_mpi2nctype(MPI_Datatype itype);
 
-extern int
-ncmpiio_end_indep_data(NC *ncp); 
-
 extern int                
 ncmpii_file_set_view(NC *ncp, MPI_File fh, MPI_Offset *offset, MPI_Datatype filetype);
 
@@ -767,5 +763,8 @@ ncmpii_getput_zero_req(NC *ncp, int rw_flag);
 
 extern int
 ncmpii_NC_check_vlens(NC *ncp);
+
+extern void
+ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
 
 #endif /* _NC_H */

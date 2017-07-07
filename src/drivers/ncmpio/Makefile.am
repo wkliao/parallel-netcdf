@@ -43,8 +43,11 @@ H_SRCS = ncmpio_dispatch.h \
          subfile.h
 
 C_SRCS = ncmpio_dispatch.c \
-         ncmpio_file.c \
+         ncmpio_create.c \
+         ncmpio_open.c \
          ncmpio_enddef.c \
+         ncmpio_close.c \
+         ncmpio_file_misc.c \
          header.c \
          dim.c \
          error.c \

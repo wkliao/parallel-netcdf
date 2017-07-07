@@ -100,17 +100,17 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
     MPI_Comm_size(ncp->nciop->comm, &nprocs);
 #ifdef SUBFILE_DEBUG
     if (myrank == 0)
-      printf("%s: rank(%d): nprocs=%d, ncp->nc_num_subfiles=%d\n",
-           __func__, myrank, nprocs, ncp->nc_num_subfiles);
+      printf("%s: rank(%d): nprocs=%d, ncp->num_subfiles=%d\n",
+           __func__, myrank, nprocs, ncp->num_subfiles);
 #endif
 
     /* split the orignial comm to subcomm */
-    if (nprocs > ncp->nc_num_subfiles) {
-        ratio = (double)nprocs/(double)(ncp->nc_num_subfiles);
+    if (nprocs > ncp->num_subfiles) {
+        ratio = (double)nprocs/(double)(ncp->num_subfiles);
         color = (int)((double)myrank/ratio);
     }
     else
-        color = myrank%ncp->nc_num_subfiles;
+        color = myrank%ncp->num_subfiles;
 
 #ifdef SUBFILE_DEBUG
     printf("rank(%d): color=%d\n", myrank, color);
@@ -152,17 +152,17 @@ ncmpii_subfile_open(NC *ncp, int *ncidp)
     MPI_Comm_size(ncp->nciop->comm, &nprocs);
 #ifdef SUBFILE_DEBUG
     if (myrank == 0)
-      printf("%s: rank(%d): nprocs=%d, ncp->nc_num_subfiles=%d\n", __func__,
-           myrank, nprocs, ncp->nc_num_subfiles);
+      printf("%s: rank(%d): nprocs=%d, ncp->num_subfiles=%d\n", __func__,
+           myrank, nprocs, ncp->num_subfiles);
 #endif
 
     /* split the original comm to subcomm */
-    if (nprocs > ncp->nc_num_subfiles) {
-        ratio = (double)nprocs/(double)ncp->nc_num_subfiles;
+    if (nprocs > ncp->num_subfiles) {
+        ratio = (double)nprocs/(double)ncp->num_subfiles;
         color = (int)((double)myrank/ratio);
     }
     else
-        color = myrank%ncp->nc_num_subfiles;
+        color = myrank%ncp->num_subfiles;
 
 #ifdef SUBFILE_DEBUG
     if (myrank == 0)
@@ -220,12 +220,12 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
 #endif
     if (is_partitioned == 1) return NC_NOERR;
 
-    if (nprocs > ncp->nc_num_subfiles) {
-        ratio = (double)nprocs/(double)ncp->nc_num_subfiles;
+    if (nprocs > ncp->num_subfiles) {
+        ratio = (double)nprocs/(double)ncp->num_subfiles;
         color = (int)((double)myrank/ratio);
     }
     else
-        color = myrank%ncp->nc_num_subfiles;
+        color = myrank%ncp->num_subfiles;
 
 #ifdef SUBFILE_DEBUG
     printf("%s: rank(%d): color=%d\n", __func__, myrank, color);
@@ -241,11 +241,11 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
         TEST_HANDLE_ERR(status)
 
         status = ncmpii_put_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
-                                NC_INT, 1, &ncp->nc_num_subfiles, NC_INT);
+                                NC_INT, 1, &ncp->num_subfiles, NC_INT);
         TEST_HANDLE_ERR(status)
     }
     else if (status == NC_NOERR) { /* attr is already set */
-        assert(num_subfiles == ncp->nc_num_subfiles);
+        assert(num_subfiles == ncp->num_subfiles);
     }
     else /* other error */
         return status;
@@ -260,9 +260,9 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
     ncp_sf = (NC*)pncp->ncp;
 
     /* adjust the hints to be used by PnetCDF; use the same value in master */
-    ncp_sf->nciop->hints.h_align = ncp->nciop->hints.h_align;
-    ncp_sf->nciop->hints.v_align = ncp->nciop->hints.v_align;
-    ncp_sf->nciop->hints.r_align = ncp->nciop->hints.r_align;
+    ncp_sf->h_align = ncp->h_align;
+    ncp_sf->v_align = ncp->v_align;
+    ncp_sf->r_align = ncp->r_align;
 
     for(i=0; i<ncp->vars.ndefined; i++) { /* traverse all variables */
         NC_var **vpp = ncp->vars.value;
@@ -311,13 +311,13 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
         /* divide only when dim is partitionable */
         /* 1. skip sizeof(par_dim_id) is smaller than num_subfiles */
         /* 2. skip if ndims < min_ndims */
-        if ( (dpp[vpp[i]->dimids[par_dim_id]]->size)/(ncp->nc_num_subfiles) != 0 && (vpp[i]->ndims >= par_dim_id+1) && (vpp[i]->ndims >= min_ndims)) {
+        if ( (dpp[vpp[i]->dimids[par_dim_id]]->size)/(ncp->num_subfiles) != 0 && (vpp[i]->ndims >= par_dim_id+1) && (vpp[i]->ndims >= min_ndims)) {
             int varid, j, jj, k;
             int var_ndims = vpp[i]->ndims; /* keep org ndims */
             int dimids[var_ndims];
-            char *key[ncp->nc_num_subfiles][var_ndims];
+            char *key[ncp->num_subfiles][var_ndims];
 
-            for (jj=0; jj < ncp->nc_num_subfiles; jj++)
+            for (jj=0; jj < ncp->num_subfiles; jj++)
                 for (k=0; k<var_ndims; k++)
                     key[jj][k] = (char*) NCI_Calloc(NC_MAX_NAME, 1);
 
@@ -325,7 +325,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
             status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.ndims_org", NC_INT, 1, &vpp[i]->ndims, NC_INT);
             TEST_HANDLE_ERR(status)
 
-            int sf_range[ncp->nc_num_subfiles][var_ndims][3];
+            int sf_range[ncp->num_subfiles][var_ndims][3];
 
             /* j: each dimension */
             /* subfile: create a var with partitioned dim sizes */
@@ -340,7 +340,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
                 dim_sz = dim_sz0;
 
                 /* determine partition ratio */
-                x = (double)(dim_sz0)/(double)(ncp->nc_num_subfiles);
+                x = (double)(dim_sz0)/(double)(ncp->num_subfiles);
 
                 /* don't partition dim if dim size is less than ratio x */
                 if ((int)x < 1 && j == par_dim_id)
@@ -367,7 +367,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
 
                 /* dpp_sf[color][j] = ncp_sf->dims.value[j]; */
 
-                for (jj=0; jj < ncp->nc_num_subfiles; jj++) {
+                for (jj=0; jj < ncp->num_subfiles; jj++) {
                     double xx, yy;
                     sprintf(key[jj][j], "_PnetCDF_SubFiling.range(%s).subfile.%d", dim_name, jj); /* dim name*/
                     xx = x*(double)jj;
@@ -405,17 +405,17 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
                 vpp[i]->shape = NULL;
             }
             vpp[i]->len = vpp[i]->xsz; /* size of type  */
-            vpp[i]->num_subfiles = ncp->nc_num_subfiles;
+            vpp[i]->num_subfiles = ncp->num_subfiles;
 
             status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.dimids_org",
                                     NC_INT, vpp[i]->ndims_org, vpp[i]->dimids_org, NC_INT);
             TEST_HANDLE_ERR(status)
 
             status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.num_subfiles",
-                                    NC_INT, 1, &ncp->nc_num_subfiles, NC_INT);
+                                    NC_INT, 1, &ncp->num_subfiles, NC_INT);
             TEST_HANDLE_ERR(status)
 
-            for (jj=0; jj < ncp->nc_num_subfiles; jj++)
+            for (jj=0; jj < ncp->num_subfiles; jj++)
                 for (k=0; k < var_ndims; k++) {
                     status = ncmpii_put_att(ncp, i, key[jj][k], NC_INT,
                                             2, sf_range[jj][k], NC_INT);
@@ -436,7 +436,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
             }
 
             /* deallocate buffers */
-            for (jj=0; jj < ncp->nc_num_subfiles; jj++)
+            for (jj=0; jj < ncp->num_subfiles; jj++)
                 for (k=0; k<var_ndims; k++)
                     NCI_Free(key[jj][k]);
 
@@ -546,9 +546,9 @@ ncmpii_subfile_getput_vars(NC               *ncp,
     }
 
     /* i: for each subfile */
-    for (i=0; i<ncp->nc_num_subfiles; i++) {
+    for (i=0; i<ncp->num_subfiles; i++) {
         int flag = 0; /* set to 1 if par_dim_id is partitioned, initially 0 */
-        double ratio = (double)nprocs/(double)ncp->nc_num_subfiles;
+        double ratio = (double)nprocs/(double)ncp->num_subfiles;
         int aproc=-1; /* I/O delegate proc in subfile group */
 
         if (delegate_scheme == BALANCED) {
@@ -668,7 +668,7 @@ ncmpii_subfile_getput_vars(NC               *ncp,
     } /* for each subfile, i */
 
 #ifdef SUBFILE_DEBUG
-    for (i=0; i<ncp->nc_num_subfiles; i++) {
+    for (i=0; i<ncp->num_subfiles; i++) {
         char str_st[100], str_st_org[100], str_ct[100], str_t1[10];
         sprintf(str_st, ">> rank(%d): subfile(%d): var(%s): start(", myrank, i, varp->name->cp);
         sprintf(str_ct, ">> rank(%d): subfile(%d): count(", myrank, i);

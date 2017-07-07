@@ -743,7 +743,7 @@ ncmpii__enddef(void       *ncdp,
 
 #ifdef ENABLE_SUBFILING
     /* num of subfiles has been determined already */
-    if (ncp->nc_num_subfiles > 1) {
+    if (ncp->num_subfiles > 1) {
         /* TODO: should return subfile-related msg when there's an error */
         err = ncmpii_subfile_partition(ncp, &ncp->ncid_sf);
         CHECK_ERROR(err)
@@ -767,7 +767,7 @@ ncmpii__enddef(void       *ncdp,
     CHECK_ERROR(err)
 
 #ifdef ENABLE_SUBFILING
-    if (ncp->nc_num_subfiles > 1) {
+    if (ncp->num_subfiles > 1) {
         /* get ncp info for the subfile */
         PNC *pncp;
         err = PNC_check_id(ncp->ncid_sf, &pncp);
@@ -827,7 +827,7 @@ ncmpii__enddef(void       *ncdp,
 
 #ifdef ENABLE_SUBFILING
     /* write header to subfile */
-    if (ncp->nc_num_subfiles > 1) {
+    if (ncp->num_subfiles > 1) {
         err = write_NC(ncp_sf);
         if (status == NC_NOERR) status = err;
     }
@@ -851,7 +851,7 @@ ncmpii__enddef(void       *ncdp,
     fClr(ncp->flags, NC_CREAT | NC_INDEF);
 
 #ifdef ENABLE_SUBFILING
-    if (ncp->nc_num_subfiles > 1)
+    if (ncp->num_subfiles > 1)
         fClr(ncp_sf->flags, NC_CREAT | NC_INDEF);
 #endif
 

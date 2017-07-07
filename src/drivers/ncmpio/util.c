@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>  /* strcasecmp() */
 #include <mpi.h>
 
 #include <pnc_debug.h>
@@ -266,5 +267,99 @@ fn_exit:
         if (err == NC_NOERR) err = min_st;
     }
     return err;
+}
+
+/*----< ncmpio_set_pnetcdf_hints() >-----------------------------------------*/
+/* this is where the I/O hints designated to pnetcdf are extracted */
+void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
+{
+    char value[MPI_MAX_INFO_VAL];
+    int  flag;
+
+    if (info == MPI_INFO_NULL) return;
+
+    /* nc_header_align_size, nc_var_align_size, and r_align * take effect when
+     * a file is created or opened and later adding more header or variable
+     * data */
+
+    /* extract PnetCDF hints from user info object */
+    MPI_Info_get(info, "nc_header_align_size", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        ncp->h_align = strtoll(value,NULL,10);
+        if (errno != 0) ncp->h_align = 0;
+        else if (ncp->h_align < 0) ncp->h_align = 0;
+    }
+
+    MPI_Info_get(info, "nc_var_align_size", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        ncp->v_align = strtoll(value,NULL,10);
+        if (errno != 0) ncp->v_align = 0;
+        else if (ncp->v_align < 0) ncp->v_align = 0;
+    }
+
+    MPI_Info_get(info, "nc_record_align_size", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        ncp->r_align = strtoll(value,NULL,10);
+        if (errno != 0) ncp->r_align = 0;
+        else if (ncp->r_align < 0) ncp->r_align = 0;
+    }
+
+    /* get header reading chunk size from info */
+    MPI_Info_get(info, "nc_header_read_chunk_size", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        ncp->chunk = strtoll(value,NULL,10);
+        if (errno != 0) ncp->chunk = 0;
+        else if (ncp->chunk < 0) ncp->chunk = 0;
+    }
+
+#ifdef ENABLE_SUBFILING
+    MPI_Info_get(info, "pnetcdf_subfiling", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag && strcasecmp(value, "disable") == 0)
+        ncp->subfile_mode = 0;
+
+    MPI_Info_get(info, "nc_num_subfiles", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;
+        ncp->num_subfiles = strtoll(value,NULL,10);
+        if (errno != 0) ncp->num_subfiles = 0;
+        else if (ncp->num_subfiles < 0) ncp->num_subfiles = 0;
+    }
+    if (ncp->subfile_mode == 0) ncp->num_subfiles = 0;
+#endif
+}
+
+/*----< ncmpii_check_mpifh() >-----------------------------------------------*/
+int
+ncmpii_check_mpifh(NC  *ncp,
+                   int  collective)
+{
+    int mpireturn;
+
+    if (collective && NC_indep(ncp)) /* collective handle but in indep mode */
+        DEBUG_RETURN_ERROR(NC_EINDEP)
+
+    if (!collective && !NC_indep(ncp)) /* indep handle but in collective mode */
+        DEBUG_RETURN_ERROR(NC_ENOTINDEP)
+
+    /* PnetCDF's default mode is collective. MPI file handle, collective_fh,
+     * will never be MPI_FILE_NULL
+     */
+
+    if (!collective && ncp->nciop->independent_fh == MPI_FILE_NULL) {
+        TRACE_IO(MPI_File_open)(MPI_COMM_SELF, (char*)ncp->nciop->path,
+                                ncp->nciop->mpiomode, ncp->nciop->mpiinfo,
+                                &ncp->nciop->independent_fh);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_handle_error(mpireturn, "MPI_File_open");
+    }
+
+    return NC_NOERR;
 }
 

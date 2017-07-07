@@ -4,6 +4,14 @@
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in src/dispatchers/file.c
+ *
+ * ncmpi_bput_var<kind>_<type>() : dispatcher->bput_var()
+ * ncmpi_buffer_attach()         : dispatcher->buffer_attach()
+ * ncmpi_buffer_detach()         : dispatcher->buffer_detach()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
