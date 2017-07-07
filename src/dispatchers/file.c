@@ -1114,3 +1114,12 @@ ncmpi_buffer_detach(int ncid)
     return pncp->dispatch->buffer_detach(pncp->ncp);
 }
 
+/*----< ncmpi_delete() >-----------------------------------------------------*/
+/* 
+ * filename: the name of the file we will remove.
+ * info: MPI info object, in case underlying file system needs hints.
+ *
+ * This API is implemented in src/driver/ncmpio/ncmpio_file.c
+ *
+ */
+
