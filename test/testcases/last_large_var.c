@@ -300,8 +300,7 @@ int check_var_offset(char *filename)
     /* the above error keeps the program in define mode, thus close will
      * call enddef again
      */
-    err = ncmpi_close(ncid);
-    EXP_ERR(NC_EVARSIZE)
+    err = ncmpi_close(ncid); CHECK_ERR
 
     return nerrs;
 }

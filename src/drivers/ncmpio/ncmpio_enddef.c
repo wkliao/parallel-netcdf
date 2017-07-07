@@ -625,7 +625,21 @@ ncmpii__enddef(void       *ncdp,
     if (NC_readonly(ncp)) /* must have write permission */
         DEBUG_RETURN_ERROR(NC_EPERM)
 
+    if (h_minfree < 0 || v_align < 0 || v_minfree < 0 || r_align < 0)
+        DEBUG_ASSIGN_ERROR(status, NC_EINVAL)
+    else {
+        ncp->h_minfree = h_minfree;
+        ncp->v_minfree = v_minfree;
+    }
+
     if (ncp->safe_mode) {
+        /* find min error code across processes */
+        err = status;
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+        if (status != NC_NOERR) return status;
+
         /* check if h_minfree, v_align, v_minfree, and r_align are consistent
          * among all processes */
         MPI_Offset root_args[4];
@@ -643,6 +657,8 @@ ncmpii__enddef(void       *ncdp,
             root_args[2] != v_minfree ||
             root_args[3] != r_align)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
+        else if (h_minfree < 0 || v_align < 0 || v_minfree < 0 || r_align < 0)
+            DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
         else
             err = NC_NOERR;
 
@@ -653,9 +669,6 @@ ncmpii__enddef(void       *ncdp,
 
         if (status != NC_NOERR) return status;
     }
-
-    if (h_minfree > 0) ncp->h_minfree = h_minfree;
-    if (v_minfree > 0) ncp->v_minfree = v_minfree;
 
     /* calculate a good align size for PnetCDF level hints:
      * header_align_size and var_align_size based on the MPI-IO hint
