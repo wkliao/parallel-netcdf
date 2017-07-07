@@ -31,7 +31,8 @@ endif
 
 TESTPROGRAMS = large_files \
                large_var \
-               large_dims_vars_attrs
+               large_dims_vars_attrs \
+               high_dim_var
 
 check_PROGRAMS = $(TESTPROGRAMS)
 

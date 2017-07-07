@@ -240,7 +240,7 @@ ncmpii_in_swapn(void       *buf,
 #ifdef WORDS_BIGENDIAN
     return;
 #else
-    int i;
+    size_t i;
 
     if (esize <= 1 || nelems <= 0) return;  /* no need */
 

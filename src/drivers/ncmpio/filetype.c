@@ -864,7 +864,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
 {
     int           dim, err, nblocks, *blocklens;
     MPI_Aint     *disps;
-    MPI_Offset    offset, stride_off, nelems, *shape;
+    MPI_Offset    offset, nelems, *shape;
     MPI_Datatype  filetype=MPI_BYTE;
 
     if (stride == NULL)
@@ -910,6 +910,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
     if (is_filetype_contig != NULL) *is_filetype_contig = 0;
     offset = varp->begin;
 
+#if 1
     blocklens = (int*) NCI_Malloc((size_t)nelems * SIZEOF_INT);
     disps = (MPI_Aint*) NCI_Malloc((size_t)nelems * SIZEOF_MPI_AINT);
     shape = (MPI_Offset*) NCI_Malloc((size_t)varp->ndims * SIZEOF_MPI_OFFSET);
@@ -940,7 +941,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
      * The above approach avoids such problem by flattening stride access into
      * offset-length and using a single call to hindexed constructor.
      */
-#if 0
+#else
     int ndims, *blockcounts;
     MPI_Aint *blockstride;
     MPI_Offset   stride_off;
