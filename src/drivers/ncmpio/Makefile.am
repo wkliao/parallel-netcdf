@@ -47,6 +47,7 @@ C_SRCS = ncmpio_dispatch.c \
          ncmpio_open.c \
          ncmpio_enddef.c \
          ncmpio_close.c \
+         ncmpio_sync.c \
          ncmpio_file_misc.c \
          header.c \
          dim.c \
