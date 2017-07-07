@@ -405,20 +405,19 @@ struct NC {
     int           flags;
     int           format;       /* 1, 2, or 5 corresponding to CDF-1, 2, or 5 */
     int           safe_mode;    /* 0 or 1, for parameter consistency check */
-    int           subfile_mode; /* 0 or 1, for disable/enable subfiling */
+    int           numGetReqs;   /* number of pending nonblocking get requests */
+    int           numPutReqs;   /* number of pending nonblocking put requests */
 #ifdef ENABLE_SUBFILING
-    int           subfile_mode;
+    int           subfile_mode; /* 0 or 1, for disable/enable subfiling */
     int           nc_num_subfiles; /* number of subfiles */
     int           ncid_sf;         /* ncid of subfile */
 #endif
-    int           numGetReqs;  /* number of pending nonblocking get requests */
-    int           numPutReqs;  /* number of pending nonblocking put requests */
+    MPI_Offset    chunk;       /* chunk size for reading header */
     MPI_Offset    h_align;     /* file alignment for header */
     MPI_Offset    v_align;     /* file alignment for each fixed variable */
     MPI_Offset    r_align;     /* file alignment for record variable section */
     MPI_Offset    h_minfree;   /* pad at the end of the header section */
     MPI_Offset    v_minfree;   /* pad at the end of the data section for fixed-size variables */
-    MPI_Offset    chunk;    /* chunk size for reading header */
     MPI_Offset    xsz;      /* external size of this header, <= var[0].begin */
     MPI_Offset    begin_var;/* file offset of the first (non-record) var */
     MPI_Offset    begin_rec;/* file offset of the first 'record' */

@@ -94,18 +94,6 @@ void set_pnetcdf_hints(NC *ncp, MPI_Info  info)
     char value[MPI_MAX_INFO_VAL];
     int  flag;
 
-    /* value 0 indicates the hint is not set */
-    ncp->h_align      = 0;
-    ncp->v_align      = 0;
-    ncp->r_align      = 0;
-    ncp->h_minfree    = 0;
-    ncp->v_minfree    = 0;
-    ncp->chunk        = 0;
-#ifdef ENABLE_SUBFILING
-    ncp->subfile_mode = 0;
-    ncp->num_subfiles = 0;
-#endif
-
     if (info == MPI_INFO_NULL) return;
 
     /* nc_header_align_size, nc_var_align_size, and r_align * take effect when
@@ -455,10 +443,8 @@ ncmpii_create(MPI_Comm     comm,
 
 #if SIZEOF_MPI_OFFSET <  8
     /* check cmode */
-    if (fIsSet(cmode, NC_64BIT_DATA)     ||
-        fIsSet(cmode, NC_64BIT_OFFSET)   ||
-        default_format == NC_FORMAT_CDF5 || 
-        default_format == NC_FORMAT_CDF2) {
+    if (fIsSet(cmode, NC_64BIT_DATA)     || fIsSet(cmode, NC_64BIT_OFFSET)   ||
+        default_format == NC_FORMAT_CDF5 || default_format == NC_FORMAT_CDF2) {
         /* unlike serial netcdf, we will not bother to support
          * NC_64BIT_OFFSET on systems with off_t smaller than 8 bytes.
          * serial netcdf has proven it's possible if datasets are small, but
@@ -475,46 +461,12 @@ ncmpii_create(MPI_Comm     comm,
 
     /* It is illegal to have both NC_64BIT_OFFSET & NC_64BIT_DATA */
     if ((cmode & (NC_64BIT_OFFSET|NC_64BIT_DATA)) ==
-                 (NC_64BIT_OFFSET|NC_64BIT_DATA)) {
+                 (NC_64BIT_OFFSET|NC_64BIT_DATA))
         DEBUG_RETURN_ERROR(NC_EINVAL_CMODE)
-    }
 
     /* allocate buffer for header object NC */
     ncp = (NC*) NCI_Calloc(1, sizeof(NC));
     if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    ncp->safe_mode         = safe_mode;
-    ncp->ncid              = ncid;
-    ncp->abuf              = NULL;
-    ncp->old               = NULL;
-    ncp->chunk             = NC_DEFAULT_CHUNKSIZE;
-    /* initialize arrays storing pending non-blocking requests */
-    ncp->numGetReqs        = 0;
-    ncp->numPutReqs        = 0;
-    ncp->get_list          = NULL;
-    ncp->put_list          = NULL;
-    /* initialize unlimited_id as no unlimited dimension yet defined */
-    ncp->dims.unlimited_id = -1;
-    /* find the true header size (not-yet aligned) */
-    ncp->xsz               = ncmpii_hdr_len_NC(ncp);
-#ifdef ENABLE_SUBFILING
-    ncp->ncid_sf           = -1; /* subfile ncid; init to -1 */
-#endif
-
-    /* PnetCDF default fill mode is no fill */
-    fSet(ncp->flags, NC_NOFILL);
-    fSet(ncp->flags, NC_CREAT);
-
-#ifndef SEARCH_NAME_LINEARLY
-    for (i=0; i<HASH_TABLE_SIZE; i++) {
-        /* initialize dim name lookup table */
-        ncp->dims.nameT[i].num = 0;
-        ncp->dims.nameT[i].list = NULL;
-        /* initialize var name lookup table */
-        ncp->vars.nameT[i].num = 0;
-        ncp->vars.nameT[i].list = NULL;
-    }
-#endif
 
     /* set the file format version based on the create mode, cmode */
     if (fIsSet(cmode, NC_64BIT_DATA)) {
@@ -537,8 +489,52 @@ ncmpii_create(MPI_Comm     comm,
             ncp->format = 1;
         }
     }
+    /* PnetCDF default fill mode is no fill */
+    fSet(ncp->flags, NC_NOFILL);
+    fSet(ncp->flags, NC_CREAT);
+
+    ncp->ncid              = ncid;
+    ncp->safe_mode         = safe_mode;
+    /* initialize arrays storing pending non-blocking requests */
+    ncp->numGetReqs        = 0;
+    ncp->numPutReqs        = 0;
+#ifdef ENABLE_SUBFILING
+    ncp->subfile_mode      = 0;
+    ncp->num_subfiles      = 0;
+    ncp->ncid_sf           = -1; /* subfile ncid; init to -1 */
+#endif
+
+    ncp->chunk        = NC_DEFAULT_CHUNKSIZE;
+    ncp->h_align      = 0; /* value 0 indicates the hint is not set */
+    ncp->v_align      = 0;
+    ncp->r_align      = 0;
+    ncp->h_minfree    = 0;
+    ncp->v_minfree    = 0;
+
     /* extract I/O hints from user info */
     set_pnetcdf_hints(ncp, info);
+
+    /* find the true header size (not-yet aligned) */
+    ncp->xsz               = ncmpii_hdr_len_NC(ncp);
+
+    ncp->get_list          = NULL;
+    ncp->put_list          = NULL;
+    ncp->abuf              = NULL;
+    ncp->old               = NULL;
+
+    /* initialize unlimited_id as no unlimited dimension yet defined */
+    ncp->dims.unlimited_id = -1;
+
+#ifndef SEARCH_NAME_LINEARLY
+    for (i=0; i<HASH_TABLE_SIZE; i++) {
+        /* initialize dim name lookup table */
+        ncp->dims.nameT[i].num = 0;
+        ncp->dims.nameT[i].list = NULL;
+        /* initialize var name lookup table */
+        ncp->vars.nameT[i].num = 0;
+        ncp->vars.nameT[i].list = NULL;
+    }
+#endif
 
     /* create file collectively */
     err = ncmpiio_create(comm, path, cmode, info, ncp);
@@ -598,22 +594,34 @@ ncmpii_open(MPI_Comm     comm,
     ncp = (NC*) NCI_Calloc(1, sizeof(NC));
     if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    ncp->safe_mode         = safe_mode;
-    ncp->ncid              = ncid;
-    ncp->abuf              = NULL;
-    ncp->old               = NULL;
-    ncp->chunk             = NC_DEFAULT_CHUNKSIZE;
-    /* initialize arrays storing pending non-blocking requests */
-    ncp->numGetReqs        = 0;
-    ncp->numPutReqs        = 0;
-    ncp->get_list          = NULL;
-    ncp->put_list          = NULL;
-
     /* PnetCDF default fill mode is no fill */
     fSet(ncp->flags, NC_NOFILL);
 
+    ncp->ncid         = ncid;
+    ncp->safe_mode    = safe_mode;
+    ncp->numGetReqs   = 0;
+    ncp->numPutReqs   = 0;
+
+#ifdef ENABLE_SUBFILING
+    ncp->subfile_mode = 0;
+    ncp->num_subfiles = 0;
+    ncp->ncid_sf      = -1; /* subfile ncid; init to -1 */
+#endif
+
+    ncp->chunk        = NC_DEFAULT_CHUNKSIZE;
+    ncp->h_align      = 0; /* value 0 indicates the hint is not set */
+    ncp->v_align      = 0;
+    ncp->r_align      = 0;
+    ncp->h_minfree    = 0;
+    ncp->v_minfree    = 0;
+
     /* extract I/O hints from user info */
     set_pnetcdf_hints(ncp, info);
+
+    ncp->get_list     = NULL;
+    ncp->put_list     = NULL;
+    ncp->abuf         = NULL;
+    ncp->old          = NULL;
 
     /* open the file in parallel */
     err = ncmpiio_open(comm, path, omode, info, ncp);

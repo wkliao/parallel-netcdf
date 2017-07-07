@@ -823,14 +823,18 @@ stride_flatten(int               isRecVar, /* whether record variable */
         /* array_len is global array size from lowest up to ndim */
         array_len *= dimlen[ndim];
 
-        /* off is the global array offset for this dimension, ndim-1 */
+        /* off is the global array offset for this dimension, ndim-1
+         * For record variable, dimlen[0] is the sum of single record sizes
+         */
         if (ndim == 1 && isRecVar) off = start[0] * dimlen[0];
         else off = start[ndim-1] * array_len * el_size;
 
         /* update all offsets from lowest up to dimension ndim-1 */
         for (j=0; j<subarray_len; j++) disps[j] += off;
 
-        /* update each successive subarray of dimension ndim-1 */
+        /* update each successive subarray of dimension ndim-1
+         * For record variable, dimlen[0] is the sum of single record sizes
+         */
         if (ndim == 1 && isRecVar) off = stride[0] * dimlen[0];
         else off = stride[ndim-1] * array_len * el_size;
 
