@@ -269,7 +269,6 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
      */
     int status;
     NCtype type = NC_UNSPECIFIED; 
-    NC_dim **dpp, **end;
     int dim;
     unsigned long long err_addr;
     MPI_Offset tmp;
@@ -314,13 +313,11 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
         if (ncap->value == NULL) return NC_ENOMEM;
         ncap->nalloc = ncap->ndefined;
 
-        dpp = ncap->value;
-        end = &dpp[ncap->ndefined];
-        for (/*NADA*/ dim = 0; dpp < end; dpp++, dim++) {
-            status = val_get_NC_dim(fd, gbp, dpp);
+        for (dim=0; dim<ncap->ndefined; dim++) {
+            status = val_get_NC_dim(fd, gbp, &ncap->value[dim]);
             if (status != NC_NOERR) {
 	        printf("dimension[%d] in ", dim);
-                ncap->ndefined = dpp - ncap->value;
+                ncap->ndefined = dim;
                 ncmpii_free_NC_dimarray(ncap);
                 return status;
             }
@@ -476,7 +473,6 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
      */
     int status;
     NCtype type = NC_UNSPECIFIED;
-    NC_attr **app, **end;
     int att;
     MPI_Offset tmp;
     unsigned long long err_addr;
@@ -517,17 +513,14 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
         }
 
         ncap->value = (NC_attr **) malloc(ncap->ndefined * sizeof(NC_attr *));
-        if (ncap->value == NULL)
-            return NC_ENOMEM;
+        if (ncap->value == NULL) return NC_ENOMEM;
         ncap->nalloc = ncap->ndefined; 
 
-        app = ncap->value;
-        end = &app[ncap->ndefined];
-        for( /*NADA*/ att = 0; app < end; app++, att++) {
-            status = val_get_NC_attr(fd, gbp, app);
+        for (att=0; att<ncap->ndefined; att++) {
+            status = val_get_NC_attr(fd, gbp, &ncap->value[att]);
             if (status != NC_NOERR) {
 	        printf("attribute[%d] of ", att);
-                ncap->ndefined = app - ncap->value;
+                ncap->ndefined = att;
                 ncmpii_free_NC_attrarray(ncap);
                 return status;
             }
@@ -667,7 +660,6 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
      */
     int status;
     NCtype type = NC_UNSPECIFIED;
-    NC_var **vpp, **end;
     int var;
     MPI_Offset tmp;
     unsigned long long err_addr;
@@ -709,13 +701,11 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
         if (ncap->value == NULL) return NC_ENOMEM; 
         ncap->nalloc = ncap->ndefined;
 
-        vpp = ncap->value;
-        end = &vpp[ncap->ndefined];
-        for (/*NADA*/ var = 0; vpp < end; vpp++, var++) {
-            status = val_get_NC_var(fd, gbp, vpp);
+        for (var=0; var<ncap->ndefined; var++) {
+            status = val_get_NC_var(fd, gbp, &ncap->value[var]);
             if (status != NC_NOERR) {
                 printf("variable[%d] in ", var);
-                ncap->ndefined = vpp - ncap->value;
+                ncap->ndefined = var;
                 ncmpii_free_NC_vararray(ncap);
                 return status;
             }
