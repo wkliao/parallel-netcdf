@@ -1019,10 +1019,12 @@ int main(int argc, char **argv)
     }
 
 prog_exit:
-    free(ncp->dims.value);
-    free(ncp->attrs.value);
-    free(ncp->vars.value);
-    free(ncp);
+    if (ncp != NULL) {
+        if (ncp->dims.value  != NULL) free(ncp->dims.value);
+        if (ncp->attrs.value != NULL) free(ncp->attrs.value);
+        if (ncp->vars.value  != NULL) free(ncp->vars.value);
+        free(ncp);
+    }
     close(fd);
 
     if (status == NC_NOERR)
