@@ -31,9 +31,9 @@
 #include "subfile.h"
 #endif
 
-/*----< ncmpii_open() >------------------------------------------------------*/
+/*----< ncmpio_open() >------------------------------------------------------*/
 int
-ncmpii_open(MPI_Comm     comm,
+ncmpio_open(MPI_Comm     comm,
             const char  *path,
             int          omode,
             int          ncid,
@@ -81,18 +81,18 @@ ncmpii_open(MPI_Comm     comm,
 
     TRACE_IO(MPI_File_open)(comm, (char *)path, mpiomode, info, &fh);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_File_open");
+        return ncmpio_handle_error(mpireturn, "MPI_File_open");
 
     /* duplicate MPI communicator as user may free it later */
     mpireturn = MPI_Comm_dup(comm, &dup_comm);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Comm_dup");
+        return ncmpio_handle_error(mpireturn, "MPI_Comm_dup");
 
     /* get the file info used by MPI-IO */
     mpireturn = MPI_File_get_info(fh, &info_used);
     if (mpireturn != MPI_SUCCESS) {
         MPI_Comm_free(&dup_comm);
-        return ncmpii_handle_error(mpireturn, "MPI_File_get_info");
+        return ncmpio_handle_error(mpireturn, "MPI_File_get_info");
     }
 
     /* Now the file has been successfully opened, allocate/set NC object */
@@ -159,34 +159,34 @@ ncmpii_open(MPI_Comm     comm,
     }
 
     /* read header from file into NC object pointed by ncp -------------------*/
-    err = ncmpii_hdr_get_NC(ncp);
+    err = ncmpio_hdr_get_NC(ncp);
     if (err != NC_NOERR) { /* fatal error */
         ncmpio_close_files(ncp, 0);
-        ncmpii_free_NC(ncp);
+        ncmpio_free_NC(ncp);
         return err;
     }
 
 #ifdef ENABLE_SUBFILING
     if (ncp->subfile_mode) {
         /* check subfiling attribute */
-        err = ncmpii_get_att(ncp, NC_GLOBAL, "num_subfiles", &ncp->num_subfiles,
+        err = ncmpio_get_att(ncp, NC_GLOBAL, "num_subfiles", &ncp->num_subfiles,
                              NC_INT);
         if (err == NC_NOERR && ncp->num_subfiles > 1) {
             /* ignore error NC_ENOTATT if this attribute is not defined */
             for (i=0; i<ncp->vars.ndefined; i++) {
-                err = ncmpii_get_att(ncp, i, "num_subfiles",
+                err = ncmpio_get_att(ncp, i, "num_subfiles",
                                      &ncp->vars.value[i]->num_subfiles, NC_INT);
                 if (err == NC_ENOTATT) continue;
                 if (err != NC_NOERR) return err;
 
                 if (ncp->vars.value[i]->num_subfiles > 1) {
-                    err = ncmpii_get_att(ncp, i, "ndims_org",
+                    err = ncmpio_get_att(ncp, i, "ndims_org",
                                          &ncp->vars.value[i]->ndims_org,NC_INT);
                     if (err != NC_NOERR) return err;
                 }
             }
             if (ncp->num_subfiles > 1) {
-                err = ncmpii_subfile_open(ncp, &ncp->ncid_sf);
+                err = ncmpio_subfile_open(ncp, &ncp->ncid_sf);
                 if (err != NC_NOERR) return err;
             }
         }

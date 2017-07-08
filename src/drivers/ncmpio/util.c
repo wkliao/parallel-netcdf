@@ -18,12 +18,12 @@
 #include "ncmpidtype.h"
 #include "ncx.h"
 
-/*----< ncmpii_sanity_check() >----------------------------------------------*/
+/*----< ncmpio_sanity_check() >----------------------------------------------*/
 /* check the following errors and in that precedence.
  * NC_EBADID, NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
  * NC_ECHAR, NC_EINVALCOORDS, NC_EEDGE, NC_ESTRIDE, NC_EINVAL.
  */
-int ncmpii_sanity_check(NC                *ncp,
+int ncmpio_sanity_check(NC                *ncp,
                         int               varid,
                         const MPI_Offset *start,
                         const MPI_Offset *count,
@@ -56,12 +56,12 @@ int ncmpii_sanity_check(NC                *ncp,
     if (io_method != NONBLOCKING_IO) { /* for blocking APIs */
         /* check if in the right collective or independent mode and initialize
          * MPI file handlers */
-        err = ncmpii_check_mpifh(ncp, io_method);
+        err = ncmpio_check_mpifh(ncp, io_method);
         if (err != NC_NOERR) goto fn_exit;
     }
 
     /* check if varid is valid (check NC_ENOTVAR) */
-    err = ncmpii_NC_lookupvar(ncp, varid, varp);
+    err = ncmpio_NC_lookupvar(ncp, varid, varp);
     if (err != NC_NOERR) goto fn_exit;
 
     /* check NC_ECHAR */
@@ -75,7 +75,7 @@ int ncmpii_sanity_check(NC                *ncp,
             MPI_Datatype ptype;
             MPI_Offset   bnelems=0;
 
-            err = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+            err = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                       &isderived, &buftype_is_contig);
             if (err != NC_NOERR) goto fn_exit;
 
@@ -263,7 +263,7 @@ fn_exit:
         int min_st, mpireturn;
         TRACE_COMM(MPI_Allreduce)(&err, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR) err = min_st;
     }
     return err;
@@ -335,9 +335,9 @@ void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
 #endif
 }
 
-/*----< ncmpii_check_mpifh() >-----------------------------------------------*/
+/*----< ncmpio_check_mpifh() >-----------------------------------------------*/
 int
-ncmpii_check_mpifh(NC  *ncp,
+ncmpio_check_mpifh(NC  *ncp,
                    int  collective)
 {
     int mpireturn;
@@ -357,7 +357,7 @@ ncmpii_check_mpifh(NC  *ncp,
                                 ncp->mpiomode, ncp->mpiinfo,
                                 &ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_File_open");
+            return ncmpio_handle_error(mpireturn, "MPI_File_open");
     }
 
     return NC_NOERR;

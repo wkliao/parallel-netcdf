@@ -21,7 +21,7 @@
 #include "ncmpidtype.h"
 
 /*@
-  ncmpii_type_filter - Map a basic MPI datatype into one of the eight
+  ncmpio_type_filter - Map a basic MPI datatype into one of the eight
   that we process natively.
 
   We unfortunately need to wrap all these types in case they aren't defined.
@@ -31,7 +31,7 @@
   MPI_SHORT, MPI_INT, MPI_LONG, MPI_FLOAT, and MPI_DOUBLE.
   On failure, MPI_DATATYPE_NULL.
 @*/
-static MPI_Datatype ncmpii_type_filter(MPI_Datatype type)
+static MPI_Datatype ncmpio_type_filter(MPI_Datatype type)
 {
     /* char types */
 #ifdef HAVE_DECL_MPI_CHARACTER
@@ -236,7 +236,7 @@ static MPI_Datatype ncmpii_type_filter(MPI_Datatype type)
 @*/
 #ifdef HAVE_DECL_MPI_COMBINER_DARRAY
 static int
-ncmpii_darray_get_totalblks(int rank,
+ncmpio_darray_get_totalblks(int rank,
                             MPI_Offset ndims,
                             int array_of_gsizes[],
                             int array_of_distribs[],
@@ -287,9 +287,9 @@ ncmpii_darray_get_totalblks(int rank,
 #endif
 
 
-/*----< ncmpii_dtype_decode() >-----------------------------------------------*/
+/*----< ncmpio_dtype_decode() >-----------------------------------------------*/
 /*@
-  ncmpii_dtype_decode - Decode the MPI derived datatype to get the bottom
+  ncmpio_dtype_decode - Decode the MPI derived datatype to get the bottom
   level primitive datatype information.
 
   Input:
@@ -301,7 +301,7 @@ ncmpii_darray_get_totalblks(int rank,
 . nelems - Number of elements/entries of such ptype in one buftype object
 . iscontig_of_ptypes - Whether dtype is a contiguous number of ptype
 @*/
-int ncmpii_dtype_decode(MPI_Datatype dtype,
+int ncmpio_dtype_decode(MPI_Datatype dtype,
                         MPI_Datatype *ptype,
                         int *el_size,
                         MPI_Offset *nelems,
@@ -351,7 +351,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
   if ( combiner == MPI_COMBINER_NAMED ) {
     /* Predefined datatype */
     *nelems = 1;
-    if ( (*ptype = ncmpii_type_filter(dtype)) == MPI_DATATYPE_NULL )
+    if ( (*ptype = ncmpio_type_filter(dtype)) == MPI_DATATYPE_NULL )
       DEBUG_RETURN_ERROR(NC_EUNSPTETYPE)
     MPI_Type_size(dtype, el_size);
     *iscontig_of_ptypes = 1;
@@ -396,7 +396,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
     case MPI_COMBINER_RESIZED:
 #endif
 
-        status = ncmpii_dtype_decode(array_of_dtypes[0], ptype, el_size,
+        status = ncmpio_dtype_decode(array_of_dtypes[0], ptype, el_size,
                                      nelems, isderived, iscontig_of_ptypes);
         if (*isderived)
           MPI_Type_free(array_of_dtypes);
@@ -413,7 +413,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
         *el_size = 0;
         for (i=0; i<count && *el_size==0; i++) {
           /* need to skip null/marker types */
-          status = ncmpii_dtype_decode(array_of_dtypes[i],
+          status = ncmpio_dtype_decode(array_of_dtypes[i],
                                        ptype,
                                        el_size,
                                        nelems,
@@ -427,7 +427,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
             *nelems *= array_of_ints[1+i];
         }
         for ( ; i<count; i++) {
-          status = ncmpii_dtype_decode(array_of_dtypes[i],
+          status = ncmpio_dtype_decode(array_of_dtypes[i],
                                        &tmpptype,
                                        &tmpel_size,
                                        &tmpnelems,
@@ -499,7 +499,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
         ndims = array_of_ints[2];
 
         /* seldom reached, so put it in a separate function */
-        total_blocks = ncmpii_darray_get_totalblks(array_of_ints[1],
+        total_blocks = ncmpio_darray_get_totalblks(array_of_ints[1],
                                                    ndims,
                                                    array_of_ints+3,
                                                    array_of_ints+3+ndims,
@@ -530,7 +530,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
 }
 
 /*@
-  ncmpii_data_repack - copy data between two buffers with different datatypes.
+  ncmpio_data_repack - copy data between two buffers with different datatypes.
 
   Input:
 . inbuf - input buffer where data is copied from
@@ -541,7 +541,7 @@ int ncmpii_dtype_decode(MPI_Datatype dtype,
 . outtype - datatype of each element in output buffer
 @*/
 
-int ncmpii_data_repack(void *inbuf,
+int ncmpio_data_repack(void *inbuf,
                        MPI_Offset incount,
                        MPI_Datatype intype,
                        void *outbuf,

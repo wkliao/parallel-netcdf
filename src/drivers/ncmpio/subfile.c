@@ -40,7 +40,7 @@ static int is_partitioned = 0;
     }                                                                          \
 
 #if 0
-static int ncmpii_itoa(int val, char* buf)
+static int ncmpio_itoa(int val, char* buf)
 {
     const unsigned int radix = 10;
 
@@ -86,7 +86,7 @@ static int ncmpii_itoa(int val, char* buf)
 }
 #endif
 
-int ncmpii_subfile_create(NC *ncp, int *ncidp)
+int ncmpio_subfile_create(NC *ncp, int *ncidp)
 {
     int myrank, nprocs, color, status=NC_NOERR, mpireturn;
     char path_sf[1024];
@@ -119,7 +119,7 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
      * for now, just passing 0 value. */
     TRACE_COMM(MPI_Comm_split)(ncp->comm, color, myrank, &comm_sf);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Comm_split"); 
+        return ncmpio_handle_error(mpireturn, "MPI_Comm_split"); 
 
     sprintf(path_sf, "%s.subfile_%i.%s", ncp->path, color, "nc");
 
@@ -143,7 +143,7 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
 }
 
 int
-ncmpii_subfile_open(NC *ncp, int *ncidp)
+ncmpio_subfile_open(NC *ncp, int *ncidp)
 {
     int myrank, nprocs, color, status=NC_NOERR, mpireturn;
     char path_sf[1024];
@@ -176,7 +176,7 @@ ncmpii_subfile_open(NC *ncp, int *ncidp)
      * for now, just passing 0 value. */
     TRACE_COMM(MPI_Comm_split)(ncp->comm, color, myrank, &comm_sf);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Comm_split"); 
+        return ncmpio_handle_error(mpireturn, "MPI_Comm_split"); 
 
     /* char path[1024], file[1024]; */
     /* find_path_and_fname(ncp->path, path, file); */
@@ -191,7 +191,7 @@ ncmpii_subfile_open(NC *ncp, int *ncidp)
     return status;
 }
 
-int ncmpii_subfile_close(NC *ncp)
+int ncmpio_subfile_close(NC *ncp)
 {
     int status = NC_NOERR;
 
@@ -205,8 +205,8 @@ int ncmpii_subfile_close(NC *ncp)
     return status;
 }
 
-/*----< ncmpii_subfile_partition() >---------------------------------------*/
-int ncmpii_subfile_partition(NC *ncp, int *ncidp)
+/*----< ncmpio_subfile_partition() >---------------------------------------*/
+int ncmpio_subfile_partition(NC *ncp, int *ncidp)
 {
     int i, j, color, myrank, nprocs, status=NC_NOERR, num_subfiles;
     NC *ncp_sf;
@@ -235,14 +235,14 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
 
     /* check whether file is already partitioned */
     /* this is to handle when app has multiple ncmpi_enddef() */
-    status = ncmpii_get_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
+    status = ncmpio_get_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
                             &num_subfiles, NC_INT);
 
     if (status == NC_ENOTATT) { /* if such attr doesn't exist */
-        status = ncmpii_subfile_create(ncp, ncidp);
+        status = ncmpio_subfile_create(ncp, ncidp);
         TEST_HANDLE_ERR(status)
 
-        status = ncmpii_put_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
+        status = ncmpio_put_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
                                 NC_INT, 1, &ncp->num_subfiles, NC_INT);
         TEST_HANDLE_ERR(status)
     }
@@ -277,7 +277,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
         if (vpp[i]->dimids == NULL) continue;
 
         int par_dim_id_temp;
-        status = ncmpii_get_att(ncp, i, "_PnetCDF_SubFiling.par_dim_id",
+        status = ncmpio_get_att(ncp, i, "_PnetCDF_SubFiling.par_dim_id",
                                 &par_dim_id_temp, NC_INT);
         if (status == NC_NOERR) { /* if this attr exists */
 #ifdef SUBFILE_DEBUG
@@ -299,7 +299,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
             return status; /* other kind of error */
 
         if (par_dim_id < vpp[i]->ndims) {
-            status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.par_dim_index",
+            status = ncmpio_put_att(ncp, i, "_PnetCDF_SubFiling.par_dim_index",
                                     NC_INT, 1, &par_dim_id, NC_INT);
             TEST_HANDLE_ERR(status)
         }
@@ -324,7 +324,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
                     key[jj][k] = (char*) NCI_Calloc(NC_MAX_NAME, 1);
 
             /* save original value ndims to attribute before making to 0 */
-            status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.ndims_org", NC_INT, 1, &vpp[i]->ndims, NC_INT);
+            status = ncmpio_put_att(ncp, i, "_PnetCDF_SubFiling.ndims_org", NC_INT, 1, &vpp[i]->ndims, NC_INT);
             TEST_HANDLE_ERR(status)
 
             int sf_range[ncp->num_subfiles][var_ndims][3];
@@ -359,12 +359,12 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
                     dim_sz = max-min+1;
                 }
 
-                /* name->cp is always NULL terminated, see ncmpii_new_NC_string() */
+                /* name->cp is always NULL terminated, see ncmpio_new_NC_string() */
                 sprintf(str, "%s.%s", dim_name, vpp[i]->name->cp);
 #ifdef SUBFILE_DEBUG
                 printf("rank(%d): new dim name = %s, dim_sz=%d\n", myrank, str, dim_sz);
 #endif
-                status = ncmpii_def_dim(ncp_sf, str, dim_sz, &dimids[j]);
+                status = ncmpio_def_dim(ncp_sf, str, dim_sz, &dimids[j]);
                 TEST_HANDLE_ERR(status)
 
                 /* dpp_sf[color][j] = ncp_sf->dims.value[j]; */
@@ -409,30 +409,30 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
             vpp[i]->len = vpp[i]->xsz; /* size of type  */
             vpp[i]->num_subfiles = ncp->num_subfiles;
 
-            status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.dimids_org",
+            status = ncmpio_put_att(ncp, i, "_PnetCDF_SubFiling.dimids_org",
                                     NC_INT, vpp[i]->ndims_org, vpp[i]->dimids_org, NC_INT);
             TEST_HANDLE_ERR(status)
 
-            status = ncmpii_put_att(ncp, i, "_PnetCDF_SubFiling.num_subfiles",
+            status = ncmpio_put_att(ncp, i, "_PnetCDF_SubFiling.num_subfiles",
                                     NC_INT, 1, &ncp->num_subfiles, NC_INT);
             TEST_HANDLE_ERR(status)
 
             for (jj=0; jj < ncp->num_subfiles; jj++)
                 for (k=0; k < var_ndims; k++) {
-                    status = ncmpii_put_att(ncp, i, key[jj][k], NC_INT,
+                    status = ncmpio_put_att(ncp, i, key[jj][k], NC_INT,
                                             2, sf_range[jj][k], NC_INT);
                     TEST_HANDLE_ERR(status)
                 }
 
             /* define a var with new dim */
-            status = ncmpii_def_var(ncp_sf, (*vpp[i]).name->cp,
+            status = ncmpio_def_var(ncp_sf, (*vpp[i]).name->cp,
                                     vpp[i]->type, var_ndims, dimids, &varid);
             TEST_HANDLE_ERR(status)
 
             /* add an attribute about each dim's range in subfile */
             /* varid: var id in subfile */
             for (k=0; k<var_ndims; k++) {
-                status = ncmpii_put_att(ncp_sf, varid, key[color][k],
+                status = ncmpio_put_att(ncp_sf, varid, key[color][k],
                                         NC_INT, 2, sf_range[color][k], NC_INT);
                 TEST_HANDLE_ERR(status)
             }
@@ -442,7 +442,7 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
                 for (k=0; k<var_ndims; k++)
                     NCI_Free(key[jj][k]);
 
-            status = ncmpii_put_att(ncp_sf, varid, "_PnetCDF_SubFiling.subfile_index",
+            status = ncmpio_put_att(ncp_sf, varid, "_PnetCDF_SubFiling.subfile_index",
                                     NC_INT, 1, &color, NC_INT);
             TEST_HANDLE_ERR(status)
         } /* end if() */
@@ -453,9 +453,9 @@ int ncmpii_subfile_partition(NC *ncp, int *ncidp)
     return NC_NOERR;
 }
 
-/*----< ncmpii_subfile_getput_vars() >---------------------------------------*/
+/*----< ncmpio_subfile_getput_vars() >---------------------------------------*/
 int
-ncmpii_subfile_getput_vars(NC               *ncp,
+ncmpio_subfile_getput_vars(NC               *ncp,
                            NC_var           *varp,
                            const MPI_Offset  start[],
                            const MPI_Offset  count[],
@@ -503,20 +503,20 @@ ncmpii_subfile_getput_vars(NC               *ncp,
     /* check attr for subfiles */
     int par_dim_id = 0; /* default is the most significant dim */
 
-    status = ncmpii_inq_varid(ncp, varp->name->cp, &varid);
+    status = ncmpio_inq_varid(ncp, varp->name->cp, &varid);
     TEST_HANDLE_ERR(status)
 
-    status = ncmpii_get_att(ncp, varid, "_PnetCDF_SubFiling.par_dim_index",
+    status = ncmpio_get_att(ncp, varid, "_PnetCDF_SubFiling.par_dim_index",
                             &par_dim_id, NC_INT);
     TEST_HANDLE_ERR(status)
 #ifdef SUBFILE_DEBUG
     if (myrank == 0)
         printf("_PnetCDF_SubFiling.par_dim_index of %s = %d\n", varp->name->cp, par_dim_id);
 #endif
-    status = ncmpii_inq_varid(ncp_sf, varp->name->cp, &varid_sf);
+    status = ncmpio_inq_varid(ncp_sf, varp->name->cp, &varid_sf);
     TEST_HANDLE_ERR(status)
 
-    status = ncmpii_get_att(ncp_sf, varid_sf, "_PnetCDF_SubFiling.subfile_index",
+    status = ncmpio_get_att(ncp_sf, varid_sf, "_PnetCDF_SubFiling.subfile_index",
                             &color, NC_INT);
     TEST_HANDLE_ERR(status)
 
@@ -600,7 +600,7 @@ ncmpii_subfile_getput_vars(NC               *ncp,
             }
 #endif
             /* should get range info from the master file */
-            status = ncmpii_get_att(ncp, varid, key, sf_range, NC_INT);
+            status = ncmpio_get_att(ncp, varid, key, sf_range, NC_INT);
             TEST_HANDLE_ERR(status)
 
 #ifdef SUBFILE_DEBUG
@@ -773,10 +773,10 @@ ncmpii_subfile_getput_vars(NC               *ncp,
             bufcount *= count[i];
         }
         /* assign buftype match with the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpio_nc2mpitype(varp->type);
     }
 
-    status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+    status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                  &isderived, &buftype_is_contig);
     /* bnelems now is the number of ptype in a buftype */
     TEST_HANDLE_ERR(status)
@@ -854,7 +854,7 @@ ncmpii_subfile_getput_vars(NC               *ncp,
 #endif
     /* doing my portion of I/O */
     if (count_my_req_per_proc[myrank] != 0) {
-        status = ncmpii_igetput_varm(ncp_sf,
+        status = ncmpio_igetput_varm(ncp_sf,
                                      ncp_sf->vars.value[varid_sf],
                                      my_req[myrank].start,
                                      my_req[myrank].count,
@@ -1042,7 +1042,7 @@ ncmpii_subfile_getput_vars(NC               *ncp,
 
     for (i=0; i<nprocs; i++) {
         if (count_others_req_per_proc[i] != 0 && i != myrank) {
-            status = ncmpii_igetput_varm(ncp_sf,
+            status = ncmpio_igetput_varm(ncp_sf,
                                          ncp_sf->vars.value[varid_sf],
                                          others_req[i].start,
                                          others_req[i].count,
@@ -1074,17 +1074,17 @@ ncmpii_subfile_getput_vars(NC               *ncp,
     stime = MPI_Wtime();
     */
     array_of_statuses = (int *)NCI_Malloc((size_t)nasyncios * SIZEOF_INT);
-    status = ncmpii_wait(ncp_sf, nasyncios, array_of_requests, array_of_statuses, COLL_IO);
+    status = ncmpio_wait(ncp_sf, nasyncios, array_of_requests, array_of_statuses, COLL_IO);
     TEST_HANDLE_ERR(status)
     NCI_Free(array_of_statuses);
     NCI_Free(array_of_requests);
 
     /*
     int pending_nreqs;
-    status = ncmpii_inq_nreqs(ncp, &pending_nreqs);
+    status = ncmpio_inq_nreqs(ncp, &pending_nreqs);
     printf("myrank(%d): pending_nreqs=%d\n", myrank, pending_nreqs);
     wait_time = MPI_Wtime() - stime;
-    printf("myrank(%d): ncmpii_wait time = %f\n", myrank, wait_time);
+    printf("myrank(%d): ncmpio_wait time = %f\n", myrank, wait_time);
     */
 #ifdef TAU_SSON
     TAU_PHASE_STOP(t56);

@@ -55,7 +55,7 @@ dnl
  */
 
 inline MPI_Datatype
-ncmpii_nc2mpitype(nc_type xtype)
+ncmpio_nc2mpitype(nc_type xtype)
 {
     switch(xtype){
         case NC_BYTE :   return MPI_SIGNED_CHAR;
@@ -74,7 +74,7 @@ ncmpii_nc2mpitype(nc_type xtype)
 }
 
 inline nc_type
-ncmpii_mpi2nctype(MPI_Datatype itype)
+ncmpio_mpi2nctype(MPI_Datatype itype)
 {
     if (itype == MPI_SIGNED_CHAR)        return NC_BYTE ;
     if (itype == MPI_CHAR)               return NC_CHAR ;
@@ -90,13 +90,13 @@ ncmpii_mpi2nctype(MPI_Datatype itype)
     return NC_EBADTYPE;
 }
 
-/*----< ncmpii_need_convert() >----------------------------------------------*/
+/*----< ncmpio_need_convert() >----------------------------------------------*/
 /* netCDF specification makes a special case for type conversion between
  * uchar and NC_BYTE: do not check for range error. See
  * http://www.unidata.ucar.edu/software/netcdf/docs/data_type.html#type_conversion
  */
 inline int
-ncmpii_need_convert(int          format, /* 1, 2, or 5 (CDF format number) */
+ncmpio_need_convert(int          format, /* 1, 2, or 5 (CDF format number) */
                     nc_type      xtype,  /* external NC type */
                     MPI_Datatype itype)  /* internal MPI type */
 {
@@ -133,9 +133,9 @@ ncmpii_need_convert(int          format, /* 1, 2, or 5 (CDF format number) */
             );
 }
 
-/*----< ncmpii_need_swap() >-------------------------------------------------*/
+/*----< ncmpio_need_swap() >-------------------------------------------------*/
 inline int
-ncmpii_need_swap(nc_type      xtype,  /* external NC type */
+ncmpio_need_swap(nc_type      xtype,  /* external NC type */
                  MPI_Datatype itype)  /* internal MPI type */
 {
 #ifdef WORDS_BIGENDIAN
@@ -153,10 +153,10 @@ ncmpii_need_swap(nc_type      xtype,  /* external NC type */
 /* Endianness byte swap: done in-place */
 #define SWAP(x,y) {tmp = (x); (x) = (y); (y) = tmp;}
 
-/*----< ncmpii_swap() >-------------------------------------------------------*/
+/*----< ncmpio_swap() >-------------------------------------------------------*/
 /* out-place byte swap, i.e. dest_p != src_p */
 void
-ncmpii_swapn(void       *dest_p,  /* destination array */
+ncmpio_swapn(void       *dest_p,  /* destination array */
              const void *src_p,   /* source array */
              MPI_Offset  nelems,  /* number of elements in buf[] */
              int         esize)   /* byte size of each element */
@@ -230,10 +230,10 @@ Or
 
 */
 
-/*----< ncmpii_in_swap() >---------------------------------------------------*/
+/*----< ncmpio_in_swap() >---------------------------------------------------*/
 /* in-place byte swap */
 void
-ncmpii_in_swapn(void       *buf,
+ncmpio_in_swapn(void       *buf,
                 MPI_Offset  nelems,  /* number of elements in buf[] */
                 int         esize)   /* byte size of each element */
 {
@@ -287,9 +287,9 @@ dnl PUTN_XTYPE(xtype)
 dnl
 define(`PUTN_XTYPE',dnl
 `dnl
-/*----< ncmpii_x_putn_$1() >--------------------------------------------------*/
+/*----< ncmpio_x_putn_$1() >--------------------------------------------------*/
 inline int
-ncmpii_x_putn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
+ncmpio_x_putn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
               void         *xp,     /* buffer of external type $1 */
               const void   *buf,    /* user buffer of internal type, itype */
               MPI_Offset    nelems,
@@ -351,9 +351,9 @@ dnl GETN_XTYPE(xtype)
 dnl
 define(`GETN_XTYPE',dnl
 `dnl
-/*----< ncmpii_x_getn_$1() >-------------------------------------------------*/
+/*----< ncmpio_x_getn_$1() >-------------------------------------------------*/
 inline int
-ncmpii_x_getn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
+ncmpio_x_getn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
               const void   *xp,     /* buffer of external type $1 */
               void         *ip,     /* user buffer of internal type, itype */
               MPI_Offset    nelems,

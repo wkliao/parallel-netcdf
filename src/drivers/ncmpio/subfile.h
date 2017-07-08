@@ -37,15 +37,15 @@ typedef struct {
         return status;                                                 \
     }
 
-extern int ncmpii_subfile_create(NC *ncp, int *ncidp);
+extern int ncmpio_subfile_create(NC *ncp, int *ncidp);
 
-extern int ncmpii_subfile_open(NC *ncp, int *ncidp);
+extern int ncmpio_subfile_open(NC *ncp, int *ncidp);
 
-extern int ncmpii_subfile_close(NC *ncp);
+extern int ncmpio_subfile_close(NC *ncp);
 
-extern int ncmpii_subfile_partition(NC *ncp, int *ncidp);
+extern int ncmpio_subfile_partition(NC *ncp, int *ncidp);
 
-extern int ncmpii_subfile_getput_vars(NC *ncp, NC_var *varp, const MPI_Offset start[],
+extern int ncmpio_subfile_getput_vars(NC *ncp, NC_var *varp, const MPI_Offset start[],
                                const MPI_Offset count[], const MPI_Offset  stride[],
                                void *buf, MPI_Offset bufcount,
                                MPI_Datatype buftype, int rw_flag, int io_method);

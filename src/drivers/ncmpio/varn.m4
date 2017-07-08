@@ -28,9 +28,9 @@ dnl
 #include "ncx.h"
 #include "ncmpidtype.h"
 
-/*----< ncmpii_getput_varn() >------------------------------------------------*/
+/*----< ncmpio_getput_varn() >------------------------------------------------*/
 static int
-ncmpii_getput_varn(NC                *ncp,
+ncmpio_getput_varn(NC                *ncp,
                    NC_var            *varp,
                    int                num,
                    MPI_Offset* const *starts,  /* [num][varp->ndims] */
@@ -91,7 +91,7 @@ ncmpii_getput_varn(NC                *ncp,
             }
         }
         /* assign buftype match with the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpio_nc2mpitype(varp->type);
     }
 
     cbuf = buf;
@@ -104,7 +104,7 @@ ncmpii_getput_varn(NC                *ncp,
          * el_size is the element size of ptype
          * bnelems is the total number of ptype elements in buftype
          */
-        status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+        status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                      &isderived, &iscontig_of_ptypes);
 
         if (status != NC_NOERR) goto err_check;
@@ -165,7 +165,7 @@ ncmpii_getput_varn(NC                *ncp,
             buflen *= _counts[i][j];
         }
         if (buflen == 0) continue;
-        status = ncmpii_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
+        status = ncmpio_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
                                      NULL, bufp, buflen, ptype, &req_id,
                                      rw_flag, 0, isSameGroup);
         /* req_id is reused because requests in a varn is considered in the
@@ -190,11 +190,11 @@ err_check:
         TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN,
                                   ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce"); 
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce"); 
 
         if (min_st != NC_NOERR) {
             if (req_id != NC_REQ_NULL) /* cancel pending nonblocking request */
-                ncmpii_cancel(ncp, 1, &req_id, &st);
+                ncmpio_cancel(ncp, 1, &req_id, &st);
             if (free_cbuf) NCI_Free(cbuf);
             return status;
         }
@@ -202,7 +202,7 @@ err_check:
 
     if (io_method == INDEP_IO && status != NC_NOERR) {
         if (req_id != NC_REQ_NULL) /* cancel pending nonblocking request */
-            ncmpii_cancel(ncp, 1, &req_id, &st);
+            ncmpio_cancel(ncp, 1, &req_id, &st);
         if (free_cbuf) NCI_Free(cbuf);
         return status;
     }
@@ -214,7 +214,7 @@ err_check:
            calls in wait_all */
         num = 0;
 
-    err = ncmpii_wait(ncp, num, &req_id, &st, io_method);
+    err = ncmpio_wait(ncp, num, &req_id, &st, io_method);
 
     /* unpack to user buf, if buftype is noncontiguous */
     if (status == NC_NOERR && rw_flag == READ_REQ && free_cbuf) {
@@ -237,9 +237,9 @@ include(`utils.m4')
 dnl
 define(`VARN',dnl
 `dnl
-/*----< ncmpii_$1_varn() >--------------------------------------------------*/
+/*----< ncmpio_$1_varn() >--------------------------------------------------*/
 int
-ncmpii_$1_varn(void              *ncdp,
+ncmpio_$1_varn(void              *ncdp,
                int                varid,
                int                num,
                MPI_Offset* const *starts,
@@ -254,7 +254,7 @@ ncmpii_$1_varn(void              *ncdp,
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    status = ncmpii_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
+    status = ncmpio_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
                                  buftype, API_VARN, (itype==NC_NAT), 1,
                                  ReadWrite($1), io_method, &varp);
     if (status != NC_NOERR) {
@@ -268,14 +268,14 @@ ncmpii_$1_varn(void              *ncdp,
 
         /* for collective API, participate the collective I/O with zero-length
          * request for this process */
-        err = ncmpii_getput_zero_req(ncp, ReadWrite($1));
+        err = ncmpio_getput_zero_req(ncp, ReadWrite($1));
         assert(err == NC_NOERR);
 
         /* return the error code from sanity check */
         return status;
     }
 
-    return ncmpii_getput_varn(ncp, varp, num, starts, counts, (void*)buf,
+    return ncmpio_getput_varn(ncp, varp, num, starts, counts, (void*)buf,
                               bufcount, buftype, ReadWrite($1), io_method);
 }
 ')dnl

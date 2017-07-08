@@ -37,7 +37,7 @@ dnl
 */
 
 static int
-ncmpii_getput_varnm(int                ncid,
+ncmpio_getput_varnm(int                ncid,
                     int                varid,
                     int                num,
                     MPI_Offset* const  starts[],   /* [num] */
@@ -59,7 +59,7 @@ ncmpi_put_varn(int           ncid,
                MPI_Offset    bufcount,
                MPI_Datatype  buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, INDEP_IO);
 }
@@ -73,7 +73,7 @@ ncmpi_put_varn_all(int           ncid,
                    MPI_Offset    bufcount,
                    MPI_Datatype  buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, COLL_IO);
 }
@@ -90,7 +90,7 @@ ncmpi_put_varn_$1$5(int       ncid,
                     int       num,
                     const $2 *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, (void*)buf, -1, $3, WRITE_REQ, $4);
 }
 ')dnl
@@ -131,7 +131,7 @@ ncmpi_put_varn1(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, INDEP_IO);
 }
@@ -146,7 +146,7 @@ ncmpi_put_varn1_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, COLL_IO);
 }
@@ -164,7 +164,7 @@ ncmpi_put_varn1_$1$5(int                ncid,
                      MPI_Offset* const  starts[],    /* [num] */
                      const $2          *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, (void*)buf, -1, $3, WRITE_REQ, $4);
 }
 ')dnl
@@ -206,7 +206,7 @@ ncmpi_put_varna(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, INDEP_IO);
 }
@@ -222,7 +222,7 @@ ncmpi_put_varna_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, COLL_IO);
 }
@@ -241,7 +241,7 @@ ncmpi_put_varna_$1$5(int                ncid,
                      MPI_Offset* const  counts[],    /* [num] */
                      const $2          *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, (void*)buf, -1, $3, WRITE_REQ, $4);
 }
 ')dnl
@@ -284,7 +284,7 @@ ncmpi_put_varns(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, INDEP_IO);
 }
@@ -301,7 +301,7 @@ ncmpi_put_varns_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, (void*)buf, bufcount, buftype,
                                WRITE_REQ, COLL_IO);
 }
@@ -321,7 +321,7 @@ ncmpi_put_varns_$1$5(int                ncid,
                      MPI_Offset* const  strides[],   /* [num] */
                      const $2          *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, (void*)buf, -1, $3, WRITE_REQ, $4);
 }
 ')dnl
@@ -365,7 +365,7 @@ ncmpi_put_varnm(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, (void*)buf, bufcount, buftype,
                                WRITE_REQ, INDEP_IO);
 }
@@ -383,7 +383,7 @@ ncmpi_put_varnm_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, (void*)buf, bufcount, buftype,
                                WRITE_REQ, COLL_IO);
 }
@@ -404,7 +404,7 @@ ncmpi_put_varnm_$1$5(int                ncid,
                      MPI_Offset* const  imaps[],     /* [num] */
                      const $2          *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, (void*)buf, -1, $3, WRITE_REQ, $4);
 }
 ')dnl
@@ -444,7 +444,7 @@ ncmpi_get_varn(int           ncid,
                MPI_Offset    bufcount,
                MPI_Datatype  buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, INDEP_IO);
 }
@@ -458,7 +458,7 @@ ncmpi_get_varn_all(int           ncid,
                    MPI_Offset    bufcount,
                    MPI_Datatype  buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, COLL_IO);
 }
@@ -475,7 +475,7 @@ ncmpi_get_varn_$1$5(int       ncid,
                     int       num,
                     $2       *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, NULL, NULL, NULL,
                                NULL, buf, -1, $3, READ_REQ, $4);
 }
 ')dnl
@@ -516,7 +516,7 @@ ncmpi_get_varn1(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, INDEP_IO);
 }
@@ -531,7 +531,7 @@ ncmpi_get_varn1_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, COLL_IO);
 }
@@ -549,7 +549,7 @@ ncmpi_get_varn1_$1$5(int                ncid,
                      MPI_Offset* const  starts[],    /* [num] */
                      $2                *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, NULL, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, NULL, NULL,
                                NULL, buf, -1, $3, READ_REQ, $4);
 }
 ')dnl
@@ -591,7 +591,7 @@ ncmpi_get_varna(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, INDEP_IO);
 }
@@ -607,7 +607,7 @@ ncmpi_get_varna_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, COLL_IO);
 }
@@ -626,7 +626,7 @@ ncmpi_get_varna_$1$5(int                ncid,
                      MPI_Offset* const  counts[],    /* [num] */
                      $2                *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, NULL,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, NULL,
                                NULL, buf, -1, $3, READ_REQ, $4);
 }
 ')dnl
@@ -669,7 +669,7 @@ ncmpi_get_varns(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, INDEP_IO);
 }
@@ -686,7 +686,7 @@ ncmpi_get_varns_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, buf, bufcount, buftype,
                                READ_REQ, COLL_IO);
 }
@@ -706,7 +706,7 @@ ncmpi_get_varns_$1$5(int                ncid,
                      MPI_Offset* const  strides[],   /* [num] */
                      $2                *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                NULL, buf, -1, $3, READ_REQ, $4);
 }
 ')dnl
@@ -750,7 +750,7 @@ ncmpi_get_varnm(int                ncid,
                 MPI_Offset         bufcount,
                 MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, buf, bufcount, buftype,
                                READ_REQ, INDEP_IO);
 }
@@ -768,7 +768,7 @@ ncmpi_get_varnm_all(int                ncid,
                     MPI_Offset         bufcount,
                     MPI_Datatype       buftype)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, buf, bufcount, buftype,
                                READ_REQ, COLL_IO);
 }
@@ -789,7 +789,7 @@ ncmpi_get_varnm_$1$5(int                ncid,
                      MPI_Offset* const  imaps[],     /* [num] */
                      $2                *buf)
 {
-    return ncmpii_getput_varnm(ncid, varid, num, starts, counts, strides,
+    return ncmpio_getput_varnm(ncid, varid, num, starts, counts, strides,
                                imaps, buf, -1, $3, READ_REQ, $4);
 }
 ')dnl
@@ -820,9 +820,9 @@ GET_VARNM(double,    double,             MPI_DOUBLE,             COLL_IO, _all)
 GET_VARNM(longlong,  long long,          MPI_LONG_LONG_INT,      COLL_IO, _all)
 GET_VARNM(ulonglong, unsigned long long, MPI_UNSIGNED_LONG_LONG, COLL_IO, _all)
 
-/*----< ncmpii_getput_varnm() >-----------------------------------------------*/
+/*----< ncmpio_getput_varnm() >-----------------------------------------------*/
 static int
-ncmpii_getput_varnm(int                ncid,
+ncmpio_getput_varnm(int                ncid,
                     int                varid,
                     int                num,
                     MPI_Offset* const  starts[],  /* [num] */
@@ -862,15 +862,15 @@ ncmpii_getput_varnm(int                ncid,
     /* check whether collective or independent mode */
     if (status == NC_NOERR) {
         if (io_method == INDEP_IO)
-            status = ncmpii_check_mpifh(ncp, 0);
+            status = ncmpio_check_mpifh(ncp, 0);
         else if (io_method == COLL_IO)
-            status = ncmpii_check_mpifh(ncp, 1);
+            status = ncmpio_check_mpifh(ncp, 1);
         /* else if (io_method == INDEP_COLL_IO) */
     }
 
     /* check if varid is valid */
     if (status == NC_NOERR)
-        status = ncmpii_NC_lookupvar(ncp, varid, &varp);
+        status = ncmpio_NC_lookupvar(ncp, varid, &varp);
 
     /* decode buftype */
     if (status == NC_NOERR) {
@@ -879,7 +879,7 @@ ncmpii_getput_varnm(int                ncid,
              * el_size is the element size of ptype
              * bnelems is the total number of ptype elements in buftype
              */
-            status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+            status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                          &isderived, &iscontig_of_ptypes);
         else if (bufcount == 0)
             num = 0;
@@ -923,7 +923,7 @@ ncmpii_getput_varnm(int                ncid,
             /* if num > 1, skip the 2nd and rest of requests */
             GET_FULL_DIMENSIONS(start, count)
             for (buflen=1, j=0; j<varp->ndims; j++) buflen *= count[j];
-            status = ncmpii_igetput_varm(ncp, varp, start, count, NULL,
+            status = ncmpio_igetput_varm(ncp, varp, start, count, NULL,
                                          NULL, bufp, buflen,
                                          ptype, &req_ids[0], rw_flag, 0);
             if (varp->ndims > 0) NCI_Free(start);
@@ -932,7 +932,7 @@ ncmpii_getput_varnm(int                ncid,
         count = (MPI_Offset*) NCI_Malloc(varp->ndims * SIZEOF_MPI_OFFSET);
         for (j=0; j<varp->ndims; j++) count[j] = 1;
         for (i=0; i<num; i++) {
-            status = ncmpii_igetput_varm(ncp, varp, starts[i], count, NULL,
+            status = ncmpio_igetput_varm(ncp, varp, starts[i], count, NULL,
                                          NULL, bufp, 1,
                                          ptype, &req_ids[i], rw_flag, 0);
             bufp += el_size;
@@ -941,7 +941,7 @@ ncmpii_getput_varnm(int                ncid,
     } else if (strides == NULL) { /* vara */
         for (i=0; i<num; i++) {
             for (buflen=1, j=0; j<varp->ndims; j++) buflen *= counts[i][j];
-            status = ncmpii_igetput_varm(ncp, varp, starts[i], counts[i], NULL,
+            status = ncmpio_igetput_varm(ncp, varp, starts[i], counts[i], NULL,
                                          NULL, bufp, buflen,
                                          ptype, &req_ids[i], rw_flag, 0);
             bufp += buflen * el_size;
@@ -949,7 +949,7 @@ ncmpii_getput_varnm(int                ncid,
     } else if (imaps == NULL) {   /* vars */
         for (i=0; i<num; i++) {
             for (buflen=1, j=0; j<varp->ndims; j++) buflen *= counts[i][j];
-            status = ncmpii_igetput_varm(ncp, varp, starts[i], counts[i],
+            status = ncmpio_igetput_varm(ncp, varp, starts[i], counts[i],
                                          strides[i], NULL, bufp, buflen,
                                          ptype, &req_ids[i], rw_flag, 0);
             bufp += buflen * el_size;
@@ -957,7 +957,7 @@ ncmpii_getput_varnm(int                ncid,
     } else {                      /* varm */
         for (i=0; i<num; i++) {
             for (buflen=1, j=0; j<varp->ndims; j++) buflen *= counts[i][j];
-            status = ncmpii_igetput_varm(ncp, varp, starts[i], counts[i],
+            status = ncmpio_igetput_varm(ncp, varp, starts[i], counts[i],
                                          strides[i], imaps[i], bufp, buflen,
                                          ptype, &req_ids[i], rw_flag, 0);
             bufp += buflen * el_size;

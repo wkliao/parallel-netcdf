@@ -31,10 +31,10 @@ dnl
 #include "macro.h"
 
 
-/*----< ncmpii_abuf_malloc() >------------------------------------------------*/
+/*----< ncmpio_abuf_malloc() >------------------------------------------------*/
 /* allocate memory space from the attached buffer pool */
 static int
-ncmpii_abuf_malloc(NC *ncp, MPI_Offset nbytes, void **buf, int *abuf_index)
+ncmpio_abuf_malloc(NC *ncp, MPI_Offset nbytes, void **buf, int *abuf_index)
 {
     /* extend the table size if more entries are needed */
     if (ncp->abuf->tail + 1 == ncp->abuf->table_size) {
@@ -124,9 +124,9 @@ add_record_requests(NC_var           *varp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_igetput_varm() >-----------------------------------------------*/
+/*----< ncmpio_igetput_varm() >-----------------------------------------------*/
 int
-ncmpii_igetput_varm(NC               *ncp,
+ncmpio_igetput_varm(NC               *ncp,
                     NC_var           *varp,
                     const MPI_Offset  start[],
                     const MPI_Offset  count[],
@@ -161,7 +161,7 @@ ncmpii_igetput_varm(NC               *ncp,
      * el_size: size of ptype
      * buftype_is_contig: whether buftype is contiguous
      */
-    err = ncmpii_calc_datatype_elems(varp, count,
+    err = ncmpio_calc_datatype_elems(varp, count,
                                      buftype, &ptype, &bufcount, &bnelems,
                                      &nbytes, &el_size, &buftype_is_contig);
     if (err == NC_EIOMISMATCH) DEBUG_ASSIGN_ERROR(warning, err)
@@ -183,14 +183,14 @@ ncmpii_igetput_varm(NC               *ncp,
         DEBUG_RETURN_ERROR(NC_EINSUFFBUF)
 
     /* check if type conversion and Endianness byte swap is needed */
-    need_convert = ncmpii_need_convert(ncp->format, varp->type, ptype);
-    need_swap    = ncmpii_need_swap(varp->type, ptype);
+    need_convert = ncmpio_need_convert(ncp->format, varp->type, ptype);
+    need_swap    = ncmpio_need_swap(varp->type, ptype);
 
     if (imap != NULL) {
         /* check whether this is a true varm call, if yes, imaptype will be a
          * newly created MPI derived data type, otherwise MPI_DATATYPE_NULL
          */
-        err = ncmpii_create_imaptype(varp, count, imap, bnelems, el_size,
+        err = ncmpio_create_imaptype(varp, count, imap, bnelems, el_size,
                                      ptype, &imaptype);
         if (err != NC_NOERR) return err;
     }
@@ -237,7 +237,7 @@ ncmpii_igetput_varm(NC               *ncp,
 
             /* allocate lbuf */
             if (use_abuf && imaptype == MPI_DATATYPE_NULL && !need_convert) {
-                status = ncmpii_abuf_malloc(ncp, nbytes, &lbuf, &abuf_index);
+                status = ncmpio_abuf_malloc(ncp, nbytes, &lbuf, &abuf_index);
                 if (status != NC_NOERR) return status;
                 abuf_allocated = 1;
             }
@@ -256,7 +256,7 @@ ncmpii_igetput_varm(NC               *ncp,
             /* allocate cbuf */
             if (use_abuf && !need_convert) {
                 assert(abuf_allocated == 0);
-                status = ncmpii_abuf_malloc(ncp, nbytes, &cbuf, &abuf_index);
+                status = ncmpio_abuf_malloc(ncp, nbytes, &cbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (lbuf != buf) NCI_Free(lbuf);
                     return status;
@@ -287,7 +287,7 @@ ncmpii_igetput_varm(NC               *ncp,
 
             if (use_abuf) { /* use attached buffer to allocate xbuf */
                 assert(abuf_allocated == 0);
-                status = ncmpii_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
+                status = ncmpio_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (cbuf != buf) NCI_Free(cbuf);
                     return status;
@@ -298,7 +298,7 @@ ncmpii_igetput_varm(NC               *ncp,
 
             /* find the fill value */
             fillp = NCI_Malloc((size_t)varp->xsz);
-            ncmpii_inq_var_fill(varp, fillp);
+            ncmpio_inq_var_fill(varp, fillp);
 
             /* datatype conversion + byte-swap from cbuf to xbuf */
             DATATYPE_PUT_CONVERT(ncp->format, varp->type, xbuf, cbuf, bnelems,
@@ -318,7 +318,7 @@ ncmpii_igetput_varm(NC               *ncp,
         else {
             if (use_abuf && buftype_is_contig && imaptype == MPI_DATATYPE_NULL){
                 assert(abuf_allocated == 0);
-                status = ncmpii_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
+                status = ncmpio_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (cbuf != buf) NCI_Free(cbuf);
                     return status;
@@ -339,7 +339,7 @@ ncmpii_igetput_varm(NC               *ncp,
                     memcpy(xbuf, buf, (size_t)nbytes);
                 }
                 /* perform array in-place byte swap on xbuf */
-                ncmpii_in_swapn(xbuf, bnelems, ncmpix_len_nctype(varp->type));
+                ncmpio_in_swapn(xbuf, bnelems, ncmpix_len_nctype(varp->type));
 
                 if (xbuf == buf) need_swap_back_buf = 1;
                 /* user buf needs to be swapped back to its original contents */
@@ -466,9 +466,9 @@ dnl IGETPUT_API(get/put)
 dnl
 define(`IGETPUT_API',dnl
 `dnl
-/*----< ncmpii_i$1_var() >---------------------------------------------------*/
+/*----< ncmpio_i$1_var() >---------------------------------------------------*/
 int
-ncmpii_i$1_var(void             *ncdp,
+ncmpio_i$1_var(void             *ncdp,
                int               varid,
                const MPI_Offset *start,
                const MPI_Offset *count,
@@ -488,7 +488,7 @@ ncmpii_i$1_var(void             *ncdp,
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
-    status = ncmpii_sanity_check(ncp, varid, start, count, stride,
+    status = ncmpio_sanity_check(ncp, varid, start, count, stride,
                                  bufcount, buftype, api,
                                  (itype==NC_NAT), 0, ReadWrite($1),
                                  NONBLOCKING_IO, &varp);
@@ -499,7 +499,7 @@ ncmpii_i$1_var(void             *ncdp,
          if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
-    status = ncmpii_igetput_varm(ncp, varp, _start, _count, stride, imap,
+    status = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
                                  (void*)buf, bufcount, buftype,
                                  reqid, ReadWrite($1), 0, 0);
 

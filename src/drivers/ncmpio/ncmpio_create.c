@@ -33,9 +33,9 @@
 #include "subfile.h"
 #endif
 
-/*----< ncmpii_create() >----------------------------------------------------*/
+/*----< ncmpio_create() >----------------------------------------------------*/
 int
-ncmpii_create(MPI_Comm     comm,
+ncmpio_create(MPI_Comm     comm,
               const char  *path,
               int          cmode,
               int          ncid,
@@ -136,7 +136,7 @@ ncmpii_create(MPI_Comm     comm,
                 int errorclass;
                 MPI_Error_class(mpireturn, &errorclass);
                 if (errorclass != MPI_ERR_NO_SUCH_FILE) /* ignore this error */
-                    err = ncmpii_handle_error(mpireturn, "MPI_File_delete");
+                    err = ncmpio_handle_error(mpireturn, "MPI_File_delete");
             }
 #endif
         }
@@ -163,24 +163,24 @@ ncmpii_create(MPI_Comm     comm,
             if (errno == EEXIST) DEBUG_RETURN_ERROR(NC_EEXIST)
         }
 #endif
-        return ncmpii_handle_error(mpireturn, "MPI_File_open");
+        return ncmpio_handle_error(mpireturn, "MPI_File_open");
         /* for NC_NOCLOBBER, MPI_MODE_EXCL was added to mpiomode. If the file
          * already exists, MPI-IO should return error class MPI_ERR_FILE_EXISTS
          * which PnetCDF will return error code NC_EEXIST. This is checked
-         * inside of ncmpii_handle_error()
+         * inside of ncmpio_handle_error()
          */
     }
 
     /* duplicate communicator as user may free it later */
     mpireturn = MPI_Comm_dup(comm, &dup_comm);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_Comm_dup");
+        return ncmpio_handle_error(mpireturn, "MPI_Comm_dup");
 
     /* get the file info actually used by MPI-IO (may alter user's info) */
     mpireturn = MPI_File_get_info(fh, &info_used);
     if (mpireturn != MPI_SUCCESS) {
         MPI_Comm_free(&dup_comm);
-        return ncmpii_handle_error(mpireturn, "MPI_File_get_info");
+        return ncmpio_handle_error(mpireturn, "MPI_File_get_info");
     }
 
     /* Now the file has been successfully created, allocate/set NC object */
@@ -223,7 +223,7 @@ ncmpii_create(MPI_Comm     comm,
     ncmpio_set_pnetcdf_hints(ncp, info);
 
     /* find the true header size (not-yet aligned) */
-    ncp->xsz          = ncmpii_hdr_len_NC(ncp);
+    ncp->xsz          = ncmpio_hdr_len_NC(ncp);
 
     ncp->get_list     = NULL;
     ncp->put_list     = NULL;

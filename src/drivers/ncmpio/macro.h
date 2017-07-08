@@ -25,7 +25,7 @@
         NC_dim *dimp;                                                         \
         int _dimid;                                                           \
         _dimid = (varp->num_subfiles>1)?varp->dimids_org[_i]:varp->dimids[_i];\
-        dimp = ncmpii_elem_NC_dimarray(&ncp->dims, _dimid);                   \
+        dimp = ncmpio_elem_NC_dimarray(&ncp->dims, _dimid);                   \
         if (dimp->size == NC_UNLIMITED)                                       \
             count[_i] = NC_get_numrecs(ncp);                                  \
         else                                                                  \
@@ -59,34 +59,34 @@
      * into user buffer, ibuf */                                              \
     switch(xtype) {                                                           \
         case NC_BYTE:                                                         \
-            err = ncmpii_x_getn_NC_BYTE(cdf_ver,xbuf,ibuf,bnelems,itype);     \
+            err = ncmpio_x_getn_NC_BYTE(cdf_ver,xbuf,ibuf,bnelems,itype);     \
             break;                                                            \
         case NC_UBYTE:                                                        \
-            err = ncmpii_x_getn_NC_UBYTE(xbuf,ibuf,bnelems,itype);            \
+            err = ncmpio_x_getn_NC_UBYTE(xbuf,ibuf,bnelems,itype);            \
             break;                                                            \
         case NC_SHORT:                                                        \
-            err = ncmpii_x_getn_NC_SHORT(xbuf,ibuf,bnelems,itype);            \
+            err = ncmpio_x_getn_NC_SHORT(xbuf,ibuf,bnelems,itype);            \
             break;                                                            \
         case NC_USHORT:                                                       \
-            err = ncmpii_x_getn_NC_USHORT(xbuf,ibuf,bnelems,itype);           \
+            err = ncmpio_x_getn_NC_USHORT(xbuf,ibuf,bnelems,itype);           \
             break;                                                            \
         case NC_INT:                                                          \
-            err = ncmpii_x_getn_NC_INT(xbuf,ibuf,bnelems,itype);              \
+            err = ncmpio_x_getn_NC_INT(xbuf,ibuf,bnelems,itype);              \
             break;                                                            \
         case NC_UINT:                                                         \
-            err = ncmpii_x_getn_NC_UINT(xbuf,ibuf,bnelems,itype);             \
+            err = ncmpio_x_getn_NC_UINT(xbuf,ibuf,bnelems,itype);             \
             break;                                                            \
         case NC_FLOAT:                                                        \
-            err = ncmpii_x_getn_NC_FLOAT(xbuf,ibuf,bnelems,itype);            \
+            err = ncmpio_x_getn_NC_FLOAT(xbuf,ibuf,bnelems,itype);            \
             break;                                                            \
         case NC_DOUBLE:                                                       \
-            err = ncmpii_x_getn_NC_DOUBLE(xbuf,ibuf,bnelems,itype);           \
+            err = ncmpio_x_getn_NC_DOUBLE(xbuf,ibuf,bnelems,itype);           \
             break;                                                            \
         case NC_INT64:                                                        \
-            err = ncmpii_x_getn_NC_INT64(xbuf,ibuf,bnelems,itype);            \
+            err = ncmpio_x_getn_NC_INT64(xbuf,ibuf,bnelems,itype);            \
             break;                                                            \
         case NC_UINT64:                                                       \
-            err = ncmpii_x_getn_NC_UINT64(xbuf,ibuf,bnelems,itype);           \
+            err = ncmpio_x_getn_NC_UINT64(xbuf,ibuf,bnelems,itype);           \
             break;                                                            \
         default:                                                              \
             err = NC_EBADTYPE;                                                \
@@ -103,34 +103,34 @@
      * MPI_FIle_write call */                                                 \
     switch(xtype) {                                                           \
         case NC_BYTE:                                                         \
-            err = ncmpii_x_putn_NC_BYTE(cdf_ver,xbuf,ibuf,cnelems,itype,fillp);\
+            err = ncmpio_x_putn_NC_BYTE(cdf_ver,xbuf,ibuf,cnelems,itype,fillp);\
             break;                                                            \
         case NC_UBYTE:                                                        \
-            err = ncmpii_x_putn_NC_UBYTE(xbuf,ibuf,cnelems,itype,fillp);      \
+            err = ncmpio_x_putn_NC_UBYTE(xbuf,ibuf,cnelems,itype,fillp);      \
             break;                                                            \
         case NC_SHORT:                                                        \
-            err = ncmpii_x_putn_NC_SHORT(xbuf,ibuf,cnelems,itype,fillp);      \
+            err = ncmpio_x_putn_NC_SHORT(xbuf,ibuf,cnelems,itype,fillp);      \
             break;                                                            \
         case NC_USHORT:                                                       \
-            err = ncmpii_x_putn_NC_USHORT(xbuf,ibuf,cnelems,itype,fillp);     \
+            err = ncmpio_x_putn_NC_USHORT(xbuf,ibuf,cnelems,itype,fillp);     \
             break;                                                            \
         case NC_INT:                                                          \
-            err = ncmpii_x_putn_NC_INT(xbuf,ibuf,cnelems,itype,fillp);        \
+            err = ncmpio_x_putn_NC_INT(xbuf,ibuf,cnelems,itype,fillp);        \
             break;                                                            \
         case NC_UINT:                                                         \
-            err = ncmpii_x_putn_NC_UINT(xbuf,ibuf,cnelems,itype,fillp);       \
+            err = ncmpio_x_putn_NC_UINT(xbuf,ibuf,cnelems,itype,fillp);       \
             break;                                                            \
         case NC_FLOAT:                                                        \
-            err = ncmpii_x_putn_NC_FLOAT(xbuf,ibuf,cnelems,itype,fillp);      \
+            err = ncmpio_x_putn_NC_FLOAT(xbuf,ibuf,cnelems,itype,fillp);      \
             break;                                                            \
         case NC_DOUBLE:                                                       \
-            err = ncmpii_x_putn_NC_DOUBLE(xbuf,ibuf,cnelems,itype,fillp);     \
+            err = ncmpio_x_putn_NC_DOUBLE(xbuf,ibuf,cnelems,itype,fillp);     \
             break;                                                            \
         case NC_INT64:                                                        \
-            err = ncmpii_x_putn_NC_INT64(xbuf,ibuf,cnelems,itype,fillp);      \
+            err = ncmpio_x_putn_NC_INT64(xbuf,ibuf,cnelems,itype,fillp);      \
             break;                                                            \
         case NC_UINT64:                                                       \
-            err = ncmpii_x_putn_NC_UINT64(xbuf,ibuf,cnelems,itype,fillp);     \
+            err = ncmpio_x_putn_NC_UINT64(xbuf,ibuf,cnelems,itype,fillp);     \
             break;                                                            \
         default:                                                              \
             err = NC_EBADTYPE;                                                \

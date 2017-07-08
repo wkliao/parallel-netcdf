@@ -75,7 +75,7 @@ static const char ncmagic5[] = {'C', 'D', 'F', 0x05};
  * netcdf file.
  */
 int
-ncmpii_NC_computeshapes(NC *ncp)
+ncmpio_NC_computeshapes(NC *ncp)
 {
     NC_var **vpp = (NC_var **)ncp->vars.value;
     NC_var *const *const end = &vpp[ncp->vars.ndefined];
@@ -90,8 +90,8 @@ ncmpii_NC_computeshapes(NC *ncp)
     if (ncp->vars.ndefined == 0) return NC_NOERR;
 
     for ( /*NADA*/; vpp < end; vpp++) {
-        /* (*vpp)->len is recomputed from dimensions in ncmpii_NC_var_shape64() */
-        status = ncmpii_NC_var_shape64(*vpp, &ncp->dims);
+        /* (*vpp)->len is recomputed from dimensions in ncmpio_NC_var_shape64() */
+        status = ncmpio_NC_var_shape64(*vpp, &ncp->dims);
 
         if (status != NC_NOERR) return status;
 
@@ -369,9 +369,9 @@ hdr_len_NC_vararray(const NC_vararray *ncap,
     return xlen;
 }
 
-/*----< ncmpii_hdr_len_NC() >------------------------------------------------*/
+/*----< ncmpio_hdr_len_NC() >------------------------------------------------*/
 MPI_Offset
-ncmpii_hdr_len_NC(const NC *ncp)
+ncmpio_hdr_len_NC(const NC *ncp)
 {
     /* netCDF file format:
      * netcdf_file = header  data
@@ -725,7 +725,7 @@ hdr_put_NC_var(bufferinfo   *pbp,
         /* Special case, when there is no record variable, the last fixed-size
          * variable can be larger than 2 GiB if its file starting offset is
          * less than 2 GiB. This checking has already been done in the call
-         * to ncmpii_NC_check_vlens() in ncmpii_NC_enddef().
+         * to ncmpio_NC_check_vlens() in ncmpio_NC_enddef().
          *
          * if (varp->len != (int)varp->len) DEBUG_RETURN_ERROR(NC_EVARSIZE)
          */
@@ -814,11 +814,11 @@ hdr_put_NC_vararray(bufferinfo        *pbp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_hdr_put_NC() >------------------------------------------------*/
+/*----< ncmpio_hdr_put_NC() >------------------------------------------------*/
 /* fill the file header into the I/O buffer, buf
  * this function is collective */
 int
-ncmpii_hdr_put_NC(NC *ncp, void *buf)
+ncmpio_hdr_put_NC(NC *ncp, void *buf)
 {
     int status;
     bufferinfo putbuf;
@@ -928,7 +928,7 @@ hdr_fetch(bufferinfo *gbp) {
                                    (gbp->offset)-slack, gbp->base,
                                    (int)gbp->size, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_read_at");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_read_at");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(err, NC_EREAD)
         }
         else {
@@ -1113,7 +1113,7 @@ hdr_get_NC_name(bufferinfo  *gbp,
     if (err != NC_NOERR) return err;
 
     /* Allocate a NC_string structure large enough to hold nchars characters */
-    ncstrp = ncmpii_new_NC_string((size_t)nchars, NULL);
+    ncstrp = ncmpio_new_NC_string((size_t)nchars, NULL);
     if (ncstrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     nbytes = nchars * X_SIZEOF_CHAR;
@@ -1143,7 +1143,7 @@ hdr_get_NC_name(bufferinfo  *gbp,
         } else {
             err = hdr_fetch(gbp);
             if (err != NC_NOERR) {
-                ncmpii_free_NC_string(ncstrp);
+                ncmpio_free_NC_string(ncstrp);
                 return err;
             }
             bufremain = gbp->size;
@@ -1159,7 +1159,7 @@ hdr_get_NC_name(bufferinfo  *gbp,
 #ifdef PNETCDF_DEBUG
             fprintf(stderr,"Error in file %s func %s line %d: NetCDF header non-zero padding found\n",__FILE__,__func__,__LINE__);
 #endif
-            ncmpii_free_NC_string(ncstrp);
+            ncmpio_free_NC_string(ncstrp);
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
         gbp->pos = (void *)((char *)gbp->pos + padding);
@@ -1190,7 +1190,7 @@ hdr_get_NC_dim(bufferinfo  *gbp,
     status = hdr_get_NC_name(gbp, &ncstrp);
     if (status != NC_NOERR) return status;
 
-    dimp = ncmpii_new_x_NC_dim(ncstrp);
+    dimp = ncmpio_new_x_NC_dim(ncstrp);
     if (dimp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* get dim_length */
@@ -1205,7 +1205,7 @@ hdr_get_NC_dim(bufferinfo  *gbp,
         dimp->size = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-        ncmpii_free_NC_dim(dimp); /* frees name */
+        ncmpio_free_NC_dim(dimp); /* frees name */
         return status;
     }
 
@@ -1286,7 +1286,7 @@ hdr_get_NC_dimarray(bufferinfo  *gbp,
             status = hdr_get_NC_dim(gbp, ncap->value + i);
             if (status != NC_NOERR) { /* error: fail to get the next dim */
                 ncap->ndefined = i;
-                ncmpii_free_NC_dimarray(ncap);
+                ncmpio_free_NC_dimarray(ncap);
                 return status;
             }
             if (ncap->value[i]->size == NC_UNLIMITED)
@@ -1392,7 +1392,7 @@ hdr_get_NC_attr(bufferinfo  *gbp,
     /* get nc_type */
     status = hdr_get_nc_type(gbp, &type);
     if (status != NC_NOERR) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         return status;
     }
 
@@ -1408,21 +1408,21 @@ hdr_get_NC_attr(bufferinfo  *gbp,
         nelems = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         return status;
     }
 
     /* allocate space for attribute object */
-    attrp = ncmpii_new_x_NC_attr(strp, type, nelems);
+    attrp = ncmpio_new_x_NC_attr(strp, type, nelems);
     if (attrp == NULL) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         return status;
     }
 
     /* get [values ...] */
     status = hdr_get_NC_attrV(gbp, attrp);
     if (status != NC_NOERR) {
-        ncmpii_free_NC_attr(attrp); /* frees strp */
+        ncmpio_free_NC_attr(attrp); /* frees strp */
         return status;
     }
 
@@ -1498,7 +1498,7 @@ hdr_get_NC_attrarray(bufferinfo   *gbp,
             status = hdr_get_NC_attr(gbp, ncap->value + i);
             if (status != NC_NOERR) { /* Error: fail to get the next att */
                 ncap->ndefined = i;
-                ncmpii_free_NC_attrarray(ncap);
+                ncmpio_free_NC_attrarray(ncap);
                 return status;
             }
         }
@@ -1550,15 +1550,15 @@ hdr_get_NC_var(bufferinfo  *gbp,
         ndims = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-         ncmpii_free_NC_string(strp);
+         ncmpio_free_NC_string(strp);
          return status;
     }
     if (ndims != (int)ndims) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
 
     /* allocate space for var object */
-    varp = ncmpii_new_x_NC_var(strp, (int)ndims);
+    varp = ncmpio_new_x_NC_var(strp, (int)ndims);
     if (varp == NULL) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
 
@@ -1566,7 +1566,7 @@ hdr_get_NC_var(bufferinfo  *gbp,
     for (dim=0; dim<ndims; dim++) {
         status = hdr_check_buffer(gbp, (gbp->version < 5 ? 4 : 8));
         if (status != NC_NOERR) {
-            ncmpii_free_NC_var(varp);
+            ncmpio_free_NC_var(varp);
             return status;
         }
         if (gbp->version < 5) {
@@ -1590,14 +1590,14 @@ hdr_get_NC_var(bufferinfo  *gbp,
     /* get vatt_list */
     status = hdr_get_NC_attrarray(gbp, &varp->attrs);
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
     /* get nc_type */
     status = hdr_get_nc_type(gbp, &varp->type);
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
@@ -1613,7 +1613,7 @@ hdr_get_NC_var(bufferinfo  *gbp,
         varp->len = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
     /* As described in CDF-2 format specification, vsize is redundant.
@@ -1624,7 +1624,7 @@ hdr_get_NC_var(bufferinfo  *gbp,
        vsize stored in the file and hence bypass the limitation of CDF-2 on
        variable size of 2^32-4 bytes.
 
-       Later on, back to ncmpii_hdr_get_NC(), ncmpii_NC_computeshapes() is
+       Later on, back to ncmpio_hdr_get_NC(), ncmpio_NC_computeshapes() is
        called which recomputes varp->len using the dimension values and hence
        overwrites the value read from file above.
 
@@ -1635,7 +1635,7 @@ hdr_get_NC_var(bufferinfo  *gbp,
     /* next element is 'begin' */
     status = hdr_check_buffer(gbp, (gbp->version == 1 ? 4 : 8));
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
@@ -1651,7 +1651,7 @@ hdr_get_NC_var(bufferinfo  *gbp,
         varp->begin = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
@@ -1732,7 +1732,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
             ncap->value[i]->varid = i;
             if (status != NC_NOERR) { /* Error: fail to get the next var */
                 ncap->ndefined = i;
-                ncmpii_free_NC_vararray(ncap);
+                ncmpio_free_NC_vararray(ncap);
                 return status;
             }
         }
@@ -1741,7 +1741,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_hdr_get_NC() >------------------------------------------------*/
+/*----< ncmpio_hdr_get_NC() >------------------------------------------------*/
 /*  CDF format specification
  *      netcdf_file  = header  data
  *      header       = magic  numrecs  dim_list  gatt_list  var_list
@@ -1756,7 +1756,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
  *      var_list     = ABSENT | NC_VARIABLE   nelems  [var ...]
  */
 int
-ncmpii_hdr_get_NC(NC *ncp)
+ncmpio_hdr_get_NC(NC *ncp)
 {
     int status;
     bufferinfo getbuf;
@@ -1870,16 +1870,16 @@ ncmpii_hdr_get_NC(NC *ncp)
     if (status != NC_NOERR) goto fn_exit;
 
     /* get the un-aligned size occupied by the file header */
-    ncp->xsz = ncmpii_hdr_len_NC(ncp);
+    ncp->xsz = ncmpio_hdr_len_NC(ncp);
 
     /* Recompute the shapes of all variables
      * Sets ncp->begin_var to start of first variable.
      * Sets ncp->begin_rec to start of first record variable.
      */
-    status = ncmpii_NC_computeshapes(ncp);
+    status = ncmpio_NC_computeshapes(ncp);
     if (status != NC_NOERR) goto fn_exit;
 
-    status = ncmpii_NC_check_vlens(ncp);
+    status = ncmpio_NC_check_vlens(ncp);
     if (status != NC_NOERR) goto fn_exit;
 
 fn_exit:
@@ -1893,13 +1893,13 @@ fn_exit:
 
 #define WARN_STR "Warning (inconsistent metadata):"
 
-/*----< ncmpii_comp_dims() >--------------------------------------------------*/
+/*----< ncmpio_comp_dims() >--------------------------------------------------*/
 /* compare the local copy of dim_list against root's
  * If inconsistency is detected, overwrite local's with root's
  * this function is collective.
  */
 static int
-ncmpii_comp_dims(int          safe_mode,
+ncmpio_comp_dims(int          safe_mode,
                  NC_dimarray *root_dim,
                  NC_dimarray *local_dim)
 {
@@ -1952,14 +1952,14 @@ ncmpii_comp_dims(int          safe_mode,
 
         /* overwrite local's dim with root's */
         if (err != NC_NOERR) {
-            ncmpii_free_NC_dim(local_dim->value[i]);
+            ncmpio_free_NC_dim(local_dim->value[i]);
             local_dim->value[i] = dup_NC_dim(root_dim->value[i]);
         }
     }
 
     /* delete extra dimensions defined only in local copy */
     for (; i<local_dim->ndefined; i++)
-        ncmpii_free_NC_dim(local_dim->value[i]);
+        ncmpio_free_NC_dim(local_dim->value[i]);
 
     local_dim->ndefined = root_dim->ndefined;
 
@@ -1990,12 +1990,12 @@ ncmpii_comp_dims(int          safe_mode,
     return status;
 }
 
-/*----< ncmpii_comp_attrs() >-------------------------------------------------*/
+/*----< ncmpio_comp_attrs() >-------------------------------------------------*/
 /* compare the local copy of attr_list against root's
  * If inconsistency is detected, overwrite local's with root's
  */
 static int
-ncmpii_comp_attrs(int           safe_mode,
+ncmpio_comp_attrs(int           safe_mode,
                   NC_attrarray *root_attr,
                   NC_attrarray *local_attr)
 {
@@ -2194,26 +2194,26 @@ ncmpii_comp_attrs(int           safe_mode,
 
         /* overwrite local's attr with root's */
         if (ErrIsHeaderDiff(err)) {
-            ncmpii_free_NC_attr(local_attr->value[i]);
+            ncmpio_free_NC_attr(local_attr->value[i]);
             local_attr->value[i] = dup_NC_attr(root_attr->value[i]);
         }
     }
 
     /* delete extra attributes defined only in local copy */
     for (; i<local_attr->ndefined; i++)
-        ncmpii_free_NC_attr(local_attr->value[i]);
+        ncmpio_free_NC_attr(local_attr->value[i]);
 
     local_attr->ndefined = root_attr->ndefined;
 
     return status;
 }
 
-/*----< ncmpii_comp_vars() >--------------------------------------------------*/
+/*----< ncmpio_comp_vars() >--------------------------------------------------*/
 /* compare the local copy of var_list against root's
  * If inconsistency is detected, overwrite local's with root's
  */
 static int
-ncmpii_comp_vars(int          safe_mode,
+ncmpio_comp_vars(int          safe_mode,
                  NC_vararray *root_var,
                  NC_vararray *local_var)
 {
@@ -2288,7 +2288,7 @@ ncmpii_comp_vars(int          safe_mode,
         }
         /* compare variable's attributes if by far no inconsistency is found */
         if (err == NC_NOERR) {
-            err = ncmpii_comp_attrs(safe_mode, &(v1->attrs), &(v2->attrs));
+            err = ncmpio_comp_attrs(safe_mode, &(v1->attrs), &(v2->attrs));
             if (err != NC_NOERR && !ErrIsHeaderDiff(err))
                 return err; /* a fatal error */
         }
@@ -2297,16 +2297,16 @@ ncmpii_comp_vars(int          safe_mode,
 
         /* if there is any inconsistency, overwrite local's var with root's */
         if (ErrIsHeaderDiff(err)) {
-            ncmpii_free_NC_var(local_var->value[i]);
+            ncmpio_free_NC_var(local_var->value[i]);
             local_var->value[i] = dup_NC_var(root_var->value[i]);
             /* note once a new var is created, one must call
-             * ncmpii_NC_computeshapes() to recalculate the shape */
+             * ncmpio_NC_computeshapes() to recalculate the shape */
         }
     }
 
     /* delete extra variables defined only in local copy */
     for (; i<local_var->ndefined; i++)
-        ncmpii_free_NC_var(local_var->value[i]);
+        ncmpio_free_NC_var(local_var->value[i]);
 
     local_var->ndefined = root_var->ndefined;
 
@@ -2337,7 +2337,7 @@ ncmpii_comp_vars(int          safe_mode,
     return status;
 }
 
-/*----< ncmpii_hdr_check_NC() >-----------------------------------------------*/
+/*----< ncmpio_hdr_check_NC() >-----------------------------------------------*/
 /* This function is only called by NC_check_header()
  * It checks the header of local copy against root's and overwrites local's
  * header object, ncp, with root's header if any inconsistency is detected.
@@ -2349,7 +2349,7 @@ ncmpii_comp_vars(int          safe_mode,
  * NC_EMULTIDEFINE_XXX
  */
 int
-ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
+ncmpio_hdr_check_NC(bufferinfo *getbuf, /* header from root */
                     NC         *ncp)
 {
     int err, status=NC_NOERR;
@@ -2393,6 +2393,8 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     /* allocate a header object and fill it with root's header */
     root_ncp = (NC*) NCI_Calloc(1, sizeof(NC));
     if (root_ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    root_ncp->comm    = MPI_COMM_NULL;
+    root_ncp->mpiinfo = MPI_INFO_NULL;
 
     /* in safe_mode, consistency of magic numbers have already been checked in
      * ncmpi_create()
@@ -2495,7 +2497,7 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     if (err != NC_NOERR) return err; /* fatal error */
 
     /* compare local's and root's dim_list */
-    err = ncmpii_comp_dims(ncp->safe_mode, &root_ncp->dims, &ncp->dims);
+    err = ncmpio_comp_dims(ncp->safe_mode, &root_ncp->dims, &ncp->dims);
     if (err != NC_NOERR && !ErrIsHeaderDiff(err))
         return err; /* a fatal error */
     if (status == NC_NOERR) status = err;
@@ -2505,7 +2507,7 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     if (err != NC_NOERR) return err; /* fatal error */
 
     /* get the next header element att_list from getbuf to root_ncp */
-    err = ncmpii_comp_attrs(ncp->safe_mode, &root_ncp->attrs, &ncp->attrs);
+    err = ncmpio_comp_attrs(ncp->safe_mode, &root_ncp->attrs, &ncp->attrs);
     if (err != NC_NOERR && !ErrIsHeaderDiff(err))
         return err; /* a fatal error */
     if (status == NC_NOERR) status = err;
@@ -2515,14 +2517,14 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     if (err != NC_NOERR) return err; /* fatal error */
 
     /* compare local's and root's var_list */
-    err = ncmpii_comp_vars(ncp->safe_mode, &root_ncp->vars, &ncp->vars);
+    err = ncmpio_comp_vars(ncp->safe_mode, &root_ncp->vars, &ncp->vars);
     if (err != NC_NOERR && !ErrIsHeaderDiff(err))
         return err; /* a fatal error */
     if (status == NC_NOERR) status = err;
 
     if (err != NC_NOERR) { /* header has been sync-ed with root */
         /* recompute shape is required for every new variable created */
-        err = ncmpii_NC_computeshapes(ncp);
+        err = ncmpio_NC_computeshapes(ncp);
         if (err != NC_NOERR) return err; /* a fatal error */
     }
     /* now, the local header object has been sync-ed with root */
@@ -2530,27 +2532,27 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
     if (ncp->safe_mode && ErrIsHeaderDiff(status)) {
         /* recompute header size */
         MPI_Offset root_xsz, local_xsz;
-         root_xsz = ncmpii_hdr_len_NC(root_ncp);
-        local_xsz = ncmpii_hdr_len_NC(ncp);
+         root_xsz = ncmpio_hdr_len_NC(root_ncp);
+        local_xsz = ncmpio_hdr_len_NC(ncp);
         /* root's header size is getbuf->size */
         assert( ncp->xsz == getbuf->size &&
                 root_xsz == local_xsz    &&
                local_xsz == getbuf->size);
     }
-    ncmpii_free_NC(root_ncp);
+    ncmpio_free_NC(root_ncp);
     return status;
 }
 
-/*----< ncmpii_write_header() >-----------------------------------------------*/
+/*----< ncmpio_write_header() >-----------------------------------------------*/
 /* This function is called only in data mode (collective or independent) and by
  * 1. ncmpi_rename_att()
  * 2. ncmpi_copy_att()
- * 3. ncmpii_put_att()
+ * 3. ncmpio_put_att()
  * 4. ncmpi_rename_dim()
  * 5. ncmpi_rename_var()
  *
  * This function is collective (even in independent data mode) */
-int ncmpii_write_header(NC *ncp)
+int ncmpio_write_header(NC *ncp)
 {
     int rank, status=NC_NOERR, mpireturn, err;
     MPI_File fh;
@@ -2569,7 +2571,7 @@ int ncmpii_write_header(NC *ncp)
      * API (var or attribute) and the new name is smaller/bigger which changes
      * the header size. We recalculate ncp->xsz by getting the un-aligned size
      * occupied by the file header */
-    ncp->xsz = ncmpii_hdr_len_NC(ncp);
+    ncp->xsz = ncmpio_hdr_len_NC(ncp);
 
     MPI_Comm_rank(ncp->comm, &rank);
     if (rank == 0) { /* only root writes to file header */
@@ -2577,7 +2579,7 @@ int ncmpii_write_header(NC *ncp)
         void *buf = NCI_Malloc((size_t)ncp->xsz); /* header's write buffer */
 
         /* copy header object to write buffer */
-        status = ncmpii_hdr_put_NC(ncp, buf);
+        status = ncmpio_hdr_put_NC(ncp, buf);
 
         if (ncp->xsz != (int)ncp->xsz) {
             NCI_Free(buf);
@@ -2585,7 +2587,7 @@ int ncmpii_write_header(NC *ncp)
         }
         TRACE_IO(MPI_File_write_at)(fh, 0, buf, (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_write_at");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
             if (status == NC_NOERR) {
                 err = (err == NC_EFILE) ? NC_EWRITE : err;
                 DEBUG_ASSIGN_ERROR(status, err)
@@ -2604,7 +2606,7 @@ int ncmpii_write_header(NC *ncp)
         /* root's write has failed, which is serious */
         if (root_status == NC_EWRITE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         if (mpireturn != MPI_SUCCESS) {
-            ncmpii_handle_error(mpireturn,"MPI_Bcast");
+            ncmpio_handle_error(mpireturn,"MPI_Bcast");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
     }
@@ -2612,12 +2614,12 @@ int ncmpii_write_header(NC *ncp)
     if (NC_doFsync(ncp)) { /* NC_SHARE is set */
         TRACE_IO(MPI_File_sync)(fh);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpii_handle_error(mpireturn,"MPI_File_sync");
+            ncmpio_handle_error(mpireturn,"MPI_File_sync");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
         TRACE_COMM(MPI_Barrier)(ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpii_handle_error(mpireturn,"MPI_Barrier");
+            ncmpio_handle_error(mpireturn,"MPI_Barrier");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
     }

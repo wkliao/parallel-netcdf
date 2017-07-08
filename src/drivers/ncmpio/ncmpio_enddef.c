@@ -89,7 +89,7 @@ move_file_block(NC         *ncp,
                                        from+nbytes+rank*chunk_size,
                                        buf, bufcount, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_read_at_all");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EREAD)
         }
         else {
@@ -131,7 +131,7 @@ move_file_block(NC         *ncp,
                                         buf, get_size /* bufcount */,
                                         MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
         else {
@@ -232,7 +232,7 @@ NC_begins(NC *ncp)
 
     /* get the true header size (not header extent) */
     MPI_Comm_rank(ncp->comm, &rank);
-    ncp->xsz = ncmpii_hdr_len_NC(ncp);
+    ncp->xsz = ncmpio_hdr_len_NC(ncp);
 
     if (ncp->safe_mode) { /* this consistency check is redundant as metadata is
                              kept consistent at all time when safe mode is on */
@@ -242,7 +242,7 @@ NC_begins(NC *ncp)
         /* only root's header size matters */
         TRACE_COMM(MPI_Bcast)(&root_xsz, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+            err = ncmpio_handle_error(mpireturn, "MPI_Bcast"); 
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -252,7 +252,7 @@ NC_begins(NC *ncp)
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) DEBUG_RETURN_ERROR(status)
@@ -425,8 +425,7 @@ NC_begins(NC *ncp)
         ncp->recsize = *last->dsizes * last->xsz;
 #endif
 
-    if (NC_IsNew(ncp))
-        NC_set_numrecs(ncp, 0);
+    if (NC_IsNew(ncp)) ncp->numrecs = 0;
 
     return NC_NOERR;
 }
@@ -435,7 +434,7 @@ NC_begins(NC *ncp)
 /*
  * This function is collective and only called by enddef().
  * Write out the header
- * 1. Call ncmpii_hdr_put_NC() to copy the header object, ncp, to a buffer.
+ * 1. Call ncmpio_hdr_put_NC() to copy the header object, ncp, to a buffer.
  * 2. Call NC_check_header() to check if header is consistent across all
  *    processes.
  * 3. Process rank 0 writes the header to file.
@@ -453,9 +452,9 @@ write_NC(NC *ncp)
     /* In NC_begins(), root's ncp->xsz, root's header size, has been
      * broadcasted, so ncp->xsz is now root's header size. To check any
      * inconsistency in file header, we need to calculate local's header
-     * size by calling ncmpii_hdr_len_NC()./
+     * size by calling ncmpio_hdr_len_NC()./
      */
-    local_xsz = ncmpii_hdr_len_NC(ncp);
+    local_xsz = ncmpio_hdr_len_NC(ncp);
 
     /* Note valgrind will complain about uninitialized buf below, but buf will
      * be first filled with header of size ncp->xsz and later write to file.
@@ -464,7 +463,7 @@ write_NC(NC *ncp)
     buf = NCI_Malloc((size_t)local_xsz); /* buffer for local header object */
 
     /* copy the entire local header object to buf */
-    status = ncmpii_hdr_put_NC(ncp, buf);
+    status = ncmpio_hdr_put_NC(ncp, buf);
     if (status != NC_NOERR) { /* a fatal error */
         NCI_Free(buf);
         return status;
@@ -483,7 +482,7 @@ write_NC(NC *ncp)
 
         TRACE_COMM(MPI_Bcast)(root_header, h_size, MPI_BYTE, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            err = ncmpio_handle_error(mpireturn, "MPI_Bcast");
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -496,7 +495,7 @@ write_NC(NC *ncp)
         /* report error if header is inconsistency */
         TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (err != NC_NOERR) {
@@ -533,7 +532,7 @@ write_NC(NC *ncp)
         TRACE_COMM(MPI_Allreduce)(&err, &max_err, 1, MPI_INT, MPI_MAX,
                                   ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
     }
@@ -555,7 +554,7 @@ write_NC(NC *ncp)
         TRACE_IO(MPI_File_write_at)(ncp->collective_fh, 0, buf,
                                     (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_write_at");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
             /* write has failed, which is more serious than inconsistency */
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
@@ -578,7 +577,7 @@ write_NC(NC *ncp)
     return status;
 }
 
-/* Many subroutines called in ncmpii__enddef() are collective. We check the
+/* Many subroutines called in ncmpio__enddef() are collective. We check the
  * error codes of all processes only in safe mode, so the program can stop
  * collectively, if any one process got an error. However, when safe mode is
  * off, we simply return the error and program may hang if some processes
@@ -590,7 +589,7 @@ write_NC(NC *ncp)
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,   \
                                   ncp->comm);                           \
         if (mpireturn != MPI_SUCCESS) {                                 \
-            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");      \
+            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");      \
             DEBUG_RETURN_ERROR(err)                                     \
         }                                                               \
         if (status != NC_NOERR) return status;                          \
@@ -599,10 +598,10 @@ write_NC(NC *ncp)
         return err;                                                     \
 }
 
-/*----< ncmpii__enddef() >---------------------------------------------------*/
+/*----< ncmpio__enddef() >---------------------------------------------------*/
 /* This is a collective subroutine. */
 int
-ncmpii__enddef(void       *ncdp,
+ncmpio__enddef(void       *ncdp,
                MPI_Offset  h_minfree,
                MPI_Offset  v_align,
                MPI_Offset  v_minfree,
@@ -634,7 +633,7 @@ ncmpii__enddef(void       *ncdp,
         err = status;
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) return status;
@@ -649,7 +648,7 @@ ncmpii__enddef(void       *ncdp,
         root_args[3] = r_align;
         TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+            err = ncmpio_handle_error(mpireturn, "MPI_Bcast"); 
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -666,7 +665,7 @@ ncmpii__enddef(void       *ncdp,
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) return status;
@@ -748,13 +747,13 @@ ncmpii__enddef(void       *ncdp,
     MPI_Info_set(ncp->mpiinfo, "nc_num_subfiles", value);
     if (ncp->num_subfiles > 1) {
         /* TODO: should return subfile-related msg when there's an error */
-        err = ncmpii_subfile_partition(ncp, &ncp->ncid_sf);
+        err = ncmpio_subfile_partition(ncp, &ncp->ncid_sf);
         CHECK_ERROR(err)
     }
 #endif
 
     /* check whether sizes of all variables are legal */
-    err = ncmpii_NC_check_vlens(ncp);
+    err = ncmpio_NC_check_vlens(ncp);
     CHECK_ERROR(err)
 
     /* When ncp->old == NULL, this enddef is called the first time after file
@@ -843,12 +842,12 @@ ncmpii__enddef(void       *ncdp,
 
     /* fill variables according to their fill mode settings */
     if (ncp->vars.ndefined > 0) {
-        err = ncmpii_fill_vars(ncp);
+        err = ncmpio_fill_vars(ncp);
         if (status == NC_NOERR) status = err;
     }
 
     if (ncp->old != NULL) {
-        ncmpii_free_NC(ncp->old);
+        ncmpio_free_NC(ncp->old);
         ncp->old = NULL;
     }
     fClr(ncp->flags, NC_CREAT | NC_INDEF);
@@ -860,16 +859,16 @@ ncmpii__enddef(void       *ncdp,
 
     /* If the user sets NC_SHARE, we enforce a stronger data consistency */
     if (NC_doFsync(ncp))
-        ncmpiio_sync(ncp); /* calling MPI_File_sync() */
+        ncmpio_file_sync(ncp); /* calling MPI_File_sync() */
 
     return status;
 }
 
-/*----< ncmpii_enddef() >----------------------------------------------------*/
+/*----< ncmpio_enddef() >----------------------------------------------------*/
 /* This is a collective subroutine. */
 int
-ncmpii_enddef(void *ncdp)
+ncmpio_enddef(void *ncdp)
 {
-    return ncmpii__enddef(ncdp, 0, 0, 0, 0);
+    return ncmpio__enddef(ncdp, 0, 0, 0, 0);
 }
 

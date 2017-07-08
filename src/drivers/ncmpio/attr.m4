@@ -33,14 +33,14 @@ dnl
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
 
-/*----< ncmpii_free_NC_attr() >----------------------------------------------*/
+/*----< ncmpio_free_NC_attr() >----------------------------------------------*/
 /* Free NC_attr object. */
 inline void
-ncmpii_free_NC_attr(NC_attr *attrp)
+ncmpio_free_NC_attr(NC_attr *attrp)
 {
     if (attrp == NULL) return;
 
-    ncmpii_free_NC_string(attrp->name);
+    ncmpio_free_NC_string(attrp->name);
 
     NCI_Free(attrp);
 }
@@ -72,9 +72,9 @@ ncmpix_len_NC_attrV(nc_type    type,
 }
 
 
-/*----< ncmpii_new_x_NC_attr() >---------------------------------------------*/
+/*----< ncmpio_new_x_NC_attr() >---------------------------------------------*/
 NC_attr *
-ncmpii_new_x_NC_attr(NC_string  *strp,
+ncmpio_new_x_NC_attr(NC_string  *strp,
                      nc_type     type,
                      MPI_Offset  nelems)
 {
@@ -103,13 +103,13 @@ ncmpii_new_x_NC_attr(NC_string  *strp,
 }
 
 
-/*----< ncmpii_new_NC_attr() >-----------------------------------------------*/
+/*----< ncmpio_new_NC_attr() >-----------------------------------------------*/
 /*
  * IN:  name is an already normalized attribute name (NULL terminated)
  * OUT: attrp->xvalue is malloc-ed with a space of an aligned size
  */
 static NC_attr *
-ncmpii_new_NC_attr(const char *name,
+ncmpio_new_NC_attr(const char *name,
                    nc_type     type,
                    MPI_Offset  nelems)
 {
@@ -118,12 +118,12 @@ ncmpii_new_NC_attr(const char *name,
 
     assert(name != NULL && *name != 0);
 
-    strp = ncmpii_new_NC_string(strlen(name), name);
+    strp = ncmpio_new_NC_string(strlen(name), name);
     if (strp == NULL) return NULL;
 
-    attrp = ncmpii_new_x_NC_attr(strp, type, nelems);
+    attrp = ncmpio_new_x_NC_attr(strp, type, nelems);
     if (attrp == NULL) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         return NULL;
     }
 
@@ -135,7 +135,7 @@ ncmpii_new_NC_attr(const char *name,
 NC_attr *
 dup_NC_attr(const NC_attr *rattrp)
 {
-    NC_attr *attrp = ncmpii_new_NC_attr(rattrp->name->cp,
+    NC_attr *attrp = ncmpio_new_NC_attr(rattrp->name->cp,
                                         rattrp->type,
                                         rattrp->nelems);
     if (attrp == NULL) return NULL;
@@ -145,10 +145,10 @@ dup_NC_attr(const NC_attr *rattrp)
 
 /* attrarray */
 
-/*----< ncmpii_free_NC_attrarray() >-----------------------------------------*/
+/*----< ncmpio_free_NC_attrarray() >-----------------------------------------*/
 /* Free NC_attrarray values. */
 void
-ncmpii_free_NC_attrarray(NC_attrarray *ncap)
+ncmpio_free_NC_attrarray(NC_attrarray *ncap)
 {
     int i;
 
@@ -159,7 +159,7 @@ ncmpii_free_NC_attrarray(NC_attrarray *ncap)
     assert(ncap->value != NULL);
 
     for (i=0; i<ncap->ndefined; i++)
-        ncmpii_free_NC_attr(ncap->value[i]);
+        ncmpio_free_NC_attr(ncap->value[i]);
 
     NCI_Free(ncap->value);
     ncap->value    = NULL;
@@ -167,9 +167,9 @@ ncmpii_free_NC_attrarray(NC_attrarray *ncap)
     ncap->ndefined = 0;
 }
 
-/*----< ncmpii_dup_NC_attrarray() >------------------------------------------*/
+/*----< ncmpio_dup_NC_attrarray() >------------------------------------------*/
 int
-ncmpii_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
+ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 {
     int i, status=NC_NOERR;
 
@@ -200,7 +200,7 @@ ncmpii_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
     }
 
     if (status != NC_NOERR) {
-        ncmpii_free_NC_attrarray(ncap);
+        ncmpio_free_NC_attrarray(ncap);
         return status;
     }
 
@@ -277,12 +277,12 @@ NC_attrarray0(NC  *ncp,
 }
 
 
-/*----< ncmpii_NC_findattr() >------------------------------------------------*/
+/*----< ncmpio_NC_findattr() >------------------------------------------------*/
 /* Step thru NC_ATTRIBUTE array, seeking match on name.
  *  return match or -1 if Not Found.
  */
 int
-ncmpii_NC_findattr(const NC_attrarray *ncap,
+ncmpio_NC_findattr(const NC_attrarray *ncap,
                    const char         *name) /* normalized string */
 {
     int i;
@@ -318,7 +318,7 @@ NC_lookupattr(NC_attrarray  *ncap,
 
     /* validity of ncid and ncap has already been checked */
 
-    indx = ncmpii_NC_findattr(ncap, name);
+    indx = ncmpio_NC_findattr(ncap, name);
     if (indx == -1) DEBUG_RETURN_ERROR(NC_ENOTATT)
 
     if (attrpp != NULL)
@@ -329,10 +329,10 @@ NC_lookupattr(NC_attrarray  *ncap,
 
 /* Public */
 
-/*----< ncmpii_inq_attname() >-----------------------------------------------*/
+/*----< ncmpio_inq_attname() >-----------------------------------------------*/
 /* This is an independent subroutine */
 int
-ncmpii_inq_attname(void *ncdp,
+ncmpio_inq_attname(void *ncdp,
                    int   varid,
                    int   attid,
                    char *name)   /* out */
@@ -356,10 +356,10 @@ ncmpii_inq_attname(void *ncdp,
 }
 
 
-/*----< ncmpii_inq_attid() >-------------------------------------------------*/
+/*----< ncmpio_inq_attid() >-------------------------------------------------*/
 /* This is an independent subroutine */
 int
-ncmpii_inq_attid(void       *ncdp,
+ncmpio_inq_attid(void       *ncdp,
                  int         varid,
                  const char *name,
                  int        *attidp)  /* out */
@@ -379,7 +379,7 @@ ncmpii_inq_attid(void       *ncdp,
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    indx = ncmpii_NC_findattr(ncap, nname);
+    indx = ncmpio_NC_findattr(ncap, nname);
     free(nname);
     if (indx == -1) DEBUG_RETURN_ERROR(NC_ENOTATT)
 
@@ -389,10 +389,10 @@ ncmpii_inq_attid(void       *ncdp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_inq_att() >---------------------------------------------------*/
+/*----< ncmpio_inq_att() >---------------------------------------------------*/
 /* This is an independent subroutine */
 int
-ncmpii_inq_att(void       *ncdp,
+ncmpio_inq_att(void       *ncdp,
                int         varid,
                const char *name, /* input, attribute name */
                nc_type    *datatypep,
@@ -427,10 +427,10 @@ ncmpii_inq_att(void       *ncdp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_rename_att() >-------------------------------------------------*/
+/*----< ncmpio_rename_att() >-------------------------------------------------*/
 /* This API is collective if called in data mode */
 int
-ncmpii_rename_att(void       *ncdp,
+ncmpio_rename_att(void       *ncdp,
                   int         varid,
                   const char *name,
                   const char *newname)
@@ -467,7 +467,7 @@ ncmpii_rename_att(void       *ncdp,
         goto err_check;
     }
 
-    indx = ncmpii_NC_findattr(ncap, nname);
+    indx = ncmpio_NC_findattr(ncap, nname);
     free(nname);
     if (indx < 0) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTATT)
@@ -487,7 +487,7 @@ ncmpii_rename_att(void       *ncdp,
     }
 
     /* check whether new name is legal */
-    err = ncmpii_NC_check_name(newname, ncp->format);
+    err = ncmpio_NC_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -500,7 +500,7 @@ ncmpii_rename_att(void       *ncdp,
         goto err_check;
     }
 
-    if (ncmpii_NC_findattr(ncap, nnewname) >= 0) {
+    if (ncmpio_NC_findattr(ncap, nnewname) >= 0) {
         /* name in use */
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
@@ -513,7 +513,7 @@ ncmpii_rename_att(void       *ncdp,
         goto err_check;
     }
 
-    newStr = ncmpii_new_NC_string(strlen(nnewname), nnewname);
+    newStr = ncmpio_new_NC_string(strlen(nnewname), nnewname);
     if (newStr == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
         goto err_check;
@@ -531,7 +531,7 @@ err_check:
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
         root_name[0] = NULL_CHAR;
@@ -539,7 +539,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
@@ -550,7 +550,7 @@ err_check:
         if (newname != NULL) root_name_len += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
         root_name[0] = NULL_CHAR;
@@ -558,7 +558,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, newname))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
@@ -568,26 +568,26 @@ err_check:
         root_varid = varid;
         TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_varid != varid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
         if (err == NC_NOERR) err = status;
     }
 
     if (err != NC_NOERR) {
-        if (newStr != NULL) ncmpii_free_NC_string(newStr);
+        if (newStr != NULL) ncmpio_free_NC_string(newStr);
         return err;
     }
 
     assert(attrp != NULL);
 
     /* replace the old name with new name */
-    ncmpii_free_NC_string(attrp->name);
+    ncmpio_free_NC_string(attrp->name);
     attrp->name = newStr;
 
     if (! NC_indef(ncp)) { /* when file is in data mode */
@@ -596,7 +596,7 @@ err_check:
          * header, because if the file space occupied by the name shrinks, all
          * the metadata following it must be moved ahead.
          */
-        err = ncmpii_write_header(ncp);
+        err = ncmpio_write_header(ncp);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
@@ -604,7 +604,7 @@ err_check:
 }
 
 
-/*----< ncmpii_copy_att() >---------------------------------------------------*/
+/*----< ncmpio_copy_att() >---------------------------------------------------*/
 /* This API is collective for processes that opened ncdp_out.
  * If the attribute does not exist in ncdp_out, then this API must be called
  * when ncdp_out is in define mode.
@@ -613,7 +613,7 @@ err_check:
  * is in define mode.
  */
 int
-ncmpii_copy_att(void       *ncdp_in,
+ncmpio_copy_att(void       *ncdp_in,
                 int         varid_in,
                 const char *name,
                 void       *ncdp_out,
@@ -666,7 +666,7 @@ ncmpii_copy_att(void       *ncdp_in,
         goto err_check;
     }
 
-    indx = ncmpii_NC_findattr(ncap_out, nname);
+    indx = ncmpio_NC_findattr(ncap_out, nname);
 
     if (indx >= 0) { /* name in use in ncap_out */
         if (ncdp_in == ncdp_out && varid_in == varid_out)
@@ -707,7 +707,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp_out->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
         }
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
@@ -717,7 +717,7 @@ err_check:
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             NCI_Free(root_name);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
@@ -730,7 +730,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_ids, 2, MPI_INT, 0, ncp_out->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && (root_ids[0] != varid_in ||
             root_ids[1] != varid_out))
@@ -740,7 +740,7 @@ err_check:
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp_out->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
         }
 
         if (err == NC_NOERR) err = status;
@@ -767,8 +767,8 @@ err_check:
             /* Note the whole attribute object is allocated as one contiguous
              * chunk, so we cannot realloc attrp->xvalue only
              */
-            ncmpii_free_NC_attr(attrp);
-            attrp = ncmpii_new_NC_attr(nname, iattrp->type, iattrp->nelems);
+            ncmpio_free_NC_attr(attrp);
+            attrp = ncmpio_new_NC_attr(nname, iattrp->type, iattrp->nelems);
             free(nname);
             if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
             ncap_out->value[indx] = attrp;
@@ -781,7 +781,7 @@ err_check:
         }
     }
     else { /* attribute does not exit in ncdp_out */
-        attrp = ncmpii_new_NC_attr(nname, iattrp->type, iattrp->nelems);
+        attrp = ncmpio_new_NC_attr(nname, iattrp->type, iattrp->nelems);
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
@@ -798,17 +798,17 @@ err_check:
          * the file header, because if the file space occupied by the name
          * shrinks, all the metadata following it must be moved ahead.
          */
-        err = ncmpii_write_header(ncp_out); /* update file header */
+        err = ncmpio_write_header(ncp_out); /* update file header */
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
     return err;
 }
 
-/*----< ncmpii_del_att() >---------------------------------------------------*/
+/*----< ncmpio_del_att() >---------------------------------------------------*/
 /* This is a collective subroutine and must be called in define mode */
 int
-ncmpii_del_att(void       *ncdp,
+ncmpio_del_att(void       *ncdp,
                int         varid,
                const char *name)
 {
@@ -848,7 +848,7 @@ ncmpii_del_att(void       *ncdp,
         goto err_check;
     }
 
-    attrid = ncmpii_NC_findattr(ncap, nname);
+    attrid = ncmpio_NC_findattr(ncap, nname);
     free(nname);
     if (attrid == -1) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTATT)
@@ -865,7 +865,7 @@ err_check:
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
         }
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
@@ -874,7 +874,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
@@ -884,14 +884,14 @@ err_check:
         root_varid = varid;
         TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_varid != varid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
         if (err == NC_NOERR) err = status;
     }
 
@@ -899,7 +899,7 @@ err_check:
     assert(ncap != NULL);
 
     /* delete attribute */
-    ncmpii_free_NC_attr(ncap->value[attrid]);
+    ncmpio_free_NC_attr(ncap->value[attrid]);
 
     /* shuffle down */
     for (; attrid < ncap->ndefined-1; attrid++)
@@ -911,13 +911,13 @@ err_check:
     return NC_NOERR;
 }
 
-/*----< ncmpii_get_att_text() >----------------------------------------------*/
+/*----< ncmpio_get_att_text() >----------------------------------------------*/
 /* This is an independent subroutine.
  * Note this API will never return NC_ERANGE error, as text is not convertible
  * to numerical types.
  */
 static int
-ncmpii_get_att_text(void       *ncdp,
+ncmpio_get_att_text(void       *ncdp,
                     int         varid,
                     const char *name,
                     char       *buf)
@@ -961,10 +961,10 @@ dnl GET_ATT(fntype)
 dnl
 define(`GET_ATT',dnl
 `dnl
-/*----< ncmpii_get_att_$1() >------------------------------------------------*/
+/*----< ncmpio_get_att_$1() >------------------------------------------------*/
 /* This is an independent subroutine */
 static int
-ncmpii_get_att_$1(void           *ncdp,
+ncmpio_get_att_$1(void           *ncdp,
                   int             varid,
                   const char     *name,
                   FUNC2ITYPE($1) *buf)
@@ -1045,11 +1045,11 @@ foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulongl
         `GET_ATT(iType)
 ')
 
-/*----< ncmpii_get_att() >---------------------------------------------------*/
+/*----< ncmpio_get_att() >---------------------------------------------------*/
 /* This is an independent subroutine */
 /* user buffer data type matches the external type defined in file */
 int
-ncmpii_get_att(void       *ncdp,
+ncmpio_get_att(void       *ncdp,
                int         varid,
                const char *name,
                void       *buf,
@@ -1061,22 +1061,22 @@ ncmpii_get_att(void       *ncdp,
         /* this is for the API ncmpi_get_att() where the internal and external
          * data types match (inquire attribute's external data type)
          */
-        err = ncmpii_inq_att(ncdp, varid, name, &itype, NULL);
+        err = ncmpio_inq_att(ncdp, varid, name, &itype, NULL);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
     switch(itype) {
-        case NC_CHAR:   return ncmpii_get_att_text     (ncdp, varid, name, (char*)buf);
-        case NC_BYTE:   return ncmpii_get_att_schar    (ncdp, varid, name, (signed char*)buf);
-        case NC_UBYTE:  return ncmpii_get_att_uchar    (ncdp, varid, name, (unsigned char*)buf);
-        case NC_SHORT:  return ncmpii_get_att_short    (ncdp, varid, name, (short*)buf);
-        case NC_USHORT: return ncmpii_get_att_ushort   (ncdp, varid, name, (unsigned short*)buf);
-        case NC_INT:    return ncmpii_get_att_int      (ncdp, varid, name, (int*)buf);
-        case NC_UINT:   return ncmpii_get_att_uint     (ncdp, varid, name, (unsigned int*)buf);
-        case NC_FLOAT:  return ncmpii_get_att_float    (ncdp, varid, name, (float*)buf);
-        case NC_DOUBLE: return ncmpii_get_att_double   (ncdp, varid, name, (double*)buf);
-        case NC_INT64:  return ncmpii_get_att_longlong (ncdp, varid, name, (long long*)buf);
-        case NC_UINT64: return ncmpii_get_att_ulonglong(ncdp, varid, name, (unsigned long long*)buf);
+        case NC_CHAR:   return ncmpio_get_att_text     (ncdp, varid, name, (char*)buf);
+        case NC_BYTE:   return ncmpio_get_att_schar    (ncdp, varid, name, (signed char*)buf);
+        case NC_UBYTE:  return ncmpio_get_att_uchar    (ncdp, varid, name, (unsigned char*)buf);
+        case NC_SHORT:  return ncmpio_get_att_short    (ncdp, varid, name, (short*)buf);
+        case NC_USHORT: return ncmpio_get_att_ushort   (ncdp, varid, name, (unsigned short*)buf);
+        case NC_INT:    return ncmpio_get_att_int      (ncdp, varid, name, (int*)buf);
+        case NC_UINT:   return ncmpio_get_att_uint     (ncdp, varid, name, (unsigned int*)buf);
+        case NC_FLOAT:  return ncmpio_get_att_float    (ncdp, varid, name, (float*)buf);
+        case NC_DOUBLE: return ncmpio_get_att_double   (ncdp, varid, name, (double*)buf);
+        case NC_INT64:  return ncmpio_get_att_longlong (ncdp, varid, name, (long long*)buf);
+        case NC_UINT64: return ncmpio_get_att_ulonglong(ncdp, varid, name, (unsigned long long*)buf);
         default: return NC_EBADTYPE;
     }
 }
@@ -1152,7 +1152,7 @@ dnl PUT_ATT(fntype)
 dnl
 define(`PUT_ATT',dnl
 `dnl
-/*----< ncmpii_put_att_$1() >------------------------------------------------*/
+/*----< ncmpio_put_att_$1() >------------------------------------------------*/
 /* This is a collective subroutine, all arguments should be consistent among
  * all processes.
  *
@@ -1160,11 +1160,11 @@ define(`PUT_ATT',dnl
  * Attributes are always single values or one-dimensional arrays. This works
  * out well for a string, which is a one-dimensional array of ASCII characters
  *
- * Note ncmpii_put_att_text will never return NC_ERANGE error, as text is not
+ * Note ncmpio_put_att_text will never return NC_ERANGE error, as text is not
  * convertible to numerical types.
  */
 static int
-ncmpii_put_att_$1(void       *ncdp,
+ncmpio_put_att_$1(void       *ncdp,
                   int         varid,
                   const char *name,     /* attribute name */
                   ifelse(`$1',`text',,`nc_type xtype,')
@@ -1203,14 +1203,14 @@ ncmpii_put_att_$1(void       *ncdp,
     }
 
     /* check if the attribute name is legal (check for NC_EBADNAME) */
-    err = ncmpii_NC_check_name(name, ncp->format);
+    err = ncmpio_NC_check_name(name, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
     }
 
     ifelse(`$1',`text', ,`/* check if xtype is valid (check for NC_EBADTYPE) */
-    err = ncmpii_cktype(ncp->format, xtype);
+    err = ncmpio_cktype(ncp->format, xtype);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -1241,7 +1241,7 @@ ncmpii_put_att_$1(void       *ncdp,
      */
     if (varid != NC_GLOBAL && !strcmp(name, _FillValue)) {
         NC_var *varp;
-        err = ncmpii_NC_lookupvar(ncp, varid, &varp);
+        err = ncmpio_NC_lookupvar(ncp, varid, &varp);
         if (err != NC_NOERR) {
             DEBUG_TRACE_ERROR
             goto err_check;
@@ -1287,7 +1287,7 @@ ncmpii_put_att_$1(void       *ncdp,
     }
 
     /* check whether attribute already exists */
-    indx = ncmpii_NC_findattr(ncap, nname);
+    indx = ncmpio_NC_findattr(ncap, nname);
 
     if (indx >= 0) { /* name in use */
         /* xsz is the total size of this attribute */
@@ -1330,7 +1330,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
         }
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
@@ -1340,7 +1340,7 @@ err_check:
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             NCI_Free(root_name);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
@@ -1351,7 +1351,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_varid != varid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
@@ -1361,7 +1361,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_nelems, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_nelems != nelems)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_LEN)
@@ -1370,7 +1370,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(&root_xtype, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_xtype != xtype)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_TYPE)')
@@ -1386,7 +1386,7 @@ err_check:
         TRACE_COMM(MPI_Bcast)(root_buf, (int)buf_size, MPI_BYTE, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && (root_nelems != nelems || memcmp(root_buf, buf, buf_size)))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
@@ -1396,7 +1396,7 @@ err_check:
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
         }
 
         if (err == NC_NOERR) err = status;
@@ -1416,8 +1416,8 @@ err_check:
             /* Note the whole attribute object is allocated as one contiguous
              * chunk, so we cannot realloc attrp->xvalue only
              */
-            ncmpii_free_NC_attr(attrp);
-            attrp = ncmpii_new_NC_attr(nname, xtype, nelems);
+            ncmpio_free_NC_attr(attrp);
+            attrp = ncmpio_new_NC_attr(nname, xtype, nelems);
             free(nname);
             if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
             ncap->value[indx] = attrp;
@@ -1430,7 +1430,7 @@ err_check:
         }
     }
     else { /* attribute does not exit in ncid */
-        attrp = ncmpii_new_NC_attr(nname, xtype, nelems);
+        attrp = ncmpio_new_NC_attr(nname, xtype, nelems);
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
@@ -1449,13 +1449,13 @@ err_check:
         unsigned char fill[8]; /* fill value in internal representation */
 
         /* find the fill value */
-        err = ncmpii_inq_default_fill_value(xtype, &fill);
+        err = ncmpio_inq_default_fill_value(xtype, &fill);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)')
 
         ifelse(`$1',`text', `err = ncmpix_pad_putn_text(&xp, nelems, buf);',
                `$1',`uchar',`
         if (ncp->format < 5 && xtype == NC_BYTE) { /* no NC_ERANGE check */
-            err = ncmpii_inq_default_fill_value(NC_UBYTE, &fill);
+            err = ncmpio_inq_default_fill_value(NC_UBYTE, &fill);
             if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
             err = ncmpix_putn_uchar(&xp, nelems, buf, NC_UBYTE, &fill);
         } else
@@ -1478,7 +1478,7 @@ err_check:
          */
 /*
         if (err != NC_NOERR) {
-            ncmpii_free_NC_attr(attrp);
+            ncmpio_free_NC_attr(attrp);
             DEBUG_RETURN_ERROR(err)
         }
 */
@@ -1491,7 +1491,7 @@ err_check:
          * shrinks, all the metadata following it must be moved ahead.
          */
         int status;
-        status = ncmpii_write_header(ncp); /* update file header */
+        status = ncmpio_write_header(ncp); /* update file header */
         if (err == NC_NOERR) err = status;
     }
 
@@ -1503,12 +1503,12 @@ foreach(`iType', (text,schar,uchar,short,ushort,int,uint,float,double,longlong,u
         `PUT_ATT(iType)
 ')
 
-/*----< ncmpii_put_att() >---------------------------------------------------*/
+/*----< ncmpio_put_att() >---------------------------------------------------*/
 /* This is a collective subroutine, all arguments should be consistent among
  * all processes.
  */
 int
-ncmpii_put_att(void       *ncdp,
+ncmpio_put_att(void       *ncdp,
                int         varid,
                const char *name,
                nc_type     xtype,  /* external (file/NC) data type */
@@ -1517,17 +1517,17 @@ ncmpii_put_att(void       *ncdp,
                nc_type     itype)  /* interanl (memory) data type */
 {
     switch(itype) {
-        case NC_CHAR:   return ncmpii_put_att_text     (ncdp, varid, name,        nelems, buf);
-        case NC_BYTE:   return ncmpii_put_att_schar    (ncdp, varid, name, xtype, nelems, buf);
-        case NC_UBYTE:  return ncmpii_put_att_uchar    (ncdp, varid, name, xtype, nelems, buf);
-        case NC_SHORT:  return ncmpii_put_att_short    (ncdp, varid, name, xtype, nelems, buf);
-        case NC_USHORT: return ncmpii_put_att_ushort   (ncdp, varid, name, xtype, nelems, buf);
-        case NC_INT:    return ncmpii_put_att_int      (ncdp, varid, name, xtype, nelems, buf);
-        case NC_UINT:   return ncmpii_put_att_uint     (ncdp, varid, name, xtype, nelems, buf);
-        case NC_FLOAT:  return ncmpii_put_att_float    (ncdp, varid, name, xtype, nelems, buf);
-        case NC_DOUBLE: return ncmpii_put_att_double   (ncdp, varid, name, xtype, nelems, buf);
-        case NC_INT64:  return ncmpii_put_att_longlong (ncdp, varid, name, xtype, nelems, buf);
-        case NC_UINT64: return ncmpii_put_att_ulonglong(ncdp, varid, name, xtype, nelems, buf);
+        case NC_CHAR:   return ncmpio_put_att_text     (ncdp, varid, name,        nelems, buf);
+        case NC_BYTE:   return ncmpio_put_att_schar    (ncdp, varid, name, xtype, nelems, buf);
+        case NC_UBYTE:  return ncmpio_put_att_uchar    (ncdp, varid, name, xtype, nelems, buf);
+        case NC_SHORT:  return ncmpio_put_att_short    (ncdp, varid, name, xtype, nelems, buf);
+        case NC_USHORT: return ncmpio_put_att_ushort   (ncdp, varid, name, xtype, nelems, buf);
+        case NC_INT:    return ncmpio_put_att_int      (ncdp, varid, name, xtype, nelems, buf);
+        case NC_UINT:   return ncmpio_put_att_uint     (ncdp, varid, name, xtype, nelems, buf);
+        case NC_FLOAT:  return ncmpio_put_att_float    (ncdp, varid, name, xtype, nelems, buf);
+        case NC_DOUBLE: return ncmpio_put_att_double   (ncdp, varid, name, xtype, nelems, buf);
+        case NC_INT64:  return ncmpio_put_att_longlong (ncdp, varid, name, xtype, nelems, buf);
+        case NC_UINT64: return ncmpio_put_att_ulonglong(ncdp, varid, name, xtype, nelems, buf);
         default: return NC_EBADTYPE;
     }
 }

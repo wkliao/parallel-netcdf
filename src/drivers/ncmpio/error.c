@@ -19,9 +19,9 @@
 #include <pnetcdf.h>
 #include <nc.h>
 
-/*----< ncmpii_handle_error() ------------------------------------------------*/
+/*----< ncmpio_handle_error() ------------------------------------------------*/
 /* translate MPI error codes to PnetCDF/netCDF error codes */
-int ncmpii_handle_error(int   mpi_errorcode, /* returned value from MPI call */
+int ncmpio_handle_error(int   mpi_errorcode, /* returned value from MPI call */
                         char *err_msg)       /* extra error message */
 {
     int errorclass, errorStringLen;

@@ -7,14 +7,14 @@
 #ifndef _NCMPIDTYPE_H
 #define _NCMPIDTYPE_H
 
-int ncmpii_dtype_decode(MPI_Datatype dtype,
+int ncmpio_dtype_decode(MPI_Datatype dtype,
 			MPI_Datatype *ptype,
 			int *el_size,
 			MPI_Offset *nelems,
 			int *isderived,
 			int *iscontig_of_ptypes);
 
-int ncmpii_data_repack(void *inbuf,
+int ncmpio_data_repack(void *inbuf,
                        MPI_Offset incount,
                        MPI_Datatype intype,
                        void *outbuf,

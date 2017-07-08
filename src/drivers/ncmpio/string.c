@@ -25,14 +25,14 @@
 #include "rnd.h"
 
 
-/*----< ncmpii_free_NC_string() >--------------------------------------------*/
+/*----< ncmpio_free_NC_string() >--------------------------------------------*/
 /*
  * Free string, and, if needed, its values.
  * Formerly
 NC_free_string()
  */
 inline void
-ncmpii_free_NC_string(NC_string *ncstrp)
+ncmpio_free_NC_string(NC_string *ncstrp)
 {
     if (ncstrp==NULL) return;
     /* ncstrp->cp is allocated as part of ncstrp object */
@@ -49,7 +49,7 @@ ncmpii_free_NC_string(NC_string *ncstrp)
  * also handle these characters in names.
  */
 static int
-ncmpii_NC_check_name_CDF1(const char *name)
+ncmpio_NC_check_name_CDF1(const char *name)
 {
     const char *cp = name;
     assert(name != NULL);
@@ -72,11 +72,11 @@ ncmpii_NC_check_name_CDF1(const char *name)
 }
 #endif
 
-static int ncmpii_NC_check_name_CDF2(const char *name);
+static int ncmpio_NC_check_name_CDF2(const char *name);
 
-/*----< ncmpii_NC_check_name() >---------------------------------------------*/
+/*----< ncmpio_NC_check_name() >---------------------------------------------*/
 int
-ncmpii_NC_check_name(const char *name,
+ncmpio_NC_check_name(const char *name,
                      int         file_ver) /* CDF version: 1, 2, or 5 */
 {
     /* NetCDF4 has made CDF-1 no different from CDF-2 except the size of
@@ -85,10 +85,10 @@ ncmpii_NC_check_name(const char *name,
      */
 #ifdef _CONFORM_NETCDF_3_5_1
     if (file_ver == 1)
-        return ncmpii_NC_check_name_CDF1(name);
+        return ncmpio_NC_check_name_CDF1(name);
 #endif
 
-    return ncmpii_NC_check_name_CDF2(name);
+    return ncmpio_NC_check_name_CDF2(name);
 }
 
 #include "utf8proc.h"
@@ -232,7 +232,7 @@ nextUTF8(const char* cp)
  * normalize UTF-8 strings to NFC to facilitate matching and queries.
  */
 static int
-ncmpii_NC_check_name_CDF2(const char *name)
+ncmpio_NC_check_name_CDF2(const char *name)
 {
 	int skip;
 	int ch;
@@ -284,7 +284,7 @@ ncmpii_NC_check_name_CDF2(const char *name)
 	return NC_NOERR;
 }
 
-/*----< ncmpii_new_NC_string() >---------------------------------------------*/
+/*----< ncmpio_new_NC_string() >---------------------------------------------*/
 /*
  * Allocate a NC_string structure large enough
  * to hold slen characters.
@@ -292,7 +292,7 @@ ncmpii_NC_check_name_CDF2(const char *name)
 NC_new_string(count, str)
  */
 NC_string *
-ncmpii_new_NC_string(size_t      slen,
+ncmpio_new_NC_string(size_t      slen,
                      const char *str)  /* must be already normalized */
 {
     /* str may not be NULL terminated */
@@ -322,7 +322,7 @@ ncmpii_new_NC_string(size_t      slen,
 }
 
 
-/*----< ncmpii_set_NC_string() >---------------------------------------------*/
+/*----< ncmpio_set_NC_string() >---------------------------------------------*/
 /*
  * If possible, change the value of an NC_string to 'str'.
  *
@@ -330,7 +330,7 @@ ncmpii_new_NC_string(size_t      slen,
 NC_re_string()
  */
 int
-ncmpii_set_NC_string(NC_string  *ncstrp,
+ncmpio_set_NC_string(NC_string  *ncstrp,
                      const char *str)
 {
     size_t slen;

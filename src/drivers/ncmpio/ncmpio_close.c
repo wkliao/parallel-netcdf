@@ -38,13 +38,13 @@ ncmpio_close_files(NC *ncp, int doUnlink) {
     if (ncp->independent_fh != MPI_FILE_NULL) {
         TRACE_IO(MPI_File_close)(&ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_File_close");
+            return ncmpio_handle_error(mpireturn, "MPI_File_close");
     }
 
     if (ncp->collective_fh != MPI_FILE_NULL) {
         TRACE_IO(MPI_File_close)(&ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_File_close");
+            return ncmpio_handle_error(mpireturn, "MPI_File_close");
     }
 
     if (doUnlink) {
@@ -52,26 +52,26 @@ ncmpio_close_files(NC *ncp, int doUnlink) {
          * in define mode, the file is deleted */
         TRACE_IO(MPI_File_delete)((char *)ncp->path, ncp->mpiinfo);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_File_delete");
+            return ncmpio_handle_error(mpireturn, "MPI_File_delete");
     }
     return NC_NOERR;
 }
 
-/*----< ncmpii_close() >------------------------------------------------------*/
+/*----< ncmpio_close() >------------------------------------------------------*/
 /* This function is collective */
 int
-ncmpii_close(void *ncdp)
+ncmpio_close(void *ncdp)
 {
     int err=NC_NOERR, status=NC_NOERR;
     NC *ncp = (NC*)ncdp;
 
     if (NC_indef(ncp)) { /* currently in define mode */
-        status = ncmpii__enddef(ncp, 0, 0, 0, 0); /* TODO: defaults */
+        status = ncmpio__enddef(ncp, 0, 0, 0, 0); /* TODO: defaults */
 
         if (status != NC_NOERR ) {
             /* To do: Abort new definition, if any */
             if (ncp->old != NULL) {
-                ncmpii_free_NC(ncp->old);
+                ncmpio_free_NC(ncp->old);
                 ncp->old = NULL;
                 fClr(ncp->flags, NC_INDEF);
             }
@@ -80,7 +80,7 @@ ncmpii_close(void *ncdp)
 
     if (!NC_readonly(ncp) &&  /* file is open for write */
          NC_indep(ncp)) {     /* exit independent data mode will sync header */
-        err = ncmpii_end_indep_data(ncp);
+        err = ncmpio_end_indep_data(ncp);
         if (status == NC_NOERR ) status = err;
     }
 
@@ -88,22 +88,22 @@ ncmpii_close(void *ncdp)
      * update header in file, as file header is always up-to-date */
 
 #ifdef ENABLE_SUBFILING
-    /* ncmpii__enddef() will update ncp->num_subfiles */
+    /* ncmpio__enddef() will update ncp->num_subfiles */
     /* TODO: should check ncid_sf? */
     /* if the file has subfiles, close them first */
     if (ncp->num_subfiles > 1)
-        ncmpii_subfile_close(ncp);
+        ncmpio_subfile_close(ncp);
 #endif
 
     /* We can cancel or complete all outstanding nonblocking I/O.
      * For now, cancelling makes more sense. */
 #ifdef COMPLETE_NONBLOCKING_IO
     if (ncp->numGetReqs > 0) {
-        ncmpii_wait(ncp, NC_GET_REQ_ALL, NULL, NULL, INDEP_IO);
+        ncmpio_wait(ncp, NC_GET_REQ_ALL, NULL, NULL, INDEP_IO);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
     if (ncp->numPutReqs > 0) {
-        ncmpii_wait(ncp, NC_PUT_REQ_ALL, NULL, NULL, INDEP_IO);
+        ncmpio_wait(ncp, NC_PUT_REQ_ALL, NULL, NULL, INDEP_IO);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
 #else
@@ -111,27 +111,27 @@ ncmpii_close(void *ncdp)
         int rank;
         MPI_Comm_rank(ncp->comm, &rank);
         printf("PnetCDF warning: %d nonblocking get requests still pending on process %d. Cancelling ...\n",ncp->numGetReqs,rank);
-        ncmpii_cancel(ncp, NC_GET_REQ_ALL, NULL, NULL);
+        ncmpio_cancel(ncp, NC_GET_REQ_ALL, NULL, NULL);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
     if (ncp->numPutReqs > 0) {
         int rank;
         MPI_Comm_rank(ncp->comm, &rank);
         printf("PnetCDF warning: %d nonblocking put requests still pending on process %d. Cancelling ...\n",ncp->numPutReqs,rank);
-        ncmpii_cancel(ncp, NC_PUT_REQ_ALL, NULL, NULL);
+        ncmpio_cancel(ncp, NC_PUT_REQ_ALL, NULL, NULL);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
 #endif
 
     /* If the user wants a stronger data consistency by setting NC_SHARE */
     if (NC_doFsync(ncp))
-        ncmpiio_sync(ncp); /* calling MPI_File_sync() */
+        ncmpio_file_sync(ncp); /* calling MPI_File_sync() */
 
     /* calling MPI_File_close() */
     ncmpio_close_files(ncp, 0);
 
     /* free up space occupied by the header metadata */
-    ncmpii_free_NC(ncp);
+    ncmpio_free_NC(ncp);
 
     return status;
 }

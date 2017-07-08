@@ -28,9 +28,9 @@ dnl
 #include "ncx.h"
 #include "ncmpidtype.h"
 
-/*----< ncmpii_igetput_varn() >-----------------------------------------------*/
+/*----< ncmpio_igetput_varn() >-----------------------------------------------*/
 static int
-ncmpii_igetput_varn(NC                *ncp,
+ncmpio_igetput_varn(NC                *ncp,
                     NC_var            *varp,
                     int                num,
                     MPI_Offset* const *starts,  /* [num][varp->ndims] */
@@ -77,7 +77,7 @@ ncmpii_igetput_varn(NC                *ncp,
          * in file - no data conversion will be done. Also, it means buf is
          * contiguous. buftype will no longer be used.
          */
-        ptype = ncmpii_nc2mpitype(varp->type);
+        ptype = ncmpio_nc2mpitype(varp->type);
         MPI_Type_size(ptype, &el_size); /* buffer element size */
     }
     else if (bufcount == -1) { /* if (IsPrimityMPIType(buftype)) */
@@ -97,7 +97,7 @@ ncmpii_igetput_varn(NC                *ncp,
          * el_size is the element size of ptype
          * bnelems is the total number of ptype elements in buftype
          */
-        status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+        status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                      &isderived, &iscontig_of_ptypes);
 
         if (status != NC_NOERR) return status;
@@ -151,7 +151,7 @@ ncmpii_igetput_varn(NC                *ncp,
             buflen *= _counts[i][j];
 
         if (buflen == 0) continue;
-        status = ncmpii_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
+        status = ncmpio_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
                                      NULL, bufp, buflen, ptype, &reqid,
                                      rw_flag, use_abuf, isSameGroup);
         if (status != NC_NOERR) goto err_check;
@@ -199,7 +199,7 @@ err_check:
 
     if (status != NC_NOERR) {
         if (reqid != NC_REQ_NULL) /* cancel pending nonblocking request */
-            ncmpii_cancel(ncp, 1, &reqid, NULL);
+            ncmpio_cancel(ncp, 1, &reqid, NULL);
         if (free_cbuf) NCI_Free(cbuf);
     }
     if (reqidp != NULL) *reqidp = reqid;
@@ -218,9 +218,9 @@ dnl VARN(iget/iput/bput)
 dnl
 define(`VARN',dnl
 `dnl
-/*----< ncmpii_$1_varn() >----------------------------------------------------*/
+/*----< ncmpio_$1_varn() >----------------------------------------------------*/
 int
-ncmpii_$1_varn(void               *ncdp,
+ncmpio_$1_varn(void               *ncdp,
                int                 varid,
                int                 num,
                MPI_Offset* const  *starts,
@@ -240,12 +240,12 @@ ncmpii_$1_varn(void               *ncdp,
     /* check for zero-size request */
     if (num == 0 || bufcount == 0) return NC_NOERR;
 
-    status = ncmpii_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
+    status = ncmpio_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
                                  buftype, API_VARN, (itype==NC_NAT), 0,
                                  ReadWrite($1), NONBLOCKING_IO, &varp);
     if (status != NC_NOERR) return status;
 
-    return ncmpii_igetput_varn(ncp, varp, num, starts, counts, (void*)buf,
+    return ncmpio_igetput_varn(ncp, varp, num, starts, counts, (void*)buf,
                                bufcount, buftype, reqid, ReadWrite($1),
                                IsBput($1));
 }

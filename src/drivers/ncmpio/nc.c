@@ -77,7 +77,7 @@ NC_check_header(NC         *ncp,
              */
 
             /* Note that gbp.nciop and gbp.offset below will not be used in
-             * ncmpii_hdr_check_NC() */
+             * ncmpio_hdr_check_NC() */
             gbp.nciop  = ncp->nciop;
             gbp.offset = 0;
             gbp.size   = h_size;   /* entire header is in the buffer, cmpbuf */
@@ -86,10 +86,10 @@ NC_check_header(NC         *ncp,
 
             /* find the inconsistent part of the header, report the difference,
              * and overwrite the local header object with root's.
-             * ncmpii_hdr_check_NC() should not have any MPI communication
+             * ncmpio_hdr_check_NC() should not have any MPI communication
              * calls.
              */
-            status = ncmpii_hdr_check_NC(&gbp, ncp);
+            status = ncmpio_hdr_check_NC(&gbp, ncp);
 
             /* header consistency is only checked on non-root processes. The
              * returned status can be a fatal error or header inconsistency
@@ -104,7 +104,7 @@ NC_check_header(NC         *ncp,
         TRACE_COMM(MPI_Allreduce)(&status, &g_status, 1, MPI_INT, MPI_MIN,
                                   ncp->nciop->comm);
         if (mpireturn != MPI_SUCCESS) {
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce"); 
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce"); 
         }
         if (g_status != NC_NOERR) { /* some headers are inconsistent */
             if (status == NC_NOERR) DEBUG_ASSIGN_ERROR(status, NC_EMULTIDEFINE)
@@ -163,15 +163,15 @@ NC_check_def(MPI_Comm comm, void *buf, MPI_Offset nn) {
 }
 #endif
 
-/*----< ncmpii_free_NC() >----------------------------------------------------*/
-inline void
-ncmpii_free_NC(NC *ncp)
+/*----< ncmpio_free_NC() >----------------------------------------------------*/
+void
+ncmpio_free_NC(NC *ncp)
 {
     if (ncp == NULL) return;
 
-    ncmpii_free_NC_dimarray(&ncp->dims);
-    ncmpii_free_NC_attrarray(&ncp->attrs);
-    ncmpii_free_NC_vararray(&ncp->vars);
+    ncmpio_free_NC_dimarray(&ncp->dims);
+    ncmpio_free_NC_attrarray(&ncp->attrs);
+    ncmpio_free_NC_vararray(&ncp->vars);
 
     if (ncp->comm    != MPI_COMM_NULL) MPI_Comm_free(&ncp->comm);
     if (ncp->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&ncp->mpiinfo);
@@ -184,30 +184,34 @@ ncmpii_free_NC(NC *ncp)
     NCI_Free(ncp);
 }
 
-/*----< ncmpii_dup_NC() >----------------------------------------------------*/
+/*----< ncmpio_dup_NC() >----------------------------------------------------*/
 NC *
-ncmpii_dup_NC(const NC *ref)
+ncmpio_dup_NC(const NC *ref)
 {
     NC *ncp;
 
     ncp = (NC *) NCI_Calloc(1, sizeof(NC));
     if (ncp == NULL) return NULL;
 
-    if (ncmpii_dup_NC_dimarray(&ncp->dims,   &ref->dims)  != NC_NOERR ||
-        ncmpii_dup_NC_attrarray(&ncp->attrs, &ref->attrs) != NC_NOERR ||
-        ncmpii_dup_NC_vararray(&ncp->vars,   &ref->vars)  != NC_NOERR) {
-        ncmpii_free_NC(ncp);
+    *ncp = *ref;
+
+    if (ncmpio_dup_NC_dimarray(&ncp->dims,   &ref->dims)  != NC_NOERR ||
+        ncmpio_dup_NC_attrarray(&ncp->attrs, &ref->attrs) != NC_NOERR ||
+        ncmpio_dup_NC_vararray(&ncp->vars,   &ref->vars)  != NC_NOERR) {
+        ncmpio_free_NC(ncp);
         return NULL;
     }
-    ncp->xsz       = ref->xsz;
-    ncp->begin_var = ref->begin_var;
-    ncp->begin_rec = ref->begin_rec;
-    ncp->recsize   = ref->recsize;
 
-    NC_set_numrecs(ncp, NC_get_numrecs(ref));
+    /* fields below should not copied from ref */
+    ncp->comm       = MPI_COMM_NULL;
+    ncp->mpiinfo    = MPI_INFO_NULL;
+    ncp->get_list   = NULL;
+    ncp->put_list   = NULL;
+    ncp->abuf       = NULL;
+    ncp->path       = NULL;
+
     return ncp;
 }
-
 
 /*
  *  Verify that this is a user nc_type
@@ -216,7 +220,7 @@ NCcktype()
  * Sense of the return is changed.
  */
 inline int
-ncmpii_cktype(int     cdf_ver,
+ncmpio_cktype(int     cdf_ver,
               nc_type type)
 {
     /* the max data type supported by CDF-5 is NC_UINT64 */
@@ -262,14 +266,14 @@ ncmpix_howmany(nc_type type, MPI_Offset xbufsize)
  */
 
 inline int
-ncmpii_read_NC(NC *ncp) {
+ncmpio_read_NC(NC *ncp) {
   int status = NC_NOERR;
 
-  ncmpii_free_NC_dimarray(&ncp->dims);
-  ncmpii_free_NC_attrarray(&ncp->attrs);
-  ncmpii_free_NC_vararray(&ncp->vars);
+  ncmpio_free_NC_dimarray(&ncp->dims);
+  ncmpio_free_NC_attrarray(&ncp->attrs);
+  ncmpio_free_NC_vararray(&ncp->vars);
 
-  status = ncmpii_hdr_get_NC(ncp);
+  status = ncmpio_hdr_get_NC(ncp);
 
   if (status == NC_NOERR)
       fClr(ncp->flags, NC_NDIRTY);
@@ -278,7 +282,7 @@ ncmpii_read_NC(NC *ncp) {
 }
 
 inline int
-ncmpii_dset_has_recvars(NC *ncp)
+ncmpio_dset_has_recvars(NC *ncp)
 {
     /* possible further optimization: set a flag on the header data
      * structure when record variable created so we can skip this loop*/
@@ -299,7 +303,7 @@ ncmpii_dset_has_recvars(NC *ncp)
  * (product of non-rec dim sizes too large), else return NC_NOERR.
  */
 int
-ncmpii_NC_check_vlens(NC *ncp)
+ncmpio_NC_check_vlens(NC *ncp)
 {
     NC_var **vpp;
     /* maximum permitted variable size (or size of one record's worth
@@ -329,7 +333,7 @@ ncmpii_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (!IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpii_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_fix_vars_count++;
                 last = 1;
@@ -360,7 +364,7 @@ ncmpii_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpii_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_rec_vars_count++;
                 last = 1;

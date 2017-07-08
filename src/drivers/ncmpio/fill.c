@@ -60,10 +60,10 @@ static unsigned char FILL_UINT[4]   = {0xFF, 0xFF, 0xFF, 0xFF};
 static unsigned char FILL_INT64[8]  = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
 static unsigned char FILL_UINT64[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE};
 
-/*----< ncmpii_inq_default_fill_value() >------------------------------------*/
+/*----< ncmpio_inq_default_fill_value() >------------------------------------*/
 /* copy the default fill value to the memory space pointed by fill_value */
 int
-ncmpii_inq_default_fill_value(int xtype, void *fillp)
+ncmpio_inq_default_fill_value(int xtype, void *fillp)
 {
     if (fillp == NULL) return NC_NOERR;
 
@@ -84,17 +84,17 @@ ncmpii_inq_default_fill_value(int xtype, void *fillp)
     return NC_NOERR;
 }
 
-/*----< ncmpii_fill_var_buf() >----------------------------------------------*/
+/*----< ncmpio_fill_var_buf() >----------------------------------------------*/
 /* fill the buffer, buf, with either user-defined fill values or default
  * values */
 static int
-ncmpii_fill_var_buf(const NC_var *varp,
+ncmpio_fill_var_buf(const NC_var *varp,
                     MPI_Offset    bnelems, /* number of elements in buf */
                     void         *buf)
 {
     int i, indx;
 
-    indx = ncmpii_NC_findattr(&varp->attrs, _FillValue);
+    indx = ncmpio_NC_findattr(&varp->attrs, _FillValue);
     if (indx >= 0) {
         /* User defined fill value */
         NC_attr *attrp = varp->attrs.value[indx];
@@ -134,8 +134,9 @@ ncmpii_fill_var_buf(const NC_var *varp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_fill_var() >--------------------------------------------------*/
-/* For fixed-size variables, write the entire variable with fill values and
+/*----< ncmpio_fill_var() >--------------------------------------------------*/
+/* This function is a collective.
+ * For fixed-size variables, write the entire variable with fill values and
  * ignore argument recno. For record variables, write one record of that
  * variable with pre-defined/supplied fill value.
  */
@@ -177,7 +178,7 @@ ncmpiio_fill_var_rec(NC         *ncp,
     buf = NCI_Malloc((size_t)(count * varp->xsz));
 
     /* fill buffer with fill values */
-    err = ncmpii_fill_var_buf(varp, count, buf);
+    err = ncmpio_fill_var_buf(varp, count, buf);
     if (err != NC_NOERR) {
         NCI_Free(buf);
         return err;
@@ -208,21 +209,37 @@ ncmpiio_fill_var_rec(NC         *ncp,
     if (err != NC_NOERR) return err;
 
     if (mpireturn != MPI_SUCCESS)
-        return ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
+        return ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
 
     if (IS_RECVAR(varp)) { /* update header's number of records in memory */
-        err = ncmpiio_sync_numrecs(ncp, recno+1);
-        if (err == NC_NOERR) return err;
+        /* recno may be differenet among, if safe mode is disabled. In
+         * addition, recno can be > or < then ncp->numrecs. We need to sync
+         * first before update numrecs field in file.
+         *
+         * First, find the max numrecs among all processes.
+         */
+        MPI_Offset max_numrecs, numrecs=recno+1;
+        TRACE_COMM(MPI_Allreduce)(&numrecs, &max_numrecs, 1, MPI_OFFSET,
+                                  MPI_MAX, ncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+
+        /* In collective mode, ncp->numrecs is always sync-ed among processes */
+        if (ncp->numrecs < max_numrecs) {
+            err = ncmpio_write_numrecs(ncp, max_numrecs);
+            if (err != NC_NOERR) return err;
+            ncp->numrecs = max_numrecs;
+        }
     }
 
     return NC_NOERR;
 }
 
-/*----< ncmpii_fill_var() >--------------------------------------------------*/
+/*----< ncmpio_fill_var() >--------------------------------------------------*/
 /* fill an entire record of a record variable
  * this API is collective, must be called in data mode */
 int
-ncmpii_fill_var_rec(void      *ncdp,
+ncmpio_fill_var_rec(void      *ncdp,
                     int        varid,
                     MPI_Offset recno) /* record number, ignored if non-record var */
 {
@@ -243,7 +260,7 @@ ncmpii_fill_var_rec(void      *ncdp,
     }
 
     /* check whether variable ID is valid */
-    err = ncmpii_NC_lookupvar(ncp, varid, &varp);
+    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -255,8 +272,13 @@ ncmpii_fill_var_rec(void      *ncdp,
         goto err_check;
     }
 
+    if (NC_indep(ncp)) { /* must be called in collective data mode */
+        DEBUG_ASSIGN_ERROR(err, NC_EINDEP)
+        goto err_check;
+    }
+
     /* check if _FillValue attribute is defined */
-    indx = ncmpii_NC_findattr(&varp->attrs, _FillValue);
+    indx = ncmpio_NC_findattr(&varp->attrs, _FillValue);
 
     /* error if the fill mode of this variable is not on */
     if (varp->no_fill && indx == -1) {
@@ -273,7 +295,7 @@ err_check:
         root_varid = varid;
         TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_varid != varid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
@@ -281,14 +303,14 @@ err_check:
         root_recno = recno;
         TRACE_COMM(MPI_Bcast)(&root_recno, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_recno != recno)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
 
         if (err == NC_NOERR) err = status;
     }
@@ -299,14 +321,14 @@ err_check:
     return ncmpiio_fill_var_rec(ncp, varp, recno);
 }
 
-/*----< ncmpii_set_fill() >--------------------------------------------------*/
+/*----< ncmpio_set_fill() >--------------------------------------------------*/
 /* this API is collective, must be called in define mode, contrary to netCDF
  * where nc_set_fill() can also be called in data mode. The reason of PnetCDF
  * enforcing this requirement is because PnetCDF only fills fixed-size
  * variables at ncmpi_enddef() and record variables in ncmpi_fill_var_rec().
  */
 int
-ncmpii_set_fill(void *ncdp,
+ncmpio_set_fill(void *ncdp,
                 int   fill_mode,
                 int  *old_fill_mode)
 {
@@ -331,7 +353,7 @@ err_check:
 
         TRACE_COMM(MPI_Bcast)(&root_fill_mode, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return  ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+            return  ncmpio_handle_error(mpireturn, "MPI_Bcast"); 
         if (err == NC_NOERR && fill_mode != root_fill_mode)
             /* dataset's fill mode is inconsistent with root's */
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FILL_MODE)
@@ -339,7 +361,7 @@ err_check:
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
         if (err == NC_NOERR) err = status;
     }
     if (err != NC_NOERR) return err;
@@ -366,10 +388,10 @@ err_check:
     return NC_NOERR;
 }
 
-/*----< ncmpii_def_var_fill() >-----------------------------------------------*/
+/*----< ncmpio_def_var_fill() >-----------------------------------------------*/
 /* this API is collective, and must be called in define mode */
 int
-ncmpii_def_var_fill(void       *ncdp,
+ncmpio_def_var_fill(void       *ncdp,
                     int         varid,
                     int         no_fill,    /* 1: no fill, 0: fill */
                     const void *fill_value) /* when NULL, use default fill value */
@@ -391,7 +413,7 @@ ncmpii_def_var_fill(void       *ncdp,
     }
 
     /* check whether variable ID is valid */
-    err = ncmpii_NC_lookupvar(ncp, varid, &varp);
+    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -408,7 +430,7 @@ err_check:
         root_ids[2] = my_fill_null;
         TRACE_COMM(MPI_Bcast)(&root_ids, 3, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && (root_ids[0] != varid ||
             root_ids[1] != no_fill || root_ids[2] != my_fill_null))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
@@ -420,7 +442,7 @@ err_check:
                 memcpy(&root_fill_value, fill_value, (size_t)varp->xsz);
             TRACE_COMM(MPI_Bcast)(&root_fill_value, varp->xsz, MPI_BYTE, 0, ncp->comm);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+                return ncmpio_handle_error(mpireturn, "MPI_Bcast");
             if (err == NC_NOERR && fill_value != NULL &&
                 memcmp(fill_value, &root_fill_value, (size_t)varp->xsz))
                 /* variable's fill value is inconsistent with root's */
@@ -430,7 +452,7 @@ err_check:
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
 
         if (err == NC_NOERR) err = status;
     }
@@ -447,7 +469,7 @@ err_check:
     if (fill_value != NULL && !varp->no_fill) {
 
         /* create/overwrite attribute _FillValue */
-        err = ncmpii_put_att(ncdp, varid, _FillValue, varp->type,
+        err = ncmpio_put_att(ncdp, varid, _FillValue, varp->type,
                              1, fill_value, varp->type);
         if (err != NC_NOERR) return err;
     }
@@ -455,9 +477,9 @@ err_check:
     return NC_NOERR;
 }
 
-/*----< ncmpii_inq_var_fill() >----------------------------------------------*/
+/*----< ncmpio_inq_var_fill() >----------------------------------------------*/
 int
-ncmpii_inq_var_fill(NC_var *varp,
+ncmpio_inq_var_fill(NC_var *varp,
                     void   *fill_value) /* OUT: user-defined or
                                                 default fill value */
 {
@@ -479,7 +501,7 @@ ncmpii_inq_var_fill(NC_var *varp,
          * it is not defined for the variable. Default fill values are used.
          * See fill_NC_var() in putget.m4.
          */
-        err = ncmpii_inq_default_fill_value(varp->type, fill_value);
+        err = ncmpio_inq_default_fill_value(varp->type, fill_value);
         return err;
     }
 
@@ -519,7 +541,7 @@ fillerup(NC *ncp)
             continue;
 
         /* check if _FillValue attribute is defined */
-        indx = ncmpii_NC_findattr(&ncp->vars.value[i]->attrs, _FillValue);
+        indx = ncmpio_NC_findattr(&ncp->vars.value[i]->attrs, _FillValue);
 
         /* only if filling this variable is requested. Fill mode can be
          * enabled by 2 ways: explictly call to ncmpi_def_var_fill() or put
@@ -548,7 +570,7 @@ fill_added(NC *ncp, NC *old_ncp)
             continue;
 
         /* check if _FillValue attribute is defined */
-        indx = ncmpii_NC_findattr(&ncp->vars.value[varid]->attrs, _FillValue);
+        indx = ncmpio_NC_findattr(&ncp->vars.value[varid]->attrs, _FillValue);
 
         /* only if filling this variable is requested */
         if (ncp->vars.value[varid]->no_fill && indx == -1) continue;
@@ -577,7 +599,7 @@ fill_added_recs(NC *ncp, NC *old_ncp)
                 continue;
 
             /* check if _FillValue attribute is defined */
-            indx = ncmpii_NC_findattr(&ncp->vars.value[varid]->attrs, _FillValue);
+            indx = ncmpio_NC_findattr(&ncp->vars.value[varid]->attrs, _FillValue);
 
             /* only if filling this variable is requested */
             if (ncp->vars.value[varid]->no_fill && indx == -1) continue;
@@ -758,7 +780,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
             offset[k] = offset[j];
         }
         j++;
-        err = ncmpii_fill_var_buf(varp, count[k], buf_ptr);
+        err = ncmpio_fill_var_buf(varp, count[k], buf_ptr);
         if (err != NC_NOERR) {
             if (status == NC_NOERR) status = err;
             continue; /* skip this request */
@@ -789,7 +811,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
                 offset[k] = offset[j];
             }
             j++;
-            err = ncmpii_fill_var_buf(varp, count[k], buf_ptr);
+            err = ncmpio_fill_var_buf(varp, count[k], buf_ptr);
             if (err != NC_NOERR) {
                 if (status == NC_NOERR) status = err;
                 continue; /* skip this request */
@@ -822,7 +844,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
                                       &filetype);
 #endif
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_Type_hindexed");
+            err = ncmpio_handle_error(mpireturn, "MPI_Type_hindexed");
             /* return the first encountered error if there is any */
             if (status == NC_NOERR) status = err;
         }
@@ -854,14 +876,14 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
                                 MPI_INFO_NULL);
     if (mpireturn != MPI_SUCCESS)
         if (status == NC_NOERR)
-            status = ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
+            status = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
 
     return status;
 }
 
-/*----< ncmpii_fill_vars() >-------------------------------------------------*/
+/*----< ncmpio_fill_vars() >-------------------------------------------------*/
 int
-ncmpii_fill_vars(NC *ncp)
+ncmpio_fill_vars(NC *ncp)
 {
     int status=NC_NOERR;
 

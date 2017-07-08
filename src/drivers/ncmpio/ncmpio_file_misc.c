@@ -36,10 +36,10 @@
 #include "subfile.h"
 #endif
 
-/*----< ncmpii_redef() >-----------------------------------------------------*/
+/*----< ncmpio_redef() >-----------------------------------------------------*/
 /* This is a collective subroutine. */
 int
-ncmpii_redef(void *ncdp)
+ncmpio_redef(void *ncdp)
 {
     int err=NC_NOERR;
     NC *ncp = (NC*)ncdp;
@@ -55,15 +55,15 @@ ncmpii_redef(void *ncdp)
      * also ensure exiting define mode always entering collective data mode
      */
     if (NC_indep(ncp)) /* exit independent mode, if in independent mode */
-        ncmpii_end_indep_data(ncp);
+        ncmpio_end_indep_data(ncp);
 
     if (NC_doFsync(ncp)) { /* re-read the header from file */
-        err = ncmpii_read_NC(ncp);
+        err = ncmpio_read_NC(ncp);
         if (err != NC_NOERR) return err;
     }
 
     /* duplicate a header to be used in enddef() for checking if header grows */
-    ncp->old = ncmpii_dup_NC(ncp);
+    ncp->old = ncmpio_dup_NC(ncp);
     if (ncp->old == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* we are now entering define mode */
@@ -72,10 +72,10 @@ ncmpii_redef(void *ncdp)
     return NC_NOERR;
 }
 
-/*----< ncmpii_begin_indep_data() >------------------------------------------*/
+/*----< ncmpio_begin_indep_data() >------------------------------------------*/
 /* This is a collective subroutine. */
 int
-ncmpii_begin_indep_data(void *ncdp)
+ncmpio_begin_indep_data(void *ncdp)
 {
     int err=NC_NOERR;
     NC *ncp = (NC*)ncdp;
@@ -96,7 +96,7 @@ ncmpii_begin_indep_data(void *ncdp)
         /* MPI_File_sync() is collective */
         TRACE_IO(MPI_File_sync)(ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_handle_error(mpireturn, "MPI_File_sync");
+            err = ncmpio_handle_error(mpireturn, "MPI_File_sync");
             if (err == NC_NOERR) return err;
         }
         TRACE_COMM(MPI_Barrier)(ncp->comm);
@@ -107,20 +107,20 @@ ncmpii_begin_indep_data(void *ncdp)
     fSet(ncp->flags, NC_INDEP);
 
     /* open MPI_COMM_SELF file handler, if not yet opened */
-    err = ncmpii_check_mpifh(ncp, 0);
+    err = ncmpio_check_mpifh(ncp, 0);
 
     return err;
 }
 
-/*----< ncmpii_end_indep_data() >--------------------------------------------*/
+/*----< ncmpio_end_indep_data() >--------------------------------------------*/
 /* This is a collective subroutine.
  * It can be called from:
  *    1. ncmpi_end_indep_data()
  *    2. ncmpi_redef() from independent data mode entering to define more
- *    3. ncmpii_close() when closing the file
+ *    3. ncmpi_close() when closing the file
  */
 int
-ncmpii_end_indep_data(void *ncdp)
+ncmpio_end_indep_data(void *ncdp)
 {
     int status=NC_NOERR;
     NC *ncp = (NC*)ncdp;
@@ -134,7 +134,7 @@ ncmpii_end_indep_data(void *ncdp)
              * force sync in memory no matter if dirty or not.
              */
             set_NC_ndirty(ncp);
-            status = ncmpiio_sync_numrecs(ncp, ncp->numrecs);
+            status = ncmpio_sync_numrecs(ncp);
             /* the only possible dirty part of the header is numrecs */
         }
 
@@ -145,12 +145,12 @@ ncmpii_end_indep_data(void *ncdp)
             /* MPI_File_sync() is collective */
             TRACE_IO(MPI_File_sync)(ncp->independent_fh);
             if (mpireturn != MPI_SUCCESS) {
-                int err = ncmpii_handle_error(mpireturn, "MPI_File_sync");
+                int err = ncmpio_handle_error(mpireturn, "MPI_File_sync");
                 if (status == NC_NOERR) status = err;
             }
             TRACE_COMM(MPI_Barrier)(ncp->comm);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_Barrier");
+                return ncmpio_handle_error(mpireturn, "MPI_Barrier");
         }
 #endif
     }
@@ -160,10 +160,10 @@ ncmpii_end_indep_data(void *ncdp)
     return status;
 }
 
-/*----< ncmpii_abort() >-----------------------------------------------------*/
+/*----< ncmpio_abort() >-----------------------------------------------------*/
 /* This API is a collective subroutine */
 int
-ncmpii_abort(void *ncdp)
+ncmpio_abort(void *ncdp)
 {
    /*
     * In data mode, same as ncmpi_close().
@@ -180,7 +180,7 @@ ncmpii_abort(void *ncdp)
         /* a plain redef, not a create */
         assert(!NC_IsNew(ncp));
         assert(fIsSet(ncp->flags, NC_INDEF));
-        ncmpii_free_NC(ncp->old);
+        ncmpio_free_NC(ncp->old);
         ncp->old = NULL;
         fClr(ncp->flags, NC_INDEF);
     }
@@ -189,11 +189,11 @@ ncmpii_abort(void *ncdp)
         if (!NC_readonly(ncp) &&  /* file is open for write */
              NC_indep(ncp)) {     /* in independent data mode */
             /* exit independent mode, if in independent mode */
-            status = ncmpii_end_indep_data(ncp); /* will sync header */
+            status = ncmpio_end_indep_data(ncp); /* will sync header */
         }
 
         if (NC_doFsync(ncp)) {
-            err = ncmpiio_sync(ncp); /* calling MPI_File_sync() */
+            err = ncmpio_file_sync(ncp); /* calling MPI_File_sync() */
             if (status == NC_NOERR ) status = err;
         }
     }
@@ -203,14 +203,14 @@ ncmpii_abort(void *ncdp)
     if (status == NC_NOERR ) status = err;
 
     /* free up space occupied by the header metadata */
-    ncmpii_free_NC(ncp);
+    ncmpio_free_NC(ncp);
 
     return status;
 }
 
-/*----< ncmpii_inq() >-------------------------------------------------------*/
+/*----< ncmpio_inq() >-------------------------------------------------------*/
 int
-ncmpii_inq(void *ncdp,
+ncmpio_inq(void *ncdp,
            int  *ndimsp,
            int  *nvarsp,
            int  *nattsp,
@@ -226,10 +226,10 @@ ncmpii_inq(void *ncdp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_inq_misc() >--------------------------------------------------*/
+/*----< ncmpio_inq_misc() >--------------------------------------------------*/
 /* This is an independent subroutine. */
 int
-ncmpii_inq_misc(void       *ncdp,
+ncmpio_inq_misc(void       *ncdp,
                 int        *pathlen,
                 char       *path,
                 int        *num_fix_varsp,
@@ -327,7 +327,7 @@ ncmpii_inq_misc(void       *ncdp,
     if (info_used != NULL) {
         mpireturn = MPI_Info_dup(ncp->mpiinfo, info_used);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Info_dup");
+            return ncmpio_handle_error(mpireturn, "MPI_Info_dup");
 
         sprintf(value, "%lld", ncp->h_align);
         MPI_Info_set(*info_used, "nc_header_align_size", value);
@@ -399,7 +399,7 @@ ncmpi_delete(const char *filename,
 
     TRACE_IO(MPI_File_delete)((char*)filename, info);
     if (mpireturn != MPI_SUCCESS)
-        err = ncmpii_handle_error(mpireturn, "MPI_File_delete");
+        err = ncmpio_handle_error(mpireturn, "MPI_File_delete");
     return err;
 }
 

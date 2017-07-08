@@ -30,14 +30,14 @@
 /* for write case, buf needs to swapped back if swapped previously */
 #define FINAL_CLEAN_UP {                                                       \
     if (is_buf_swapped) /* byte-swap back to buf's original contents */        \
-        ncmpii_in_swapn(buf, bnelems, ncmpix_len_nctype(varp->type));          \
+        ncmpio_in_swapn(buf, bnelems, ncmpix_len_nctype(varp->type));          \
                                                                                \
     if (cbuf != NULL && cbuf != buf) NCI_Free(cbuf);                           \
 }
 
-/*----< ncmpii_getput_vard() >------------------------------------------------*/
+/*----< ncmpio_getput_vard() >------------------------------------------------*/
 static int
-ncmpii_getput_vard(NC               *ncp,
+ncmpio_getput_vard(NC               *ncp,
                    NC_var           *varp,
                    MPI_Datatype      filetype,  /* data type of the variable */
                    void             *buf,
@@ -80,7 +80,7 @@ ncmpii_getput_vard(NC               *ncp,
      * for largefiletypes */
     mpireturn = MPI_Type_size(filetype, &filetype_size);
     if (mpireturn != MPI_SUCCESS) {
-        err = ncmpii_handle_error(mpireturn, "MPI_Type_size");
+        err = ncmpio_handle_error(mpireturn, "MPI_Type_size");
         goto err_check;
     }
 
@@ -109,12 +109,12 @@ ncmpii_getput_vard(NC               *ncp,
     cbuf = (void*) buf;
 
     /* find the element type of filetype */
-    err = ncmpii_dtype_decode(filetype, &ptype, &el_size, &btnelems,
+    err = ncmpio_dtype_decode(filetype, &ptype, &el_size, &btnelems,
                               &isderived, &filetype_is_contig);
     if (err != NC_NOERR) goto err_check;
 
     /* element type of filetype must be the same as variable's type */
-    if (ptype != ncmpii_nc2mpitype(varp->type)) {
+    if (ptype != ncmpio_nc2mpitype(varp->type)) {
         DEBUG_ASSIGN_ERROR(err, NC_ETYPE_MISMATCH)
         goto err_check;
     }
@@ -130,7 +130,7 @@ ncmpii_getput_vard(NC               *ncp,
          * defined in the file - no data conversion will be done.
          */
         /* set buftype to the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpio_nc2mpitype(varp->type);
         MPI_Type_size(buftype, &buftype_size);
         bufcount = filetype_size / buftype_size;
         buftype_is_contig = 1;
@@ -140,7 +140,7 @@ ncmpii_getput_vard(NC               *ncp,
         MPI_Offset outsize;
 
         /* find whether buftype is contiguous */
-        err = ncmpii_dtype_decode(buftype, &ptype, &el_size, &btnelems,
+        err = ncmpio_dtype_decode(buftype, &ptype, &el_size, &btnelems,
                                   &isderived, &buftype_is_contig);
         if (err != NC_NOERR) goto err_check;
 
@@ -178,7 +178,7 @@ ncmpii_getput_vard(NC               *ncp,
     }
 
     /* Check if we need byte swap cbuf in-place or (into cbuf) */
-    need_swap = ncmpii_need_swap(varp->type, ptype);
+    need_swap = ncmpio_need_swap(varp->type, ptype);
     if (need_swap) {
         if (rw_flag == WRITE_REQ) {
 #ifdef DISABLE_IN_PLACE_SWAP
@@ -191,7 +191,7 @@ ncmpii_getput_vard(NC               *ncp,
                 memcpy(cbuf, buf, (size_t)filetype_size);
             }
             /* perform array in-place byte swap on cbuf */
-            ncmpii_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
             is_buf_swapped = (cbuf == buf) ? 1 : 0;
             /* is_buf_swapped indicates if the contents of the original user
              * buffer, buf, have been changed, i.e. byte swapped. */
@@ -226,7 +226,7 @@ err_check:
         fh = ncp->independent_fh;
 
     /* set the file view */
-    err = ncmpii_file_set_view(ncp, fh, &offset, filetype);
+    err = ncmpio_file_set_view(ncp, fh, &offset, filetype);
     if (err != NC_NOERR) {
         bufcount = 0; /* skip this request */
         if (status == NC_NOERR) status = err;
@@ -236,14 +236,14 @@ err_check:
         if (io_method == COLL_IO) {
             TRACE_IO(MPI_File_write_at_all)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
+                return ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
             else
                 ncp->put_size += bufcount * buftype_size;
         }
         else { /* io_method == INDEP_IO */
             TRACE_IO(MPI_File_write_at)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_File_write_at");
+                return ncmpio_handle_error(mpireturn, "MPI_File_write_at");
             else
                 ncp->put_size += bufcount * buftype_size;
         }
@@ -252,14 +252,14 @@ err_check:
         if (io_method == COLL_IO) {
             TRACE_IO(MPI_File_read_at_all)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_File_read_at_all");
+                return ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
             else
                 ncp->get_size += bufcount * buftype_size;
         }
         else { /* io_method == INDEP_IO */
             TRACE_IO(MPI_File_read_at)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpii_handle_error(mpireturn, "MPI_File_read_at");
+                return ncmpio_handle_error(mpireturn, "MPI_File_read_at");
             else
                 ncp->get_size += bufcount * buftype_size;
         }
@@ -273,7 +273,7 @@ err_check:
     if (rw_flag == READ_REQ) {
         if (need_swap)
             /* perform array in-place byte swap on cbuf */
-            ncmpii_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
 
         if (!buftype_is_contig && bnelems > 0) {
             /* unpack cbuf, a contiguous buffer, to buf using buftype */
@@ -310,8 +310,23 @@ err_check:
                 }
             }
             else { /* COLL_IO: sync numrecs in memory and file */
-                err = ncmpiio_sync_numrecs(ncp, new_numrecs);
-                if (err != NC_NOERR && status == NC_NOERR) status = err;
+                /* new_numrecs may be different among processes.
+                 * First, find the max numrecs among all processes.
+                 */
+                MPI_Offset max_numrecs;
+                TRACE_COMM(MPI_Allreduce)(&new_numrecs, &max_numrecs, 1,
+                                          MPI_OFFSET, MPI_MAX, ncp->comm);
+                if (mpireturn != MPI_SUCCESS) {
+                    err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+                    if (status == NC_NOERR) status = err;
+                }
+                /* In collective mode, ncp->numrecs is always sync-ed among
+                   processes */
+                if (ncp->numrecs < max_numrecs) {
+                    err = ncmpio_write_numrecs(ncp, max_numrecs);
+                    if (status == NC_NOERR) status = err;
+                    ncp->numrecs = max_numrecs;
+                }
             }
         }
 
@@ -327,9 +342,9 @@ err_check:
     return status;
 }
 
-/*----< ncmpii_get_vard() >--------------------------------------------------*/
+/*----< ncmpio_get_vard() >--------------------------------------------------*/
 int
-ncmpii_get_vard(void         *ncdp,
+ncmpio_get_vard(void         *ncdp,
                 int           varid,
                 MPI_Datatype  filetype,  /* access layout to the variable in file */
                 void         *buf,
@@ -341,7 +356,7 @@ ncmpii_get_vard(void         *ncdp,
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    status = ncmpii_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
+    status = ncmpio_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
                                  buftype, API_VARD, 1, 1, READ_REQ, io_method,
                                  &varp);
     if (status != NC_NOERR) {
@@ -352,20 +367,20 @@ ncmpii_get_vard(void         *ncdp,
 
         /* for collective API, participate the collective I/O with zero-length
          * request for this process */
-        err = ncmpii_getput_zero_req(ncp, READ_REQ);
+        err = ncmpio_getput_zero_req(ncp, READ_REQ);
         assert(err == NC_NOERR);
 
         /* return the error code from sanity check */
         return status;
     }
 
-    return ncmpii_getput_vard(ncp, varp, filetype, buf, bufcount, buftype,
+    return ncmpio_getput_vard(ncp, varp, filetype, buf, bufcount, buftype,
                               READ_REQ, io_method);
 }
 
-/*----< ncmpii_put_vard() >--------------------------------------------------*/
+/*----< ncmpio_put_vard() >--------------------------------------------------*/
 int
-ncmpii_put_vard(void         *ncdp,
+ncmpio_put_vard(void         *ncdp,
                 int           varid,
                 MPI_Datatype  filetype,  /* access layout to the variable in file */
                 const void   *buf,
@@ -377,7 +392,7 @@ ncmpii_put_vard(void         *ncdp,
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    status = ncmpii_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
+    status = ncmpio_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
                                  buftype, API_VARD, 1, 1, WRITE_REQ, io_method,
                                  &varp);
     if (status != NC_NOERR) {
@@ -388,13 +403,13 @@ ncmpii_put_vard(void         *ncdp,
 
         /* for collective API, participate the collective I/O with zero-length
          * request for this process */
-        err = ncmpii_getput_zero_req(ncp, WRITE_REQ);
+        err = ncmpio_getput_zero_req(ncp, WRITE_REQ);
         assert(err == NC_NOERR);
 
         /* return the error code from sanity check */
         return status;
     }
 
-    return ncmpii_getput_vard(ncp, varp, filetype, (void*)buf, bufcount,
+    return ncmpio_getput_vard(ncp, varp, filetype, (void*)buf, bufcount,
                               buftype, WRITE_REQ, io_method);
 }

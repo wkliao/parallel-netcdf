@@ -19,7 +19,7 @@
 /* borrow Jenkins hash function:
  * https://en.wikipedia.org/wiki/Jenkins_hash_function
  */
-int ncmpii_jenkins_one_at_a_time_hash(const char *str_name)
+int ncmpio_jenkins_one_at_a_time_hash(const char *str_name)
 {
     unsigned int i, hash=0;
     for (i=0; i<strlen(str_name); ++i) {
@@ -45,7 +45,7 @@ int ncmpii_jenkins_one_at_a_time_hash(const char *str_name)
 /* try different hash functions described in
  * http://www.burtleburtle.net/bob/hash/doobs.html
  */
-int ncmpii_additive_hash(const char *str_name)
+int ncmpio_additive_hash(const char *str_name)
 {
     size_t i, len = strlen(str_name);
     int hash = (int)len;
@@ -55,7 +55,7 @@ int ncmpii_additive_hash(const char *str_name)
     return (hash % 251); /* 251 is the largest prime <= 255 */
 }
 
-int ncmpii_rotating_hash(const char *str_name)
+int ncmpio_rotating_hash(const char *str_name)
 {
     size_t i, len = strlen(str_name);
     unsigned int hash = (unsigned int)len;
@@ -66,7 +66,7 @@ int ncmpii_rotating_hash(const char *str_name)
     return (int)((hash ^ (hash>>10) ^ (hash>>20)) & (HASH_TABLE_SIZE-1));
 }
 
-int ncmpii_Bernstein_hash(const char *str_name)
+int ncmpio_Bernstein_hash(const char *str_name)
 {
     size_t i, len = strlen(str_name);
     unsigned int hash = (unsigned int)len;
@@ -77,7 +77,7 @@ int ncmpii_Bernstein_hash(const char *str_name)
     return (int)((hash ^ (hash>>10) ^ (hash>>20)) & (HASH_TABLE_SIZE-1));
 }
 
-int ncmpii_Pearson_hash(const char *str_name)
+int ncmpio_Pearson_hash(const char *str_name)
 {
 #if HASH_TABLE_SIZE == 256
     unsigned char T[256] = {

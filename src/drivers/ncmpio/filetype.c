@@ -162,13 +162,13 @@ NC_start_count_stride_ck(const NC         *ncp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_get_offset() >------------------------------------------------*/
+/*----< ncmpio_get_offset() >------------------------------------------------*/
 /* returns the file offset of the last byte accessed of this request
  * If counts is NULL, this is equivalent to the starting offset of this
  * request
  */
 int
-ncmpii_get_offset(NC               *ncp,
+ncmpio_get_offset(NC               *ncp,
                   NC_var           *varp,
                   const MPI_Offset  starts[],   /* [varp->ndims] */
                   const MPI_Offset  counts[],   /* [varp->ndims] */
@@ -233,9 +233,9 @@ ncmpii_get_offset(NC               *ncp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_is_request_contiguous() >-------------------------------------*/
+/*----< ncmpio_is_request_contiguous() >-------------------------------------*/
 int
-ncmpii_is_request_contiguous(NC               *ncp,
+ncmpio_is_request_contiguous(NC               *ncp,
                              NC_var           *varp,
                              const MPI_Offset  starts[],
                              const MPI_Offset  counts[])
@@ -290,11 +290,11 @@ ncmpii_is_request_contiguous(NC               *ncp,
 }
 
 #ifndef HAVE_MPI_TYPE_CREATE_SUBARRAY
-/*----< ncmpii_type_create_subarray() >--------------------------------------*/
+/*----< ncmpio_type_create_subarray() >--------------------------------------*/
 /* this is to be used when MPI_Type_create_subarray() is not available,
  * typically for MPI-1 implementation only */
 static int
-ncmpii_type_create_subarray(int           ndims,
+ncmpio_type_create_subarray(int           ndims,
                             int          *array_of_sizes,    /* [ndims] */
                             int          *array_of_subsizes, /* [ndims] */
                             int          *array_of_starts,   /* [ndims] */
@@ -326,13 +326,13 @@ ncmpii_type_create_subarray(int           ndims,
         /* take advantage of disps argument is of type MPI_Aint */
         err = MPI_Type_create_hindexed(1, &blklens[1], &disps[1], oldtype, &type1);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_hindexed");
+            return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
         MPI_Type_commit(&type1);
 
         /* add holes in the beginning and tail of type1 */
         err = MPI_Type_create_resized(type1, 0, array_size, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_resized");
+            return ncmpio_handle_error(err, "MPI_Type_create_resized");
         MPI_Type_free(&type1);
 #else
         /* add holes in the beginning and tail of oldtype */
@@ -341,7 +341,7 @@ ncmpii_type_create_subarray(int           ndims,
         disps[0] = 0;                          disps[2] = array_size;
         err = MPI_Type_struct(3, blklens, disps, types, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_struct");
+            return ncmpio_handle_error(err, "MPI_Type_struct");
 #endif
         return NC_NOERR;
     }
@@ -356,12 +356,12 @@ ncmpii_type_create_subarray(int           ndims,
     err = MPI_Type_create_hvector(array_of_subsizes[ndims-2], blklens[0],
                                   stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 #else
     err = MPI_Type_hvector(array_of_subsizes[ndims-2], blklens[0],
                            stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_hvector");
+        return ncmpio_handle_error(err, "MPI_Type_hvector");
 #endif
     MPI_Type_commit(&type1);
 
@@ -371,11 +371,11 @@ ncmpii_type_create_subarray(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
         err = MPI_Type_create_hvector(array_of_subsizes[i], 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector(array_of_subsizes[i], 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_hvector");
 #endif
         MPI_Type_commit(&type2);
         MPI_Type_free(&type1);
@@ -402,11 +402,11 @@ ncmpii_type_create_subarray(int           ndims,
     /* adjust LB and UB without using MPI_LB or MPI_UB */
     err = MPI_Type_create_hindexed(1, blklens, &disps[1], type1, &type2);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_hindexed");
+        return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
     MPI_Type_commit(&type2);
     err = MPI_Type_create_resized(type2, disps[0], disps[2], newtype);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_resized");
+        return ncmpio_handle_error(err, "MPI_Type_create_resized");
     MPI_Type_free(&type2);
 #else
     MPI_Datatype types[3];
@@ -415,7 +415,7 @@ ncmpii_type_create_subarray(int           ndims,
     types[2] = MPI_UB;
     err = MPI_Type_struct(3, blklens, disps, types, newtype);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_struct");
+        return ncmpio_handle_error(err, "MPI_Type_struct");
 #endif
     MPI_Type_free(&type1);
 
@@ -423,13 +423,13 @@ ncmpii_type_create_subarray(int           ndims,
 }
 #endif
 
-/*----< ncmpii_type_create_subarray64() >------------------------------------*/
+/*----< ncmpio_type_create_subarray64() >------------------------------------*/
 /* This subroutine is to achieve the same result as MPI_Type_create_subarray()
  * but it takes arguments in type of MPI_Offset, instead of int. It also
  * checked for any possible 4-byte integer overflow.
  */
 static int
-ncmpii_type_create_subarray64(int           ndims,
+ncmpio_type_create_subarray64(int           ndims,
                               MPI_Offset   *array_of_sizes,    /* [ndims] */
                               MPI_Offset   *array_of_subsizes, /* [ndims] */
                               MPI_Offset   *array_of_starts,   /* [ndims] */
@@ -475,9 +475,9 @@ ncmpii_type_create_subarray64(int           ndims,
                                        order, oldtype, newtype);
         NCI_Free(sizes);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_subarray");
+            return ncmpio_handle_error(err, "MPI_Type_create_subarray");
 #else
-        err = ncmpii_type_create_subarray(ndims, sizes, subsizes, starts,
+        err = ncmpio_type_create_subarray(ndims, sizes, subsizes, starts,
                                           order, oldtype, newtype);
         NCI_Free(sizes);
 #endif
@@ -519,13 +519,13 @@ ncmpii_type_create_subarray64(int           ndims,
         /* take advantage of disps argument is of type MPI_Aint */
         err = MPI_Type_create_hindexed(1, &blklens[1], &disps[1], oldtype, &type1);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_hindexed");
+            return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
         MPI_Type_commit(&type1);
 
         /* add holes in the beginning and tail of type1 */
         err = MPI_Type_create_resized(type1, 0, array_size, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_resized");
+            return ncmpio_handle_error(err, "MPI_Type_create_resized");
         MPI_Type_free(&type1);
 #else
         /* add holes in the beginning and tail of oldtype */
@@ -534,7 +534,7 @@ ncmpii_type_create_subarray64(int           ndims,
         disps[0] = 0;                          disps[2] = array_size;
         err = MPI_Type_struct(3, blklens, disps, types, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_struct");
+            return ncmpio_handle_error(err, "MPI_Type_struct");
 #endif
         return NC_NOERR;
     }
@@ -554,11 +554,11 @@ ncmpii_type_create_subarray64(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
     err = MPI_Type_create_hvector(count, blocklength, stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 #else
     err = MPI_Type_hvector(count, blocklength, stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_hvector");
+        return ncmpio_handle_error(err, "MPI_Type_hvector");
 #endif
     MPI_Type_commit(&type1);
 
@@ -571,11 +571,11 @@ ncmpii_type_create_subarray64(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
         err = MPI_Type_create_hvector(count, 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector(count, 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_hvector");
 #endif
         MPI_Type_commit(&type2);
         MPI_Type_free(&type1);
@@ -601,11 +601,11 @@ ncmpii_type_create_subarray64(int           ndims,
     /* adjust LB and UB without using MPI_LB or MPI_UB */
     err = MPI_Type_create_hindexed(1, blklens, &disps[1], type1, &type2);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_hindexed");
+        return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
     MPI_Type_commit(&type2);
     err = MPI_Type_create_resized(type2, disps[0], disps[2], newtype);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_resized");
+        return ncmpio_handle_error(err, "MPI_Type_create_resized");
     MPI_Type_free(&type2);
 #else
     MPI_Datatype types[3];
@@ -614,16 +614,16 @@ ncmpii_type_create_subarray64(int           ndims,
     types[2] = MPI_UB;
     err = MPI_Type_struct(3, blklens, disps, types, newtype);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_struct");
+        return ncmpio_handle_error(err, "MPI_Type_struct");
 #endif
     MPI_Type_free(&type1);
 
     return NC_NOERR;
 }
 
-/*----< ncmpii_vara_create_filetype() >--------------------------------------*/
+/*----< ncmpio_vara_create_filetype() >--------------------------------------*/
 static int
-ncmpii_vara_create_filetype(NC               *ncp,
+ncmpio_vara_create_filetype(NC               *ncp,
                             NC_var           *varp,
                             const MPI_Offset *start,
                             const MPI_Offset *count,
@@ -658,8 +658,8 @@ ncmpii_vara_create_filetype(NC               *ncp,
     }
 
     /* if the request is contiguous in file, no need to create a filetype */
-    if (ncmpii_is_request_contiguous(ncp, varp, start, count)) {
-        status = ncmpii_get_offset(ncp, varp, start, NULL, NULL, rw_flag,
+    if (ncmpio_is_request_contiguous(ncp, varp, start, count)) {
+        status = ncmpio_get_offset(ncp, varp, start, NULL, NULL, rw_flag,
                                    &offset);
         *offset_ptr   = offset;
         *filetype_ptr = MPI_BYTE;
@@ -711,7 +711,7 @@ ncmpii_vara_create_filetype(NC               *ncp,
             subcount64[varp->ndims-1] *= varp->xsz;
             substart64[varp->ndims-1] *= varp->xsz;
 
-            status = ncmpii_type_create_subarray64(varp->ndims-1, shape64+1,
+            status = ncmpio_type_create_subarray64(varp->ndims-1, shape64+1,
                                  subcount64+1, substart64+1, MPI_ORDER_C,
                                  MPI_BYTE, &rectype);
             NCI_Free(shape64);
@@ -728,12 +728,12 @@ ncmpii_vara_create_filetype(NC               *ncp,
         err = MPI_Type_create_hvector((int)count[0], blocklength, ncp->recsize,
                                       rectype, &filetype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector((int)count[0], blocklength, ncp->recsize,
                                rectype, &filetype);
         if (err != MPI_SUCCESS)
-            return ncmpii_handle_error(err, "MPI_Type_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_hvector");
 #endif
         if (rectype != MPI_BYTE) MPI_Type_free(&rectype);
     }
@@ -752,7 +752,7 @@ ncmpii_vara_create_filetype(NC               *ncp,
         subcount64[varp->ndims-1] *= varp->xsz;
         substart64[varp->ndims-1] *= varp->xsz;
 
-        status = ncmpii_type_create_subarray64(varp->ndims, shape64, subcount64,
+        status = ncmpio_type_create_subarray64(varp->ndims, shape64, subcount64,
                                                substart64, MPI_ORDER_C,
                                                MPI_BYTE, &filetype);
         NCI_Free(shape64);
@@ -853,9 +853,9 @@ stride_flatten(int               isRecVar, /* whether record variable */
     return 1;
 }
 
-/*----< ncmpii_vars_create_filetype() >--------------------------------------*/
+/*----< ncmpio_vars_create_filetype() >--------------------------------------*/
 int
-ncmpii_vars_create_filetype(NC               *ncp,
+ncmpio_vars_create_filetype(NC               *ncp,
                             NC_var           *varp,
                             const MPI_Offset  start[],
                             const MPI_Offset  count[],
@@ -872,7 +872,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
     MPI_Datatype  filetype=MPI_BYTE;
 
     if (stride == NULL)
-        return ncmpii_vara_create_filetype(ncp, varp, start, count, rw_flag,
+        return ncmpio_vara_create_filetype(ncp, varp, start, count, rw_flag,
                                            blocklen, offset_ptr, filetype_ptr,
                                            is_filetype_contig);
 
@@ -882,7 +882,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
             break;
 
     if (dim == varp->ndims) /* not a true vars */
-        return ncmpii_vara_create_filetype(ncp, varp, start, count, rw_flag,
+        return ncmpio_vara_create_filetype(ncp, varp, start, count, rw_flag,
                                            blocklen, offset_ptr, filetype_ptr,
                                            is_filetype_contig);
 
@@ -936,7 +936,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
     NCI_Free(disps);
     NCI_Free(blocklens);
     if (err != MPI_SUCCESS)
-        return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
 
     MPI_Type_commit(&filetype);
 
@@ -999,7 +999,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
         if (err != MPI_SUCCESS) {
             NCI_Free(blockstride);
             NCI_Free(blockcounts);
-            return ncmpii_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
         }
 #else
         err = MPI_Type_hvector(blockcounts[dim], blocklens[dim],
@@ -1007,7 +1007,7 @@ ncmpii_vars_create_filetype(NC               *ncp,
         if (err != MPI_SUCCESS) {
             NCI_Free(blockstride);
             NCI_Free(blockcounts);
-            return ncmpii_handle_error(err, "MPI_Type_hvector");
+            return ncmpio_handle_error(err, "MPI_Type_hvector");
         }
 #endif
         MPI_Type_commit(&filetype);
@@ -1054,13 +1054,13 @@ ncmpii_vars_create_filetype(NC               *ncp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_file_set_view() >---------------------------------------------*/
+/*----< ncmpio_file_set_view() >---------------------------------------------*/
 /* This function handles the special case for root process for setting its
  * file view: to keeps the whole file header visible to the root process.
  * This function is collective if called in collective data mode
  */
 int
-ncmpii_file_set_view(NC           *ncp,
+ncmpio_file_set_view(NC           *ncp,
                      MPI_File      fh,
                      MPI_Offset   *offset,  /* IN/OUT */
                      MPI_Datatype  filetype)
@@ -1122,7 +1122,7 @@ ncmpii_file_set_view(NC           *ncp,
         *offset = 0;
     }
     if (mpireturn != MPI_SUCCESS) {
-        err = ncmpii_handle_error(mpireturn, "MPI_File_set_view");
+        err = ncmpio_handle_error(mpireturn, "MPI_File_set_view");
         if (status == NC_NOERR) status = err;
     }
 

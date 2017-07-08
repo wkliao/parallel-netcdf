@@ -31,9 +31,9 @@
 #include "ncmpidtype.h"
 #include "macro.h"
 
-/*----< ncmpii_buffer_attach() >---------------------------------------------*/
+/*----< ncmpio_buffer_attach() >---------------------------------------------*/
 int
-ncmpii_buffer_attach(void       *ncdp,
+ncmpio_buffer_attach(void       *ncdp,
                      MPI_Offset  bufsize)
 {
     NC *ncp=(NC*)ncdp;
@@ -58,9 +58,9 @@ ncmpii_buffer_attach(void       *ncdp,
     return NC_NOERR;
 }
 
-/*----< ncmpii_buffer_detach() >---------------------------------------------*/
+/*----< ncmpio_buffer_detach() >---------------------------------------------*/
 int
-ncmpii_buffer_detach(void *ncdp)
+ncmpio_buffer_detach(void *ncdp)
 {
     int  i;
     NC  *ncp=(NC*)ncdp;
@@ -84,13 +84,13 @@ ncmpii_buffer_detach(void *ncdp)
 }
 
 #ifdef THIS_SEEMS_OVER_DONE_IT
-/*----< ncmpii_buffer_detach() >---------------------------------------------*/
+/*----< ncmpio_buffer_detach() >---------------------------------------------*/
 /* mimic MPI_Buffer_detach()
  * Note from MPI: Even though the 'bufferptr' argument is declared as
  * 'void *', it is really the address of a void pointer.
  */
 int
-ncmpii_buffer_detach(void       *ncdp,
+ncmpio_buffer_detach(void       *ncdp,
                      void       *bufptr,
                      MPI_Offset *bufsize)
 {
@@ -119,9 +119,9 @@ ncmpii_buffer_detach(void       *ncdp,
 }
 #endif
 
-/*----< ncmpii_bput_var() >--------------------------------------------------*/
+/*----< ncmpio_bput_var() >--------------------------------------------------*/
 int
-ncmpii_bput_var(void             *ncdp,
+ncmpio_bput_var(void             *ncdp,
                 int               varid,
                 const MPI_Offset *start,
                 const MPI_Offset *count,
@@ -141,7 +141,7 @@ ncmpii_bput_var(void             *ncdp,
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
-    err = ncmpii_sanity_check(ncp, varid, start, count, stride,
+    err = ncmpio_sanity_check(ncp, varid, start, count, stride,
                               bufcount, buftype, api, (itype==NC_NAT),
                               0, WRITE_REQ, NONBLOCKING_IO, &varp);
     if (err != NC_NOERR) return err;
@@ -153,7 +153,7 @@ ncmpii_bput_var(void             *ncdp,
          if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
-    err = ncmpii_igetput_varm(ncp, varp, _start, _count, stride, imap,
+    err = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
                               (void*)buf, bufcount, buftype,
                               reqid, WRITE_REQ, 1, 0);
 
