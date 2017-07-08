@@ -41,7 +41,7 @@ ncmpii_open(MPI_Comm     comm,
             void       **ncpp)
 {
     char *env_str;
-    int i, rank, mpiomode, err, mpireturn;
+    int i, mpiomode, err, mpireturn;
     MPI_File fh;
     MPI_Comm dup_comm;
     MPI_Info info_used;
@@ -161,7 +161,7 @@ ncmpii_open(MPI_Comm     comm,
     /* read header from file into NC object pointed by ncp -------------------*/
     err = ncmpii_hdr_get_NC(ncp);
     if (err != NC_NOERR) { /* fatal error */
-        ncmpiio_close(ncp, 0);
+        ncmpio_close_files(ncp, 0);
         ncmpii_free_NC(ncp);
         return err;
     }
@@ -169,13 +169,11 @@ ncmpii_open(MPI_Comm     comm,
 #ifdef ENABLE_SUBFILING
     if (ncp->subfile_mode) {
         /* check subfiling attribute */
-        err = ncmpii_get_att(ncp, NC_GLOBAL, "num_subfiles",
-                             &ncp->num_subfiles, NC_INT);
+        err = ncmpii_get_att(ncp, NC_GLOBAL, "num_subfiles", &ncp->num_subfiles,
+                             NC_INT);
         if (err == NC_NOERR && ncp->num_subfiles > 1) {
             /* ignore error NC_ENOTATT if this attribute is not defined */
-            int nvars = ncp->vars.ndefined;
-
-            for (i=0; i<nvars; i++) {
+            for (i=0; i<ncp->vars.ndefined; i++) {
                 err = ncmpii_get_att(ncp, i, "num_subfiles",
                                      &ncp->vars.value[i]->num_subfiles, NC_INT);
                 if (err == NC_ENOTATT) continue;
@@ -187,7 +185,6 @@ ncmpii_open(MPI_Comm     comm,
                     if (err != NC_NOERR) return err;
                 }
             }
-
             if (ncp->num_subfiles > 1) {
                 err = ncmpii_subfile_open(ncp, &ncp->ncid_sf);
                 if (err != NC_NOERR) return err;

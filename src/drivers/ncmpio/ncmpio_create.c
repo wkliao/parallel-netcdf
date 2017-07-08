@@ -190,25 +190,12 @@ ncmpii_create(MPI_Comm     comm,
     if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* set the file format version based on the create mode, cmode */
-    if (fIsSet(cmode, NC_64BIT_DATA)) {
-        fSet(ncp->flags, NC_64BIT_DATA);
-        ncp->format = 5;
-    } else if (fIsSet(cmode, NC_64BIT_OFFSET)) {
-        fSet(ncp->flags, NC_64BIT_OFFSET);
-        ncp->format = 2;
-    } else {
-        if (default_format == NC_FORMAT_CDF5) {
-            fSet(ncp->flags, NC_64BIT_DATA);
-            ncp->format = 5;
-        }
-        else if (default_format == NC_FORMAT_CDF2) {
-            fSet(ncp->flags, NC_64BIT_OFFSET);
-            ncp->format = 2;
-        }
-        else {
-            fSet(ncp->flags, NC_32BIT);
-            ncp->format = 1;
-        }
+         if (fIsSet(cmode, NC_64BIT_DATA))   ncp->format = 5;
+    else if (fIsSet(cmode, NC_64BIT_OFFSET)) ncp->format = 2;
+    else {
+             if (default_format == NC_FORMAT_CDF5) ncp->format = 5;
+        else if (default_format == NC_FORMAT_CDF2) ncp->format = 2;
+        else                                       ncp->format = 1;
     }
     /* PnetCDF default fill mode is no fill */
     fSet(ncp->flags, NC_NOFILL);

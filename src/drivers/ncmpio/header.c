@@ -1809,13 +1809,9 @@ ncmpii_hdr_get_NC(NC *ncp)
 
     /* check version number in last byte of magic */
     if (magic[sizeof(ncmagic1)-1] == 0x1) {
-        getbuf.version = 1;
-        fSet(ncp->flags, NC_32BIT);
-        ncp->format = 1;
+        getbuf.version = ncp->format = 1;
     } else if (magic[sizeof(ncmagic1)-1] == 0x2) {
-        getbuf.version = 2;
-        fSet(ncp->flags, NC_64BIT_OFFSET);
-        ncp->format = 2;
+        getbuf.version = ncp->format = 2;
 #if SIZEOF_MPI_OFFSET < 8
         /* take the easy way out: if we can't support all CDF-2
          * files, return immediately */
@@ -1823,9 +1819,7 @@ ncmpii_hdr_get_NC(NC *ncp)
         DEBUG_RETURN_ERROR(NC_ESMALL)
 #endif
     } else if (magic[sizeof(ncmagic1)-1] == 0x5) {
-        getbuf.version = 5;
-        fSet(ncp->flags, NC_64BIT_DATA);
-        ncp->format = 5;
+        getbuf.version = ncp->format = 5;
 #if SIZEOF_MPI_OFFSET < 8
         NCI_Free(getbuf.base);
         DEBUG_RETURN_ERROR(NC_ESMALL)
@@ -2404,12 +2398,10 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
      * ncmpi_create()
      */
     if (magic[sizeof(ncmagic1)-1] == 0x5) {
-        fSet(root_ncp->flags, NC_64BIT_DATA);
         root_ncp->format = 5;
         getbuf->version = 5;
     }
     else if (magic[sizeof(ncmagic1)-1] == 0x2) {
-        fSet(root_ncp->flags, NC_64BIT_OFFSET);
         root_ncp->format = 2;
         getbuf->version = 2;
     }
@@ -2431,13 +2423,8 @@ ncmpii_hdr_check_NC(bufferinfo *getbuf, /* header from root */
             printf("%s CDF file format (local=CDF-%d, root=CDF-%d)\n",
                    WARN_STR, ncp->format, root_ver);
 #endif
-
             /* overwrite the local header object with root's */
-            if      (ncp->format == 5) fClr(ncp->flags, NC_64BIT_DATA);
-            else if (ncp->format == 2) fClr(ncp->flags, NC_64BIT_OFFSET);
-
-            if      (root_ver == 5) fSet(ncp->flags, NC_64BIT_DATA);
-            else if (root_ver == 2) fSet(ncp->flags, NC_64BIT_OFFSET);
+            ncp->format = root_ver;
 
             /* this inconsistency is not fatal */
             DEBUG_ASSIGN_ERROR(status, NC_EMULTIDEFINE_CMODE)

@@ -166,7 +166,7 @@ int
 ncmpii_abort(void *ncdp)
 {
    /*
-    * In data mode, same as ncmpiio_close.
+    * In data mode, same as ncmpi_close().
     * In define mode, descard new definition.
     * If file is just created, remove the file.
     */
@@ -199,7 +199,7 @@ ncmpii_abort(void *ncdp)
     }
 
     /* close the file */
-    err = ncmpiio_close(ncp, doUnlink);
+    err = ncmpio_close_files(ncp, doUnlink);
     if (status == NC_NOERR ) status = err;
 
     /* free up space occupied by the header metadata */

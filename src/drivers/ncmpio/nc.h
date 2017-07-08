@@ -400,7 +400,8 @@ typedef struct NC_buf {
 #define NC_HDIRTY 0x800000  /* header info has changed */
 struct NC {
     int           ncid;         /* file ID */
-    int           flags;        /* stores all modes */
+    int           flags;        /* various modes, i.e. define/data, fill,
+                                   indep/coll, header dirty, etc */
     int           iomode;       /* cmode or omode used in ncmpi_create/open */
     int           mpiomode;     /* mode used in MPI_File_open, passed from
                                  * collective open to independent open */
@@ -782,6 +783,6 @@ extern void
 ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
 
 extern int
-ncmpiio_close(NC *ncp, int doUnlink);
+ncmpio_close_files(NC *ncp, int doUnlink);
 
 #endif /* _NC_H */

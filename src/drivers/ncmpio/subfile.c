@@ -92,9 +92,7 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
     char path_sf[1024];
     double ratio;
     MPI_Comm comm_sf;
-    MPI_Info info;
-
-    MPI_Info_create(&info);
+    MPI_Info info=MPI_INFO_NULL;
 
     MPI_Comm_rank(ncp->comm, &myrank);
     MPI_Comm_size(ncp->comm, &nprocs);
@@ -125,9 +123,11 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
 
     sprintf(path_sf, "%s.subfile_%i.%s", ncp->path, color, "nc");
 
-    /* MPI_Info_set(info, "romio_lustre_start_iodevice", offset);
-       MPI_Info_set(info, "striping_factor", "1");
-     */
+/*
+    MPI_Info_create(&info);
+    MPI_Info_set(info, "romio_lustre_start_iodevice", offset);
+    MPI_Info_set(info, "striping_factor", "1");
+*/
 
     status = ncmpi_create(comm_sf, path_sf, ncp->iomode, info, ncidp);
     if (status != NC_NOERR && myrank == 0)
@@ -135,7 +135,9 @@ int ncmpii_subfile_create(NC *ncp, int *ncidp)
                 __func__, path_sf, ncmpi_strerror(status));
 
     MPI_Comm_free(&comm_sf);
+/*
     MPI_Info_free(&info);
+*/
 
     return status;
 }

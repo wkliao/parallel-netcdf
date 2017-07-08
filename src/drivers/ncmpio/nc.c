@@ -173,6 +173,14 @@ ncmpii_free_NC(NC *ncp)
     ncmpii_free_NC_attrarray(&ncp->attrs);
     ncmpii_free_NC_vararray(&ncp->vars);
 
+    if (ncp->comm    != MPI_COMM_NULL) MPI_Comm_free(&ncp->comm);
+    if (ncp->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&ncp->mpiinfo);
+
+    if (ncp->get_list != NULL) NCI_Free(ncp->get_list);
+    if (ncp->put_list != NULL) NCI_Free(ncp->put_list);
+    if (ncp->abuf     != NULL) NCI_Free(ncp->abuf);
+    if (ncp->path     != NULL) NCI_Free(ncp->path);
+
     NCI_Free(ncp);
 }
 
@@ -309,7 +317,7 @@ ncmpii_NC_check_vlens(NC *ncp)
 
     /* only CDF-1 and CDF-2 need to continue */
 
-    if (ncp->flags & NC_64BIT_OFFSET) /* CDF2 format */
+    if (ncp->format == 2) /* CDF2 format */
         vlen_max = X_UINT_MAX - 3; /* "- 3" handles rounded-up size */
     else
         vlen_max = X_INT_MAX - 3; /* CDF1 format */

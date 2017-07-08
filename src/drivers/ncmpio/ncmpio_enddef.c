@@ -34,12 +34,12 @@
 #endif
 
 
-/*----< ncmpiio_move() >-----------------------------------------------------*/
+/*----< move_file_block() >--------------------------------------------------*/
 static int
-ncmpiio_move(NC         *ncp,
-             MPI_Offset  to,
-             MPI_Offset  from,
-             MPI_Offset  nbytes)
+move_file_block(NC         *ncp,
+                MPI_Offset  to,
+                MPI_Offset  from,
+                MPI_Offset  nbytes)
 {
     int rank, nprocs, bufcount, mpireturn, err, status=NC_NOERR, min_st;
     void *buf;
@@ -105,7 +105,8 @@ ncmpiio_move(NC         *ncp,
 
         /* MPI_Barrier(ncp->comm); */
         /* important, in case new region overlaps old region */
-        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN,
+                                  ncp->comm);
         status = min_st;
         if (status != NC_NOERR) break;
 
@@ -166,28 +167,24 @@ move_fixed_vars(NC *ncp, NC *old)
         MPI_Offset from = old->vars.value[i]->begin;
         MPI_Offset to   = ncp->vars.value[i]->begin;
         if (to > from) {
-            err = ncmpiio_move(ncp, to, from, ncp->vars.value[i]->len);
+            err = move_file_block(ncp, to, from, ncp->vars.value[i]->len);
             if (status == NC_NOERR) status = err;
         }
     }
     return status;
 }
 
-/*----< move_recs_r() >------------------------------------------------------*/
-/*
- * Move the record variables down,
- * re-arrange records as needed
- * Fill as needed.
- */
+/*----< move_record_vars() >-------------------------------------------------*/
+/* Move the record variables from lower offsets (old) to higher offsets. */
 static int
-move_recs_r(NC *ncp, NC *old) {
-    int status;
+move_record_vars(NC *ncp, NC *old) {
+    int err;
     MPI_Offset recno;
-    const MPI_Offset nrecs = ncp->numrecs;
-    const MPI_Offset ncp_recsize = ncp->recsize;
-    const MPI_Offset old_recsize = old->recsize;
-    const off_t ncp_off = ncp->begin_rec;
-    const off_t old_off = old->begin_rec;
+    MPI_Offset nrecs = ncp->numrecs;
+    MPI_Offset ncp_recsize = ncp->recsize;
+    MPI_Offset old_recsize = old->recsize;
+    MPI_Offset ncp_off = ncp->begin_rec;
+    MPI_Offset old_off = old->begin_rec;
 
     assert(ncp_recsize >= old_recsize);
 
@@ -195,22 +192,18 @@ move_recs_r(NC *ncp, NC *old) {
         if (ncp_recsize == 0) /* no record variable defined yet */
             return NC_NOERR;
 
-        /* No new record variable inserted, move all record variables as a whole */
-        status = ncmpiio_move(ncp, ncp_off, old_off, ncp_recsize * nrecs);
-        if (status != NC_NOERR)
-            return status;
+        /* No new record variable inserted, move the entire record variables
+         * as a whole */
+        err = move_file_block(ncp, ncp_off, old_off, ncp_recsize * nrecs);
+        if (err != NC_NOERR) return err;
     } else {
         /* new record variables inserted, move one whole record at a time */
         for (recno = nrecs-1; recno >= 0; recno--) {
-            status = ncmpiio_move(ncp,
-                                  ncp_off+recno*ncp_recsize,
-                                  old_off+recno*old_recsize,
-                                  old_recsize);
-            if (status != NC_NOERR)
-                return status;
+            err = move_file_block(ncp, ncp_off+recno*ncp_recsize,
+                                       old_off+recno*old_recsize, old_recsize);
+            if (err != NC_NOERR) return err;
         }
     }
-
     return NC_NOERR;
 }
 
@@ -233,7 +226,9 @@ NC_begins(NC *ncp)
     NC_var *last = NULL;
     NC_var *first_var = NULL;       /* first "non-record" var */
 
-    /* CDF file format determines the size of variable's "begin" in the header */
+    /* For CDF-1 and 2 formats, a variable's "begin" in the header is 4 bytes.
+     * For CDF-5, it is 8 bytes.
+     */
 
     /* get the true header size (not header extent) */
     MPI_Comm_rank(ncp->comm, &rank);
@@ -246,16 +241,20 @@ NC_begins(NC *ncp)
 
         /* only root's header size matters */
         TRACE_COMM(MPI_Bcast)(&root_xsz, 1, MPI_OFFSET, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+            DEBUG_RETURN_ERROR(err)
+        }
 
         err = NC_NOERR;
         if (root_xsz != ncp->xsz) err = NC_EMULTIDEFINE;
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            DEBUG_RETURN_ERROR(err)
+        }
         if (status != NC_NOERR) DEBUG_RETURN_ERROR(status)
     }
 
@@ -344,10 +343,8 @@ NC_begins(NC *ncp)
             ncp->begin_rec = ncp->old->begin_rec;
     }
 
-    if (first_var != NULL)
-        ncp->begin_var = first_var->begin;
-    else
-        ncp->begin_var = ncp->begin_rec;
+    if (first_var != NULL) ncp->begin_var = first_var->begin;
+    else                   ncp->begin_var = ncp->begin_rec;
 
     end_var = ncp->begin_rec;
     /* end_var now is pointing to the beginning of record variables
@@ -466,7 +463,7 @@ write_NC(NC *ncp)
      */
     buf = NCI_Malloc((size_t)local_xsz); /* buffer for local header object */
 
-    /* copy the entire local header object to buffer */
+    /* copy the entire local header object to buf */
     status = ncmpii_hdr_put_NC(ncp, buf);
     if (status != NC_NOERR) { /* a fatal error */
         NCI_Free(buf);
@@ -481,14 +478,14 @@ write_NC(NC *ncp)
         void *root_header;
 
         /* check header against root's */
-        if (rank == 0)
-            root_header = buf;
-        else
-            root_header = (void*) NCI_Malloc((size_t)h_size);
+        if (rank == 0) root_header = buf;
+        else           root_header = (void*) NCI_Malloc((size_t)h_size);
 
         TRACE_COMM(MPI_Bcast)(root_header, h_size, MPI_BYTE, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn, "MPI_Bcast");
+            DEBUG_RETURN_ERROR(err)
+        }
 
         if (rank > 0) {
             if (h_size != local_xsz || memcmp(buf, root_buf, h_size))
@@ -497,10 +494,10 @@ write_NC(NC *ncp)
         }
 
         /* report error if header is inconsistency */
-        TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpii_handle_error(mpireturn,"MPI_Allreduce");
-            DEBUG_RETURN_ERROR(NC_EMPI)
+            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+            DEBUG_RETURN_ERROR(err)
         }
         if (err != NC_NOERR) {
             /* TODO: this error return is harsh. Maybe relax for inconsistent
@@ -536,8 +533,8 @@ write_NC(NC *ncp)
         TRACE_COMM(MPI_Allreduce)(&err, &max_err, 1, MPI_INT, MPI_MAX,
                                   ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpii_handle_error(mpireturn,"MPI_Allreduce");
-            DEBUG_RETURN_ERROR(NC_EMPI)
+            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            DEBUG_RETURN_ERROR(err)
         }
     }
     if (max_err == 1) { /* some processes encounter a fatal error */
@@ -592,8 +589,10 @@ write_NC(NC *ncp)
         int status;                                                     \
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,   \
                                   ncp->comm);                           \
-        if (mpireturn != MPI_SUCCESS)                                   \
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");     \
+        if (mpireturn != MPI_SUCCESS) {                                 \
+            err = ncmpii_handle_error(mpireturn, "MPI_Allreduce");      \
+            DEBUG_RETURN_ERROR(err)                                     \
+        }                                                               \
         if (status != NC_NOERR) return status;                          \
     }                                                                   \
     else if (err != NC_NOERR)                                           \
@@ -611,7 +610,7 @@ ncmpii__enddef(void       *ncdp,
 {
     int i, flag, striping_unit, mpireturn, err=NC_NOERR, status=NC_NOERR;
     char value[MPI_MAX_INFO_VAL];
-    MPI_Offset h_align, all_var_size;
+    MPI_Offset all_var_size;
     NC *ncp = (NC*)ncdp;
 #ifdef ENABLE_SUBFILING
     NC *ncp_sf=NULL;
@@ -633,9 +632,11 @@ ncmpii__enddef(void       *ncdp,
     if (ncp->safe_mode) {
         /* find min error code across processes */
         err = status;
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            DEBUG_RETURN_ERROR(err)
+        }
         if (status != NC_NOERR) return status;
 
         /* check if h_minfree, v_align, v_minfree, and r_align are consistent
@@ -647,8 +648,10 @@ ncmpii__enddef(void       *ncdp,
         root_args[2] = v_minfree;
         root_args[3] = r_align;
         TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Bcast");
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
+            DEBUG_RETURN_ERROR(err)
+        }
 
         if (root_args[0] != h_minfree ||
             root_args[1] != v_align   ||
@@ -661,10 +664,11 @@ ncmpii__enddef(void       *ncdp,
             err = NC_NOERR;
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
-
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_handle_error(mpireturn,"MPI_Allreduce");
+            DEBUG_RETURN_ERROR(err)
+        }
         if (status != NC_NOERR) return status;
     }
 
@@ -674,8 +678,8 @@ ncmpii__enddef(void       *ncdp,
      * from MPI-IO (for example, ROMIO's Lustre driver makes a system call to
      * get the striping parameters of a file).
      */
-    MPI_Info_get(ncp->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
-                 value, &flag);
+    MPI_Info_get(ncp->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
     striping_unit = 0;
     if (flag) {
         errno = 0;
@@ -740,7 +744,8 @@ ncmpii__enddef(void       *ncdp,
     MPI_Info_set(ncp->mpiinfo, "nc_record_align_size", value);
 
 #ifdef ENABLE_SUBFILING
-    /* num of subfiles has been determined already */
+    sprintf(value, "%d", ncp->num_subfiles);
+    MPI_Info_set(ncp->mpiinfo, "nc_num_subfiles", value);
     if (ncp->num_subfiles > 1) {
         /* TODO: should return subfile-related msg when there's an error */
         err = ncmpii_subfile_partition(ncp, &ncp->ncid_sf);
@@ -793,7 +798,7 @@ ncmpii__enddef(void       *ncdp,
             if (ncp->begin_var > ncp->old->begin_var) {
                 /* header size increases, shift the entire data part down */
                 /* shift record variables first */
-                err = move_recs_r(ncp, ncp->old);
+                err = move_record_vars(ncp, ncp->old);
                 CHECK_ERROR(err)
 
                 /* shift non-record variables */
@@ -806,7 +811,7 @@ ncmpii__enddef(void       *ncdp,
                 /* number of non-record variables increases, or
                    number of records of record variables increases,
                    shift and move all record variables down */
-                err = move_recs_r(ncp, ncp->old);
+                err = move_record_vars(ncp, ncp->old);
                 CHECK_ERROR(err)
             }
         }

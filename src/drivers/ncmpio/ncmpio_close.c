@@ -24,14 +24,13 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
 
-/*----< ncmpiio_close() >----------------------------------------------------*/
+/*----< ncmpio_close_files() >-----------------------------------------------*/
 int
-ncmpiio_close(NC *ncp, int doUnlink) {
+ncmpio_close_files(NC *ncp, int doUnlink) {
     int mpireturn;
 
     assert(ncp != NULL); /* this should never occur */
@@ -55,12 +54,6 @@ ncmpiio_close(NC *ncp, int doUnlink) {
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_delete");
     }
-
-    /* free MPI objects */
-    if (ncp->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&(ncp->mpiinfo));
-    if (ncp->comm != MPI_COMM_NULL)    MPI_Comm_free(&(ncp->comm));
-    NCI_Free(ncp->path);
-
     return NC_NOERR;
 }
 
@@ -131,11 +124,11 @@ ncmpii_close(void *ncdp)
 #endif
 
     /* If the user wants a stronger data consistency by setting NC_SHARE */
-    if (fIsSet(ncp->iomode, NC_SHARE))
+    if (NC_doFsync(ncp))
         ncmpiio_sync(ncp); /* calling MPI_File_sync() */
 
     /* calling MPI_File_close() */
-    ncmpiio_close(ncp, 0);
+    ncmpio_close_files(ncp, 0);
 
     /* free up space occupied by the header metadata */
     ncmpii_free_NC(ncp);
