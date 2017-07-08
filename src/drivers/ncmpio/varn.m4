@@ -188,7 +188,7 @@ err_check:
     if (ncp->safe_mode == 1 && io_method == COLL_IO) {
         int mpireturn;
         TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN,
-                                  ncp->nciop->comm);
+                                  ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce"); 
 

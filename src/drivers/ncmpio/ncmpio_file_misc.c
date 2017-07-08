@@ -31,7 +31,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncio.h"
 #include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
@@ -91,16 +90,16 @@ ncmpii_begin_indep_data(void *ncdp)
      * consistency, they can call ncmpi_sync()
      */
 #if 0 && !defined(DISABLE_FILE_SYNC)
-    if (!NC_readonly(ncp) && NC_collectiveFhOpened(ncp->nciop)) {
+    if (!NC_readonly(ncp) && ncp->collective_fh != MPI_FILE_NULL) {
         /* calling file sync for those already open the file */
         int err, mpireturn;
         /* MPI_File_sync() is collective */
-        TRACE_IO(MPI_File_sync)(ncp->nciop->collective_fh);
+        TRACE_IO(MPI_File_sync)(ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS) {
             err = ncmpii_handle_error(mpireturn, "MPI_File_sync");
             if (err == NC_NOERR) return err;
         }
-        TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+        TRACE_COMM(MPI_Barrier)(ncp->comm);
     }
 #endif
 
@@ -141,15 +140,15 @@ ncmpii_end_indep_data(void *ncdp)
 
 #ifndef DISABLE_FILE_SYNC
         /* calling file sync for those already open the file */
-        if (NC_doFsync(ncp) && ncp->nciop->independent_fh != MPI_FILE_NULL) {
+        if (NC_doFsync(ncp) && ncp->independent_fh != MPI_FILE_NULL) {
             int mpireturn;
             /* MPI_File_sync() is collective */
-            TRACE_IO(MPI_File_sync)(ncp->nciop->independent_fh);
+            TRACE_IO(MPI_File_sync)(ncp->independent_fh);
             if (mpireturn != MPI_SUCCESS) {
                 int err = ncmpii_handle_error(mpireturn, "MPI_File_sync");
                 if (status == NC_NOERR) status = err;
             }
-            TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+            TRACE_COMM(MPI_Barrier)(ncp->comm);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_Barrier");
         }
@@ -194,16 +193,14 @@ ncmpii_abort(void *ncdp)
         }
 
         if (NC_doFsync(ncp)) {
-            err = ncmpiio_sync(ncp->nciop); /* calling MPI_File_sync() */
+            err = ncmpiio_sync(ncp); /* calling MPI_File_sync() */
             if (status == NC_NOERR ) status = err;
         }
     }
 
     /* close the file */
-    err = ncmpiio_close(ncp->nciop, doUnlink);
+    err = ncmpiio_close(ncp, doUnlink);
     if (status == NC_NOERR ) status = err;
-
-    ncp->nciop = NULL;
 
     /* free up space occupied by the header metadata */
     ncmpii_free_NC(ncp);
@@ -255,12 +252,12 @@ ncmpii_inq_misc(void       *ncdp,
 
     /* Get the file pathname which was used to open/create the ncid's file.
      * path must already be allocated. Ignored if NULL */
-    if (ncp->nciop->path == NULL) {
+    if (ncp->path == NULL) {
         if (pathlen != NULL) *pathlen = 0;
         if (path    != NULL) *path = '\0';
     } else {
-        if (pathlen != NULL) *pathlen = (int)strlen(ncp->nciop->path);
-        if (path    != NULL) strcpy(path, ncp->nciop->path);
+        if (pathlen != NULL) *pathlen = (int)strlen(ncp->path);
+        if (path    != NULL) strcpy(path, ncp->path);
     }
 
     /* obtain the number of fixed-size variables */
@@ -294,7 +291,7 @@ ncmpii_inq_misc(void       *ncdp,
      * are available from MPI-IO hint. Otherwise, 0s are returned.
      */
     if (striping_size != NULL) {
-        MPI_Info_get(ncp->nciop->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
+        MPI_Info_get(ncp->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         *striping_size = 0;
         if (flag) {
@@ -305,7 +302,7 @@ ncmpii_inq_misc(void       *ncdp,
     }
 
     if (striping_count != NULL) {
-        MPI_Info_get(ncp->nciop->mpiinfo, "striping_factor", MPI_MAX_INFO_VAL-1,
+        MPI_Info_get(ncp->mpiinfo, "striping_factor", MPI_MAX_INFO_VAL-1,
                      value, &flag);
         *striping_count = 0;
         if (flag) {
@@ -316,10 +313,10 @@ ncmpii_inq_misc(void       *ncdp,
     }
 
     /* the amount of writes, in bytes, committed to file system so far */
-    if (put_size != NULL) *put_size = ncp->nciop->put_size;
+    if (put_size != NULL) *put_size = ncp->put_size;
 
     /* the amount of reads, in bytes, obtained from file system so far */
-    if (get_size != NULL) *get_size = ncp->nciop->get_size;
+    if (get_size != NULL) *get_size = ncp->get_size;
 
     if (recsize != NULL) *recsize = ncp->recsize;
 
@@ -328,7 +325,7 @@ ncmpii_inq_misc(void       *ncdp,
     if (header_extent != NULL) *header_extent = ncp->begin_var;
 
     if (info_used != NULL) {
-        mpireturn = MPI_Info_dup(ncp->nciop->mpiinfo, info_used);
+        mpireturn = MPI_Info_dup(ncp->mpiinfo, info_used);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Info_dup");
 

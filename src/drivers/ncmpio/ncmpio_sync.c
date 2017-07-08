@@ -24,7 +24,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncio.h"
 #include "ncx.h"
 
 /*----< ncmpiio_sync() >-----------------------------------------------------*/
@@ -32,23 +31,23 @@
  * or independent data mode.
  */
 int
-ncmpiio_sync(ncio *nciop) {
+ncmpiio_sync(NC *ncp) {
 #ifndef DISABLE_FILE_SYNC
     int mpireturn;
 
-    if (nciop->independent_fh != MPI_FILE_NULL) {
-        TRACE_IO(MPI_File_sync)(nciop->independent_fh);
+    if (ncp->independent_fh != MPI_FILE_NULL) {
+        TRACE_IO(MPI_File_sync)(ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_sync");
     }
 
-    /* nciop->collective_fh is never MPI_FILE_NULL as collective mode is
+    /* ncp->collective_fh is never MPI_FILE_NULL as collective mode is
      * default in PnetCDF */
-    TRACE_IO(MPI_File_sync)(nciop->collective_fh);
+    TRACE_IO(MPI_File_sync)(ncp->collective_fh);
     if (mpireturn != MPI_SUCCESS)
         return ncmpii_handle_error(mpireturn, "MPI_File_sync");
 
-    TRACE_COMM(MPI_Barrier)(nciop->comm);
+    TRACE_COMM(MPI_Barrier)(ncp->comm);
 #endif
     return NC_NOERR;
 }
@@ -69,15 +68,15 @@ ncmpii_write_numrecs(NC         *ncp,
     MPI_File fh;
 
     /* root process writes numrecs in file */
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
+    MPI_Comm_rank(ncp->comm, &rank);
     if (rank > 0) return NC_NOERR;
 
     /* return now if there is no record variabled defined */
     if (ncp->vars.num_rec_vars == 0) return NC_NOERR;
 
-    fh = ncp->nciop->collective_fh;
+    fh = ncp->collective_fh;
     if (NC_indep(ncp))
-        fh = ncp->nciop->independent_fh;
+        fh = ncp->independent_fh;
 
     if (new_numrecs > ncp->numrecs || NC_ndirty(ncp)) {
         int len;
@@ -109,7 +108,7 @@ ncmpii_write_numrecs(NC         *ncp,
             if (err == NC_EFILE) DEBUG_RETURN_ERROR(NC_EWRITE)
         }
         else {
-            ncp->nciop->put_size += len;
+            ncp->put_size += len;
         }
     }
     return NC_NOERR;
@@ -143,7 +142,7 @@ ncmpiio_sync_numrecs(NC         *ncp,
      * Note new_numrecs may be smaller than ncp->numrecs
      */
     TRACE_COMM(MPI_Allreduce)(&new_numrecs, &max_numrecs, 1, MPI_OFFSET,
-                              MPI_MAX, ncp->nciop->comm);
+                              MPI_MAX, ncp->comm);
     if (mpireturn != MPI_SUCCESS)
         return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
 
@@ -153,7 +152,7 @@ ncmpiio_sync_numrecs(NC         *ncp,
     if (ncp->safe_mode == 1) {
         /* broadcast root's status, because only root writes to the file */
         int root_status = status;
-        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
         /* root's write has failed, which is serious */
@@ -200,16 +199,16 @@ ncmpii_sync_numrecs(void *ncdp)
     if (NC_doFsync(ncp)) { /* NC_SHARE is set */
         int mpierr, mpireturn;
         if (NC_indep(ncp)) {
-            TRACE_IO(MPI_File_sync)(ncp->nciop->independent_fh);
+            TRACE_IO(MPI_File_sync)(ncp->independent_fh);
         }
         else {
-            TRACE_IO(MPI_File_sync)(ncp->nciop->collective_fh);
+            TRACE_IO(MPI_File_sync)(ncp->collective_fh);
         }
         if (mpireturn != MPI_SUCCESS) {
             mpierr = ncmpii_handle_error(mpireturn, "MPI_File_sync");
             if (err == NC_NOERR) err = mpierr;
         }
-        TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+        TRACE_COMM(MPI_Barrier)(ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Barrier");
     }
@@ -244,6 +243,6 @@ ncmpii_sync(void *ncdp)
     }
 
     /* calling MPI_File_sync() on both collective and independent handlers */
-    return ncmpiio_sync(ncp->nciop);
+    return ncmpiio_sync(ncp);
 }
 

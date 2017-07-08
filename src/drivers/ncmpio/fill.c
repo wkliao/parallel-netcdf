@@ -26,7 +26,7 @@
     if (ncp->safe_mode == 1) {                                               \
         int g_status;                                                        \
         TRACE_COMM(MPI_Allreduce)(&status, &g_status, 1, MPI_INT, MPI_MIN,   \
-                                  ncp->nciop->comm);                         \
+                                  ncp->comm);                                \
         if (g_status != NC_NOERR) return status;                             \
     }                                                                        \
     else if (status != NC_NOERR)                                             \
@@ -150,8 +150,8 @@ ncmpiio_fill_var_rec(NC         *ncp,
     MPI_File fh;
     MPI_Status mpistatus;
 
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
-    MPI_Comm_size(ncp->nciop->comm, &nprocs);
+    MPI_Comm_rank(ncp->comm, &rank);
+    MPI_Comm_size(ncp->comm, &nprocs);
 
     if (varp->ndims == 0) /* scalar variable */
         var_len = 1;
@@ -189,7 +189,7 @@ ncmpiio_fill_var_rec(NC         *ncp,
         offset += ncp->recsize * recno;
     offset += start * varp->xsz;
 
-    fh = ncp->nciop->collective_fh;
+    fh = ncp->collective_fh;
 
     /* make the entire file visible */
     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, MPI_BYTE, "native",
@@ -271,7 +271,7 @@ err_check:
 
         /* check if varid is consistent across all processes */
         root_varid = varid;
-        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_varid != varid)
@@ -279,14 +279,14 @@ err_check:
 
         /* check if recno is consistent across all processes */
         root_recno = recno;
-        TRACE_COMM(MPI_Bcast)(&root_recno, 1, MPI_OFFSET, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_recno, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_recno != recno)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
 
@@ -329,7 +329,7 @@ err_check:
     if (ncp->safe_mode) {
         int status, root_fill_mode=fill_mode;
 
-        TRACE_COMM(MPI_Bcast)(&root_fill_mode, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_fill_mode, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return  ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
         if (err == NC_NOERR && fill_mode != root_fill_mode)
@@ -337,7 +337,7 @@ err_check:
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FILL_MODE)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
         if (err == NC_NOERR) err = status;
@@ -406,7 +406,7 @@ err_check:
         root_ids[0] = varid;
         root_ids[1] = no_fill;
         root_ids[2] = my_fill_null;
-        TRACE_COMM(MPI_Bcast)(&root_ids, 3, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_ids, 3, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && (root_ids[0] != varid ||
@@ -418,7 +418,7 @@ err_check:
             double root_fill_value; /* max nc_type space: 8 bytes */
             if (fill_value != NULL)
                 memcpy(&root_fill_value, fill_value, (size_t)varp->xsz);
-            TRACE_COMM(MPI_Bcast)(&root_fill_value, varp->xsz, MPI_BYTE, 0, ncp->nciop->comm);
+            TRACE_COMM(MPI_Bcast)(&root_fill_value, varp->xsz, MPI_BYTE, 0, ncp->comm);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_Bcast");
             if (err == NC_NOERR && fill_value != NULL &&
@@ -428,7 +428,7 @@ err_check:
         }
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
 
@@ -611,8 +611,8 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
     MPI_Status mpistatus;
     NC_var *varp;
 
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
-    MPI_Comm_size(ncp->nciop->comm, &nprocs);
+    MPI_Comm_rank(ncp->comm, &rank);
+    MPI_Comm_size(ncp->comm, &nprocs);
 
     /* find the starting vid for newly added variables */
     start_vid = 0;
@@ -633,7 +633,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
     for (i=start_vid; i<ncp->vars.ndefined; i++)
         noFill[i-start_vid] = (char)(ncp->vars.value[i]->no_fill);
         TRACE_COMM(MPI_Bcast)(noFill, (ncp->vars.ndefined - start_vid),
-                              MPI_BYTE, 0, ncp->nciop->comm);
+                              MPI_BYTE, 0, ncp->comm);
     for (i=start_vid; i<ncp->vars.ndefined; i++) {
         /* overwrite local's mode */
         ncp->vars.value[i]->no_fill = noFill[i-start_vid];
@@ -834,7 +834,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
     NCI_Free(count);
     NCI_Free(offset);
 
-    fh = ncp->nciop->collective_fh;
+    fh = ncp->collective_fh;
 
     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, filetype, "native",
                                 MPI_INFO_NULL);

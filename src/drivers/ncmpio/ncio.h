@@ -36,12 +36,11 @@ typedef struct {
      * A copy of the ioflags argument passed in to ncmpiio_open()
      * or ncmpiio_create().
      */
-int ioflags;
-int mpioflags;       /* MPI_COLLECTIVE_FH or MPI_INDEPENDENT_FH */
-/* above 2 NO USE */
+    int ioflags;
+    int mpioflags; /* MPI_COLLECTIVE_FH or MPI_INDEPENDENT_FH */
 
-    int mpiomode; /* mode used in MPI_File_open, passed from collective open
-                     to independent open */
+    int mpiomode;  /* mode used in MPI_File_open, passed from collective open
+                      to independent open */
 
     /*
      * The MPI File handle and the communicator
@@ -64,7 +63,5 @@ int mpioflags;       /* MPI_COLLECTIVE_FH or MPI_INDEPENDENT_FH */
     char *path;
 } ncio;
 
-extern int
-ncmpiio_close(ncio *nciop, int doUnlink);
 
 #endif /* _NCIO_H */

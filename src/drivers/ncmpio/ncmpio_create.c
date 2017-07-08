@@ -28,7 +28,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncio.h"
 #include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
@@ -189,9 +188,6 @@ ncmpii_create(MPI_Comm     comm,
     /* allocate buffer for header object NC and initialize its contents */
     ncp = (NC*) NCI_Calloc(1, sizeof(NC));
     if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-/* TODO: merge ncio into NC. allocate ncio object */
-ncp->nciop = (ncio*) NCI_Malloc(sizeof(ncio));
-if (ncp->nciop == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* set the file format version based on the create mode, cmode */
     if (fIsSet(cmode, NC_64BIT_DATA)) {
@@ -262,16 +258,16 @@ if (ncp->nciop == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 #endif
 
     /* For file create, ignore if NC_NOWRITE set in cmode by user */
-    ncp->nciop->ioflags        = cmode | NC_WRITE;
-    ncp->nciop->comm           = dup_comm;
-    ncp->nciop->mpiinfo        = info_used;
-    ncp->nciop->mpiomode       = mpiomode;
-    ncp->nciop->put_size       = 0;
-    ncp->nciop->get_size       = 0;
-    ncp->nciop->collective_fh  = fh;
-    ncp->nciop->independent_fh = MPI_FILE_NULL;
-    ncp->nciop->path = (char*) NCI_Malloc(strlen(path) + 1);
-    strcpy(ncp->nciop->path, path);
+    ncp->iomode         = cmode | NC_WRITE;
+    ncp->comm           = dup_comm;
+    ncp->mpiinfo        = info_used;
+    ncp->mpiomode       = mpiomode;
+    ncp->put_size       = 0;
+    ncp->get_size       = 0;
+    ncp->collective_fh  = fh;
+    ncp->independent_fh = MPI_FILE_NULL;
+    ncp->path = (char*) NCI_Malloc(strlen(path) + 1);
+    strcpy(ncp->path, path);
 
 #ifdef PNETCDF_DEBUG
     /* PNETCDF_DEBUG is set at configure time, which will be overwritten by

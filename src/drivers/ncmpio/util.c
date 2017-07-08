@@ -261,7 +261,7 @@ int ncmpii_sanity_check(NC                *ncp,
 fn_exit:
     if (ncp->safe_mode == 1 && io_method == COLL_IO) {
         int min_st, mpireturn;
-        TRACE_COMM(MPI_Allreduce)(&err, &min_st, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR) err = min_st;
@@ -352,10 +352,10 @@ ncmpii_check_mpifh(NC  *ncp,
      * will never be MPI_FILE_NULL
      */
 
-    if (!collective && ncp->nciop->independent_fh == MPI_FILE_NULL) {
-        TRACE_IO(MPI_File_open)(MPI_COMM_SELF, (char*)ncp->nciop->path,
-                                ncp->nciop->mpiomode, ncp->nciop->mpiinfo,
-                                &ncp->nciop->independent_fh);
+    if (!collective && ncp->independent_fh == MPI_FILE_NULL) {
+        TRACE_IO(MPI_File_open)(MPI_COMM_SELF, (char*)ncp->path,
+                                ncp->mpiomode, ncp->mpiinfo,
+                                &ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_open");
     }

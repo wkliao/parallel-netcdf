@@ -55,7 +55,7 @@ ncmpii_getput_zero_req(NC  *ncp,
     MPI_Status mpistatus;
     MPI_File fh;
 
-    fh = ncp->nciop->collective_fh;
+    fh = ncp->collective_fh;
 
     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, MPI_BYTE, "native",
                                 MPI_INFO_NULL);
@@ -775,7 +775,7 @@ err_check:
         io_req[2] = -err;   /* all NC errors are negative */
         io_req[3] = newnumrecs;
         TRACE_COMM(MPI_Allreduce)(io_req, do_io, 4, MPI_OFFSET, MPI_MAX,
-                                  ncp->nciop->comm);
+                                  ncp->comm);
         if (mpireturn != MPI_SUCCESS)
  	    return ncmpii_handle_error(mpireturn, "MPI_Allreduce"); 
 
@@ -1730,9 +1730,9 @@ ncmpii_req_aggregation(NC     *ncp,
     MPI_Type_size(buf_type, &buf_type_size);
 
     if (io_method == COLL_IO)
-        fh = ncp->nciop->collective_fh;
+        fh = ncp->collective_fh;
     else
-        fh = ncp->nciop->independent_fh;
+        fh = ncp->independent_fh;
 
     /* set the file view */
     MPI_Offset offset=0;
@@ -1755,7 +1755,7 @@ ncmpii_req_aggregation(NC     *ncp,
                 }
             }
             else {
-                ncp->nciop->get_size += buf_len * buf_type_size;
+                ncp->get_size += buf_len * buf_type_size;
             }
         } else {
             TRACE_IO(MPI_File_read_at)(fh, offset, buf, buf_len, buf_type,
@@ -1769,7 +1769,7 @@ ncmpii_req_aggregation(NC     *ncp,
                 }
             }
             else {
-                ncp->nciop->get_size += buf_len * buf_type_size;
+                ncp->get_size += buf_len * buf_type_size;
             }
         }
     } else { /* WRITE_REQ */
@@ -1785,7 +1785,7 @@ ncmpii_req_aggregation(NC     *ncp,
                 }
             }
             else {
-                ncp->nciop->put_size += buf_len * buf_type_size;
+                ncp->put_size += buf_len * buf_type_size;
             }
         } else {
             TRACE_IO(MPI_File_write_at)(fh, offset, buf, buf_len, buf_type,
@@ -1799,7 +1799,7 @@ ncmpii_req_aggregation(NC     *ncp,
                 }
             }
             else {
-                ncp->nciop->put_size += buf_len * buf_type_size;
+                ncp->put_size += buf_len * buf_type_size;
             }
         }
     }
@@ -1895,19 +1895,19 @@ ncmpii_wait_getput(NC         *ncp,
         if (NC_doFsync(ncp)) { /* NC_SHARE is set */
             int mpireturn;
             if (io_method == INDEP_IO) {
-                TRACE_IO(MPI_File_sync)(ncp->nciop->independent_fh);
+                TRACE_IO(MPI_File_sync)(ncp->independent_fh);
                 if (mpireturn != MPI_SUCCESS) {
                     err = ncmpii_handle_error(mpireturn, "MPI_File_sync"); 
                     if (status == NC_NOERR) status = err;
                 }
             }
             else {
-                TRACE_IO(MPI_File_sync)(ncp->nciop->collective_fh);
+                TRACE_IO(MPI_File_sync)(ncp->collective_fh);
                 if (mpireturn != MPI_SUCCESS) {
                     err = ncmpii_handle_error(mpireturn, "MPI_File_sync"); 
                     if (status == NC_NOERR) status = err;
                 }
-                TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+                TRACE_COMM(MPI_Barrier)(ncp->comm);
             }
         }
     }
@@ -1937,9 +1937,9 @@ ncmpii_mgetput(NC           *ncp,
     MPI_Offset offset=0;
 
     if (io_method == COLL_IO)
-        fh = ncp->nciop->collective_fh;
+        fh = ncp->collective_fh;
     else
-        fh = ncp->nciop->independent_fh;
+        fh = ncp->independent_fh;
 
     /* construct a MPI file type by concatenating fileviews of all requests */
     status = ncmpii_construct_filetypes(ncp,num_reqs, reqs, rw_flag, &filetype);
@@ -2078,7 +2078,7 @@ ncmpii_mgetput(NC           *ncp,
             }
             else {
                 /* update the number of bytes read since file open */
-                ncp->nciop->get_size += len * buf_type_size;
+                ncp->get_size += len * buf_type_size;
             }
         } else {
             TRACE_IO(MPI_File_read_at)(fh, offset, buf, len, buf_type,
@@ -2093,7 +2093,7 @@ ncmpii_mgetput(NC           *ncp,
             }
             else {
                 /* update the number of bytes read since file open */
-                ncp->nciop->get_size += len * buf_type_size;
+                ncp->get_size += len * buf_type_size;
             }
         }
     } else { /* WRITE_REQ */
@@ -2110,7 +2110,7 @@ ncmpii_mgetput(NC           *ncp,
             }
             else {
                 /* update the number of bytes written since file open */
-                ncp->nciop->put_size += len * buf_type_size;
+                ncp->put_size += len * buf_type_size;
             }
         } else {
             TRACE_IO(MPI_File_write_at)(fh, offset, buf, len, buf_type,
@@ -2125,7 +2125,7 @@ ncmpii_mgetput(NC           *ncp,
             }
             else {
                 /* update the number of bytes written since file open */
-                ncp->nciop->put_size += len * buf_type_size;
+                ncp->put_size += len * buf_type_size;
             }
         }
     }

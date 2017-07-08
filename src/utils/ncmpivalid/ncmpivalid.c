@@ -826,8 +826,9 @@ val_get_NC(int fd, NC *ncp)
     MPI_Aint pos_addr, base_addr;
 
     /* Initialize the get buffer that stores the header read from the file */
-    getbuf.nciop = ncp->nciop;
-    getbuf.offset = 0;     /* read from start of the file */
+    getbuf.comm          = ncp->comm;
+    getbuf.collective_fh = ncp->collective_fh;
+    getbuf.offset        = 0;     /* read from start of the file */
 
     /* CDF-5's minimum header size is 4 bytes more than CDF-1 and CDF-2's */
     getbuf.size = _RNDUP( MAX(MIN_NC_XSZ+4, ncp->chunk), X_ALIGN );
@@ -994,24 +995,6 @@ int main(int argc, char **argv)
         goto prog_exit;
     }
 
-    /* allocate ncp->nciop object */
-    size_t sz_ncio = M_RNDUP(sizeof(ncio));
-    size_t sz_path = M_RNDUP(strlen(filename) +1);
-
-    ncp->nciop = (ncio *) NCI_Malloc(sz_ncio + sz_path);
-    if (ncp->nciop == NULL) {
-        status = NC_ENOMEM;
-        printf("Error at line %d when calling ncmpiio_new()\n",__LINE__);
-        goto prog_exit;
-    }
-
-    ncp->nciop->ioflags  = NC_NOWRITE;
-    ncp->nciop->put_size = 0;
-    ncp->nciop->get_size = 0;
-
-    ncp->nciop->path = (char *) ((char *)ncp->nciop + sz_ncio);
-    (void) strcpy((char *)ncp->nciop->path, filename);
-
     /* read and validate the header */
     status = val_get_NC(fd, ncp);
     if (status != NC_NOERR && status != -1) goto prog_exit;
@@ -1036,9 +1019,10 @@ int main(int argc, char **argv)
     }
 
 prog_exit:
-    /* free allocated buffers and close the file */
-    if (ncp != NULL && ncp->nciop != NULL) free(ncp->nciop);
-
+    free(ncp->dims.value);
+    free(ncp->attrs.value);
+    free(ncp->vars.value);
+    free(ncp);
     close(fd);
 
     if (status == NC_NOERR)

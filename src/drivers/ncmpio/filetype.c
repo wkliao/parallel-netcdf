@@ -1074,7 +1074,7 @@ ncmpii_file_set_view(NC           *ncp,
         return NC_NOERR;
     }
 
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
+    MPI_Comm_rank(ncp->comm, &rank);
     if (rank == 0) {
         /* prepend the whole file header to filetype */
         int blocklens[2];

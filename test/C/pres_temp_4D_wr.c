@@ -122,7 +122,6 @@ main(int argc, char ** argv)
 
    /* Create the file. */
    err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER, MPI_INFO_NULL, &ncid);
-
    CHECK_ERR
 
    /* Define the dimensions. The record dimension is defined to have

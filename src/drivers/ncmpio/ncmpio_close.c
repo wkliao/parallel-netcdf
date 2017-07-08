@@ -24,7 +24,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncio.h"
 #include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
@@ -32,19 +31,19 @@
 
 /*----< ncmpiio_close() >----------------------------------------------------*/
 int
-ncmpiio_close(ncio *nciop, int doUnlink) {
+ncmpiio_close(NC *ncp, int doUnlink) {
     int mpireturn;
 
-    assert(nciop != NULL); /* this should never occur */
+    assert(ncp != NULL); /* this should never occur */
 
-    if (nciop->independent_fh != MPI_FILE_NULL) {
-        TRACE_IO(MPI_File_close)(&nciop->independent_fh);
+    if (ncp->independent_fh != MPI_FILE_NULL) {
+        TRACE_IO(MPI_File_close)(&ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_close");
     }
 
-    if (nciop->collective_fh != MPI_FILE_NULL) {
-        TRACE_IO(MPI_File_close)(&nciop->collective_fh);
+    if (ncp->collective_fh != MPI_FILE_NULL) {
+        TRACE_IO(MPI_File_close)(&ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_close");
     }
@@ -52,16 +51,15 @@ ncmpiio_close(ncio *nciop, int doUnlink) {
     if (doUnlink) {
         /* called from ncmpi_abort, if the file is being created and is still
          * in define mode, the file is deleted */
-        TRACE_IO(MPI_File_delete)((char *)nciop->path, nciop->mpiinfo);
+        TRACE_IO(MPI_File_delete)((char *)ncp->path, ncp->mpiinfo);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_File_delete");
     }
 
-    /* free ncio object */
-    if (nciop->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&(nciop->mpiinfo));
-    if (nciop->comm != MPI_COMM_NULL)    MPI_Comm_free(&(nciop->comm));
-    NCI_Free(nciop->path);
-    NCI_Free(nciop);
+    /* free MPI objects */
+    if (ncp->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&(ncp->mpiinfo));
+    if (ncp->comm != MPI_COMM_NULL)    MPI_Comm_free(&(ncp->comm));
+    NCI_Free(ncp->path);
 
     return NC_NOERR;
 }
@@ -118,14 +116,14 @@ ncmpii_close(void *ncdp)
 #else
     if (ncp->numGetReqs > 0) {
         int rank;
-        MPI_Comm_rank(ncp->nciop->comm, &rank);
+        MPI_Comm_rank(ncp->comm, &rank);
         printf("PnetCDF warning: %d nonblocking get requests still pending on process %d. Cancelling ...\n",ncp->numGetReqs,rank);
         ncmpii_cancel(ncp, NC_GET_REQ_ALL, NULL, NULL);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
     if (ncp->numPutReqs > 0) {
         int rank;
-        MPI_Comm_rank(ncp->nciop->comm, &rank);
+        MPI_Comm_rank(ncp->comm, &rank);
         printf("PnetCDF warning: %d nonblocking put requests still pending on process %d. Cancelling ...\n",ncp->numPutReqs,rank);
         ncmpii_cancel(ncp, NC_PUT_REQ_ALL, NULL, NULL);
         if (status == NC_NOERR ) status = NC_EPENDING;
@@ -133,12 +131,11 @@ ncmpii_close(void *ncdp)
 #endif
 
     /* If the user wants a stronger data consistency by setting NC_SHARE */
-    if (fIsSet(ncp->nciop->ioflags, NC_SHARE))
-        ncmpiio_sync(ncp->nciop); /* calling MPI_File_sync() */
+    if (fIsSet(ncp->iomode, NC_SHARE))
+        ncmpiio_sync(ncp); /* calling MPI_File_sync() */
 
     /* calling MPI_File_close() */
-    ncmpiio_close(ncp->nciop, 0);
-    ncp->nciop = NULL;
+    ncmpiio_close(ncp, 0);
 
     /* free up space occupied by the header metadata */
     ncmpii_free_NC(ncp);

@@ -221,9 +221,9 @@ err_check:
     status = err;
 
     if (io_method == COLL_IO)
-        fh = ncp->nciop->collective_fh;
+        fh = ncp->collective_fh;
     else
-        fh = ncp->nciop->independent_fh;
+        fh = ncp->independent_fh;
 
     /* set the file view */
     err = ncmpii_file_set_view(ncp, fh, &offset, filetype);
@@ -238,14 +238,14 @@ err_check:
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_File_write_at_all");
             else
-                ncp->nciop->put_size += bufcount * buftype_size;
+                ncp->put_size += bufcount * buftype_size;
         }
         else { /* io_method == INDEP_IO */
             TRACE_IO(MPI_File_write_at)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_File_write_at");
             else
-                ncp->nciop->put_size += bufcount * buftype_size;
+                ncp->put_size += bufcount * buftype_size;
         }
     }
     else {  /* rw_flag == READ_REQ */
@@ -254,14 +254,14 @@ err_check:
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_File_read_at_all");
             else
-                ncp->nciop->get_size += bufcount * buftype_size;
+                ncp->get_size += bufcount * buftype_size;
         }
         else { /* io_method == INDEP_IO */
             TRACE_IO(MPI_File_read_at)(fh, offset, cbuf, (int)bufcount, buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_handle_error(mpireturn, "MPI_File_read_at");
             else
-                ncp->nciop->get_size += bufcount * buftype_size;
+                ncp->get_size += bufcount * buftype_size;
         }
     }
 
@@ -318,7 +318,7 @@ err_check:
         if (NC_doFsync(ncp)) { /* NC_SHARE is set */
             TRACE_IO(MPI_File_sync)(fh);
             if (io_method == COLL_IO)
-                TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+                TRACE_COMM(MPI_Barrier)(ncp->comm);
         }
     }
 

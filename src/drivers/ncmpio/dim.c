@@ -459,12 +459,12 @@ err_check:
         char *root_name=NULL;
         MPI_Offset root_size;
 
-        MPI_Comm_rank(ncp->nciop->comm, &rank);
+        MPI_Comm_rank(ncp->comm, &rank);
 
         /* check if name is consistent among all processes */
         root_name_len = 1;
         if (rank == 0 && name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
@@ -474,7 +474,7 @@ err_check:
             root_name = (char*)name;
         else
             root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             if (rank > 0) NCI_Free(root_name);
@@ -486,7 +486,7 @@ err_check:
 
         /* check if sizes are consistent across all processes */
         root_size = size;
-        TRACE_COMM(MPI_Bcast)(&root_size, 1, MPI_OFFSET, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_size, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
@@ -495,7 +495,7 @@ err_check:
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_SIZE)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) free(nname);
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
@@ -680,12 +680,12 @@ err_check:
         int root_name_len, root_dimid, rank, status, mpireturn;
         char *root_name=NULL;
 
-        MPI_Comm_rank(ncp->nciop->comm, &rank);
+        MPI_Comm_rank(ncp->comm, &rank);
 
         /* check if newname is consistent among all processes */
         root_name_len = 1;
         if (rank == 0 && newname != NULL) root_name_len += strlen(newname);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (newStr != NULL) ncmpii_free_NC_string(newStr);
             return ncmpii_handle_error(mpireturn, "MPI_Bcast root_name_len");
@@ -695,7 +695,7 @@ err_check:
             root_name = (char*)newname;
         else
             root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (newStr != NULL) ncmpii_free_NC_string(newStr);
             if (rank > 0) NCI_Free(root_name);
@@ -707,7 +707,7 @@ err_check:
 
         /* check if dimid is consistent across all processes */
         root_dimid = dimid;
-        TRACE_COMM(MPI_Bcast)(&root_dimid, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_dimid, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (newStr != NULL) ncmpii_free_NC_string(newStr);
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
@@ -716,7 +716,7 @@ err_check:
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (newStr != NULL) ncmpii_free_NC_string(newStr);
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");

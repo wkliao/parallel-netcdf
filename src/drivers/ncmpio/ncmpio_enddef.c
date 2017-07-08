@@ -27,18 +27,16 @@
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
+#include "fbits.h"
+#include "rnd.h"    /* D_RNDUP(), M_RNDUP() */
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
 
-#include "ncio.h"
-#include "fbits.h"
-#include "rnd.h"    /* D_RNDUP(), M_RNDUP() */
-
 
 /*----< ncmpiio_move() >-----------------------------------------------------*/
 static int
-ncmpiio_move(ncio *const nciop,
+ncmpiio_move(NC         *ncp,
              MPI_Offset  to,
              MPI_Offset  from,
              MPI_Offset  nbytes)
@@ -48,12 +46,12 @@ ncmpiio_move(ncio *const nciop,
     int chunk_size=1048576; /* move 1 MB per process at a time */
     MPI_Status mpistatus;
 
-    MPI_Comm_size(nciop->comm, &nprocs);
-    MPI_Comm_rank(nciop->comm, &rank);
+    MPI_Comm_size(ncp->comm, &nprocs);
+    MPI_Comm_rank(ncp->comm, &rank);
 
     /* if the file striping unit size is known (obtained from MPI-IO), then
      * we use that instead of 1 MB */
-    if (nciop->striping_unit > 0) chunk_size = nciop->striping_unit;
+    if (ncp->striping_unit > 0) chunk_size = ncp->striping_unit;
 
     /* buf will be used as a temporal buffer to move data in chunks, i.e.
      * read a chunk and later write to the new location */
@@ -61,7 +59,7 @@ ncmpiio_move(ncio *const nciop,
     if (buf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* make fileview entire file visible */
-    TRACE_IO(MPI_File_set_view)(nciop->collective_fh, 0, MPI_BYTE, MPI_BYTE,
+    TRACE_IO(MPI_File_set_view)(ncp->collective_fh, 0, MPI_BYTE, MPI_BYTE,
                                 "native", MPI_INFO_NULL);
 
     /* move the variable starting from its tail toward its beginning */
@@ -87,7 +85,7 @@ ncmpiio_move(ncio *const nciop,
         memset(&mpistatus, 0, sizeof(MPI_Status));
 
         /* read the original data @ from+nbytes+rank*chunk_size */
-        TRACE_IO(MPI_File_read_at_all)(nciop->collective_fh,
+        TRACE_IO(MPI_File_read_at_all)(ncp->collective_fh,
                                        from+nbytes+rank*chunk_size,
                                        buf, bufcount, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
@@ -99,15 +97,15 @@ ncmpiio_move(ncio *const nciop,
              * for some MPICH version, due to the uninitialized MPI_Status
              * object passed to MPI-IO calls. Thus we initialize it above to
              * work around. Otherwise we can just use:
-            nciop->get_size += bufcount;
+            ncp->get_size += bufcount;
              */
             MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
-            nciop->get_size += get_size;
+            ncp->get_size += get_size;
         }
 
-        /* MPI_Barrier(nciop->comm); */
+        /* MPI_Barrier(ncp->comm); */
         /* important, in case new region overlaps old region */
-        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
         status = min_st;
         if (status != NC_NOERR) break;
 
@@ -127,7 +125,7 @@ ncmpiio_move(ncio *const nciop,
          * bufcount for write. Note that the latter will write the variables
          * that have not been written before. Below uses the former option.
          */
-        TRACE_IO(MPI_File_write_at_all)(nciop->collective_fh,
+        TRACE_IO(MPI_File_write_at_all)(ncp->collective_fh,
                                         to+nbytes+rank*chunk_size,
                                         buf, get_size /* bufcount */,
                                         MPI_BYTE, &mpistatus);
@@ -140,13 +138,13 @@ ncmpiio_move(ncio *const nciop,
              * for some MPICH version, due to the uninitialized MPI_Status
              * object passed to MPI-IO calls. Thus we initialize it above to
              * work around. Otherwise we can just use:
-            nciop->put_size += bufcount;
+            ncp->put_size += bufcount;
              */
             int put_size;
             MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
-            nciop->put_size += put_size;
+            ncp->put_size += put_size;
         }
-        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
         status = min_st;
         if (status != NC_NOERR) break;
     }
@@ -168,7 +166,7 @@ move_fixed_vars(NC *ncp, NC *old)
         MPI_Offset from = old->vars.value[i]->begin;
         MPI_Offset to   = ncp->vars.value[i]->begin;
         if (to > from) {
-            err = ncmpiio_move(ncp->nciop, to, from, ncp->vars.value[i]->len);
+            err = ncmpiio_move(ncp, to, from, ncp->vars.value[i]->len);
             if (status == NC_NOERR) status = err;
         }
     }
@@ -198,13 +196,13 @@ move_recs_r(NC *ncp, NC *old) {
             return NC_NOERR;
 
         /* No new record variable inserted, move all record variables as a whole */
-        status = ncmpiio_move(ncp->nciop, ncp_off, old_off, ncp_recsize * nrecs);
+        status = ncmpiio_move(ncp, ncp_off, old_off, ncp_recsize * nrecs);
         if (status != NC_NOERR)
             return status;
     } else {
         /* new record variables inserted, move one whole record at a time */
         for (recno = nrecs-1; recno >= 0; recno--) {
-            status = ncmpiio_move(ncp->nciop,
+            status = ncmpiio_move(ncp,
                                   ncp_off+recno*ncp_recsize,
                                   old_off+recno*old_recsize,
                                   old_recsize);
@@ -238,7 +236,7 @@ NC_begins(NC *ncp)
     /* CDF file format determines the size of variable's "begin" in the header */
 
     /* get the true header size (not header extent) */
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
+    MPI_Comm_rank(ncp->comm, &rank);
     ncp->xsz = ncmpii_hdr_len_NC(ncp);
 
     if (ncp->safe_mode) { /* this consistency check is redundant as metadata is
@@ -247,7 +245,7 @@ NC_begins(NC *ncp)
         MPI_Offset root_xsz = ncp->xsz;
 
         /* only root's header size matters */
-        TRACE_COMM(MPI_Bcast)(&root_xsz, 1, MPI_OFFSET, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_xsz, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
 
@@ -255,7 +253,7 @@ NC_begins(NC *ncp)
         if (root_xsz != ncp->xsz) err = NC_EMULTIDEFINE;
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
         if (status != NC_NOERR) DEBUG_RETURN_ERROR(status)
@@ -475,7 +473,7 @@ write_NC(NC *ncp)
         return status;
     }
 
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
+    MPI_Comm_rank(ncp->comm, &rank);
 
 #ifdef _DIFF_HEADER
     if (ncp->safe_mode == 0) {
@@ -488,7 +486,7 @@ write_NC(NC *ncp)
         else
             root_header = (void*) NCI_Malloc((size_t)h_size);
 
-        TRACE_COMM(MPI_Bcast)(root_header, h_size, MPI_BYTE, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(root_header, h_size, MPI_BYTE, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast"); 
 
@@ -499,7 +497,7 @@ write_NC(NC *ncp)
         }
 
         /* report error if header is inconsistency */
-        TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             ncmpii_handle_error(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(NC_EMPI)
@@ -536,7 +534,7 @@ write_NC(NC *ncp)
 
     if (ncp->safe_mode == 1) {
         TRACE_COMM(MPI_Allreduce)(&err, &max_err, 1, MPI_INT, MPI_MAX,
-                                  ncp->nciop->comm);
+                                  ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             ncmpii_handle_error(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(NC_EMPI)
@@ -557,7 +555,7 @@ write_NC(NC *ncp)
         if (ncp->xsz != (int)ncp->xsz)
             DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
 
-        TRACE_IO(MPI_File_write_at)(ncp->nciop->collective_fh, 0, buf,
+        TRACE_IO(MPI_File_write_at)(ncp->collective_fh, 0, buf,
                                     (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
             err = ncmpii_handle_error(mpireturn, "MPI_File_write_at");
@@ -565,14 +563,14 @@ write_NC(NC *ncp)
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
         else {
-            ncp->nciop->put_size += ncp->xsz;
+            ncp->put_size += ncp->xsz;
         }
     }
 
     if (ncp->safe_mode == 1) {
         /* broadcast root's status, because only root writes to the file */
         int root_status = status;
-        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->comm);
         /* root's write has failed, which is more serious than inconsistency */
         if (root_status == NC_EWRITE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
     }
@@ -593,7 +591,7 @@ write_NC(NC *ncp)
     if (ncp->safe_mode == 1) {                                          \
         int status;                                                     \
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,   \
-                                  ncp->nciop->comm);                    \
+                                  ncp->comm);                           \
         if (mpireturn != MPI_SUCCESS)                                   \
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");     \
         if (status != NC_NOERR) return status;                          \
@@ -635,7 +633,7 @@ ncmpii__enddef(void       *ncdp,
     if (ncp->safe_mode) {
         /* find min error code across processes */
         err = status;
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
         if (status != NC_NOERR) return status;
@@ -648,7 +646,7 @@ ncmpii__enddef(void       *ncdp,
         root_args[1] = v_align;
         root_args[2] = v_minfree;
         root_args[3] = r_align;
-        TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Bcast");
 
@@ -663,7 +661,7 @@ ncmpii__enddef(void       *ncdp,
             err = NC_NOERR;
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->nciop->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_handle_error(mpireturn, "MPI_Allreduce");
 
@@ -676,7 +674,7 @@ ncmpii__enddef(void       *ncdp,
      * from MPI-IO (for example, ROMIO's Lustre driver makes a system call to
      * get the striping parameters of a file).
      */
-    MPI_Info_get(ncp->nciop->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
+    MPI_Info_get(ncp->mpiinfo, "striping_unit", MPI_MAX_INFO_VAL-1,
                  value, &flag);
     striping_unit = 0;
     if (flag) {
@@ -684,7 +682,7 @@ ncmpii__enddef(void       *ncdp,
         striping_unit = (int)strtol(value,NULL,10);
         if (errno != 0) striping_unit = 0;
     }
-    ncp->nciop->striping_unit = striping_unit;
+    ncp->striping_unit = striping_unit;
 
     all_var_size = 0;  /* sum of all defined variables */
     for (i=0; i<ncp->vars.ndefined; i++)
@@ -735,11 +733,11 @@ ncmpii__enddef(void       *ncdp,
      * what the true hint values are being used
      */
     sprintf(value, "%lld", ncp->h_align);
-    MPI_Info_set(ncp->nciop->mpiinfo, "nc_header_align_size", value);
+    MPI_Info_set(ncp->mpiinfo, "nc_header_align_size", value);
     sprintf(value, "%lld", ncp->v_align);
-    MPI_Info_set(ncp->nciop->mpiinfo, "nc_var_align_size", value);
+    MPI_Info_set(ncp->mpiinfo, "nc_var_align_size", value);
     sprintf(value, "%lld", ncp->r_align);
-    MPI_Info_set(ncp->nciop->mpiinfo, "nc_record_align_size", value);
+    MPI_Info_set(ncp->mpiinfo, "nc_record_align_size", value);
 
 #ifdef ENABLE_SUBFILING
     /* num of subfiles has been determined already */
@@ -857,7 +855,7 @@ ncmpii__enddef(void       *ncdp,
 
     /* If the user sets NC_SHARE, we enforce a stronger data consistency */
     if (NC_doFsync(ncp))
-        ncmpiio_sync(ncp->nciop); /* calling MPI_File_sync() */
+        ncmpiio_sync(ncp); /* calling MPI_File_sync() */
 
     return status;
 }

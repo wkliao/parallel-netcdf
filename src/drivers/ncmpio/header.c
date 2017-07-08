@@ -818,18 +818,19 @@ hdr_put_NC_vararray(bufferinfo        *pbp,
 /* fill the file header into the I/O buffer, buf
  * this function is collective */
 int
-ncmpii_hdr_put_NC(NC   *ncp,
-                  void *buf) {
+ncmpii_hdr_put_NC(NC *ncp, void *buf)
+{
     int status;
     bufferinfo putbuf;
     MPI_Offset nrecs=0;
 
-    putbuf.nciop     = NULL;
-    putbuf.offset    = 0;
-    putbuf.pos       = buf;
-    putbuf.base      = buf;
-    putbuf.size      = ncp->xsz;
-    putbuf.safe_mode = ncp->safe_mode;
+    putbuf.comm          = ncp->comm;
+    putbuf.collective_fh = ncp->collective_fh;
+    putbuf.offset        = 0;
+    putbuf.pos           = buf;
+    putbuf.base          = buf;
+    putbuf.size          = ncp->xsz;
+    putbuf.safe_mode     = ncp->safe_mode;
 
     /* netCDF file format:
      * netcdf_file  = header  data
@@ -918,12 +919,12 @@ hdr_fetch(bufferinfo *gbp) {
     memset(gbp->base, 0, (size_t)gbp->size);
     gbp->pos = gbp->base;
 
-    MPI_Comm_rank(gbp->nciop->comm, &rank);
+    MPI_Comm_rank(gbp->comm, &rank);
     if (rank == 0) {
         MPI_Status mpistatus;
         /* fileview is already entire file visible and MPI_File_read_at does
            not change the file pointer */
-        TRACE_IO(MPI_File_read_at)(gbp->nciop->collective_fh,
+        TRACE_IO(MPI_File_read_at)(gbp->collective_fh,
                                    (gbp->offset)-slack, gbp->base,
                                    (int)gbp->size, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
@@ -933,19 +934,19 @@ hdr_fetch(bufferinfo *gbp) {
         else {
             int get_size; /* actual read amount can be smaller */
             MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
-            gbp->nciop->get_size += get_size;
+            gbp->get_size += get_size;
         }
     }
     /* we might have to backtrack */
     gbp->offset += (gbp->size - slack);
 
     if (gbp->safe_mode == 1) {
-        TRACE_COMM(MPI_Bcast)(&err, 1, MPI_INT, 0, gbp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&err, 1, MPI_INT, 0, gbp->comm);
         if (err != NC_NOERR) return err;
     }
 
     /* broadcast root's read (full or partial header) to other processes */
-    TRACE_COMM(MPI_Bcast)(gbp->base, (int)gbp->size, MPI_BYTE, 0, gbp->nciop->comm);
+    TRACE_COMM(MPI_Bcast)(gbp->base, (int)gbp->size, MPI_BYTE, 0, gbp->comm);
 
     return err;
 }
@@ -1766,9 +1767,11 @@ ncmpii_hdr_get_NC(NC *ncp)
     assert(ncp != NULL);
 
     /* Initialize the get buffer that stores the header read from the file */
-    getbuf.nciop     = ncp->nciop;
-    getbuf.offset    = 0;   /* read from start of the file */
-    getbuf.safe_mode = ncp->safe_mode;
+    getbuf.comm          = ncp->comm;
+    getbuf.collective_fh = ncp->collective_fh;
+    getbuf.get_size      = 0;
+    getbuf.offset        = 0;   /* read from start of the file */
+    getbuf.safe_mode     = ncp->safe_mode;
 
     /* CDF-5's minimum header size is 4 bytes more than CDF-1 and CDF-2's */
     getbuf.size = _RNDUP( MAX(MIN_NC_XSZ+4, ncp->chunk), X_ALIGN );
@@ -1797,7 +1800,7 @@ ncmpii_hdr_get_NC(NC *ncp)
         if (memcmp(signature, hdf5_signature, 8) == 0) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOTNC3)
             if (ncp->safe_mode)
-                fprintf(stderr,"Error: file %s is HDF5 format\n",ncp->nciop->path);
+                fprintf(stderr,"Error: file %s is HDF5 format\n",ncp->path);
         }
         else
             DEBUG_ASSIGN_ERROR(status, NC_ENOTNC)
@@ -1886,6 +1889,7 @@ ncmpii_hdr_get_NC(NC *ncp)
     if (status != NC_NOERR) goto fn_exit;
 
 fn_exit:
+    ncp->get_size += getbuf.get_size;
     NCI_Free(getbuf.base);
 
     return status;
@@ -2570,9 +2574,9 @@ int ncmpii_write_header(NC *ncp)
      * all metadata following the new name must be moved ahead.
      */
 
-    fh = ncp->nciop->collective_fh;
+    fh = ncp->collective_fh;
     if (NC_indep(ncp))
-        fh = ncp->nciop->independent_fh;
+        fh = ncp->independent_fh;
 
     /* update file header size, as this subroutine may be called from a rename
      * API (var or attribute) and the new name is smaller/bigger which changes
@@ -2580,7 +2584,7 @@ int ncmpii_write_header(NC *ncp)
      * occupied by the file header */
     ncp->xsz = ncmpii_hdr_len_NC(ncp);
 
-    MPI_Comm_rank(ncp->nciop->comm, &rank);
+    MPI_Comm_rank(ncp->comm, &rank);
     if (rank == 0) { /* only root writes to file header */
         MPI_Status mpistatus;
         void *buf = NCI_Malloc((size_t)ncp->xsz); /* header's write buffer */
@@ -2601,7 +2605,7 @@ int ncmpii_write_header(NC *ncp)
             }
         }
         else {
-            ncp->nciop->put_size += ncp->xsz;
+            ncp->put_size += ncp->xsz;
         }
         NCI_Free(buf);
     }
@@ -2609,7 +2613,7 @@ int ncmpii_write_header(NC *ncp)
     if (ncp->safe_mode == 1) {
         /* broadcast root's status, because only root writes to the file */
         int root_status = status;
-        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->nciop->comm);
+        TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->comm);
         /* root's write has failed, which is serious */
         if (root_status == NC_EWRITE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         if (mpireturn != MPI_SUCCESS) {
@@ -2624,7 +2628,7 @@ int ncmpii_write_header(NC *ncp)
             ncmpii_handle_error(mpireturn,"MPI_File_sync");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
-        TRACE_COMM(MPI_Barrier)(ncp->nciop->comm);
+        TRACE_COMM(MPI_Barrier)(ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             ncmpii_handle_error(mpireturn,"MPI_Barrier");
             DEBUG_RETURN_ERROR(NC_EMPI)
