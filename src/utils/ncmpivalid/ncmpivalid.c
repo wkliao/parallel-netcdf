@@ -173,7 +173,7 @@ val_get_NC_string(int fd, bufferinfo *gbp, NC_string **ncstrpp) {
         return status;
     }
 
-    ncstrp = ncmpii_new_NC_string(nchars, NULL);
+    ncstrp = ncmpio_new_NC_string(nchars, NULL);
     if (ncstrp == NULL) return NC_ENOMEM;
 
     padding = _RNDUP(ncstrp->nchars, X_ALIGN) - ncstrp->nchars;
@@ -199,7 +199,7 @@ val_get_NC_string(int fd, bufferinfo *gbp, NC_string **ncstrpp) {
             status = val_fetch(fd, gbp);
             if (status != NC_NOERR) {
                 printf("fetching the name string of ");
-                ncmpii_free_NC_string(ncstrp);
+                ncmpio_free_NC_string(ncstrp);
                 return status;
             } 
             bufremain = gbp->size;
@@ -211,13 +211,13 @@ val_get_NC_string(int fd, bufferinfo *gbp, NC_string **ncstrpp) {
         status = val_check_buffer(fd, gbp, padding);
         if (status != NC_NOERR) {
             printf("fetching padding for the name string of ");
-            ncmpii_free_NC_string(ncstrp);
+            ncmpio_free_NC_string(ncstrp);
             return status;
         } 
         if (memcmp(gbp->pos, pad, padding) != 0) {
             printf("Error @ [0x%8.8Lx]: \n\tPadding should be 0x00 for the name string alignment of ", (long long unsigned)
 	           (((size_t) gbp->pos - (size_t) gbp->base) + gbp->offset - gbp->size));
-            ncmpii_free_NC_string(ncstrp);
+            ncmpio_free_NC_string(ncstrp);
             return NC_EINVAL;
         }
         gbp->pos = (void *)((char *)gbp->pos + padding);
@@ -237,13 +237,13 @@ val_get_NC_dim(int fd, bufferinfo *gbp, NC_dim **dimpp) {
     status = val_get_NC_string(fd, gbp, &ncstrp);
     if (status != NC_NOERR) return status;
 
-    dimp = ncmpii_new_x_NC_dim(ncstrp);
+    dimp = ncmpio_new_x_NC_dim(ncstrp);
     if(dimp == NULL) return NC_ENOMEM;
 
     status = val_get_size_t(fd, gbp, &dimp->size);
     if (status != NC_NOERR) {
         printf("\"%s\" - ", ncstrp->cp);
-        ncmpii_free_NC_dim(dimp); /* frees name */
+        ncmpio_free_NC_dim(dimp); /* frees name */
         return status;
     }
 
@@ -318,7 +318,7 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
             if (status != NC_NOERR) {
 	        printf("dimension[%d] in ", dim);
                 ncap->ndefined = dim;
-                ncmpii_free_NC_dimarray(ncap);
+                ncmpio_free_NC_dimarray(ncap);
                 return status;
             }
         }
@@ -427,27 +427,27 @@ val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
   status = val_get_nc_type(fd, gbp, &type);
   if(status != NC_NOERR) {
     printf("\"%s\" - ", strp->cp);
-    ncmpii_free_NC_string(strp);
+    ncmpio_free_NC_string(strp);
     return status;
   }
 
   status = val_get_size_t(fd, gbp, &nelems); 
   if(status != NC_NOERR) {
     printf("the values of \"%s\" - ", strp->cp);
-    ncmpii_free_NC_string(strp);
+    ncmpio_free_NC_string(strp);
     return status;
   }
 
-  attrp = ncmpii_new_x_NC_attr(strp, type, nelems);
+  attrp = ncmpio_new_x_NC_attr(strp, type, nelems);
   if(attrp == NULL) {
-    ncmpii_free_NC_string(strp);
+    ncmpio_free_NC_string(strp);
     return status;
   }
 
   status = val_get_NC_attrV(fd, gbp, attrp);
   if(status != NC_NOERR) {
     printf("\"%s\" - ", strp->cp);
-    ncmpii_free_NC_attr(attrp); /* frees strp */ 
+    ncmpio_free_NC_attr(attrp); /* frees strp */ 
     return status;
   }
 
@@ -521,7 +521,7 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
             if (status != NC_NOERR) {
 	        printf("attribute[%d] of ", att);
                 ncap->ndefined = att;
-                ncmpii_free_NC_attrarray(ncap);
+                ncmpio_free_NC_attrarray(ncap);
                 return status;
             }
         }
@@ -560,13 +560,13 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
     status = val_get_size_t(fd, gbp, &ndims);
     if (status != NC_NOERR) {
         printf("the dimid list of \"%s\" - ", strp->cp);
-        ncmpii_free_NC_string(strp); 
+        ncmpio_free_NC_string(strp); 
         return status;
     }
 
-    varp = ncmpii_new_x_NC_var(strp, ndims);
+    varp = ncmpio_new_x_NC_var(strp, ndims);
     if (varp == NULL) {
-        ncmpii_free_NC_string(strp);
+        ncmpio_free_NC_string(strp);
         return NC_ENOMEM;
     }
 
@@ -574,7 +574,7 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
         status = val_check_buffer(fd, gbp, (gbp->version < 5 ? 4 : 8));
         if (status != NC_NOERR) {
             printf("the dimid[%d] is expected for \"%s\" - ", dim, strp->cp);
-            ncmpii_free_NC_var(varp);
+            ncmpio_free_NC_var(varp);
             return status;
         }
         if (gbp->version < 5) {
@@ -589,7 +589,7 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
         }
         varp->dimids[dim] = dimid;
         if (status != NC_NOERR) {
-            ncmpii_free_NC_var(varp);
+            ncmpio_free_NC_var(varp);
             return status;
         }
     }
@@ -597,14 +597,14 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
     status = val_get_NC_attrarray(fd, gbp, &varp->attrs);
     if (status != NC_NOERR) {
         printf("ATTRIBUTE list of \"%s\" - ", strp->cp);
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
     status = val_get_nc_type(fd, gbp, &varp->type);
     if (status != NC_NOERR) {
         printf("\"%s\" - ", strp->cp);
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     } 
 
@@ -612,14 +612,14 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
     status = val_get_size_t(fd, gbp, &varp->len);
     if (status != NC_NOERR) {
         printf("the data of  \"%s\" - ", strp->cp);
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
     status = val_check_buffer(fd, gbp, (gbp->version < 5 ? 4 : 8));
     if (status != NC_NOERR) {
         printf("offset is expected for the data of \"%s\" - ", strp->cp);
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
     if (gbp->version == 1) {
@@ -633,7 +633,7 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
         varp->begin = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) {
-        ncmpii_free_NC_var(varp);
+        ncmpio_free_NC_var(varp);
         return status;
     }
 
@@ -706,7 +706,7 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
             if (status != NC_NOERR) {
                 printf("variable[%d] in ", var);
                 ncap->ndefined = var;
-                ncmpii_free_NC_vararray(ncap);
+                ncmpio_free_NC_vararray(ncap);
                 return status;
             }
         }
@@ -752,7 +752,7 @@ val_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (!IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpii_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_fix_vars_count++;
                 last = 1;
@@ -789,7 +789,7 @@ val_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpii_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_rec_vars_count++;
                 last = 1;
@@ -949,8 +949,8 @@ val_get_NC(int fd, NC *ncp)
         goto fn_exit;
     }
 
-    ncp->xsz = ncmpii_hdr_len_NC(ncp);
-    status = ncmpii_NC_computeshapes(ncp);
+    ncp->xsz = ncmpio_hdr_len_NC(ncp);
+    status = ncmpio_NC_computeshapes(ncp);
     if (status != NC_NOERR) goto fn_exit;
 
     status = val_NC_check_vlens(ncp);
@@ -991,7 +991,7 @@ int main(int argc, char **argv)
     ncp = (NC*) calloc(1, sizeof(NC));
     if (ncp == NULL) {
         status = NC_ENOMEM;
-        printf("Error at line %d when calling ncmpii_new_NC()\n",__LINE__);
+        printf("Error at line %d when calling ncmpio_new_NC()\n",__LINE__);
         goto prog_exit;
     }
 
