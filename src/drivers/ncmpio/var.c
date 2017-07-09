@@ -202,8 +202,8 @@ ncmpio_dup_NC_var(const NC_var *rvarp)
     }
 
     /* copy the contents of shape may not be necessary, as one must call
-     * ncmpio_NC_computeshapes() to recompute it after a new variable is
-     * created */
+     * compute_var_shape() to recompute it after a new variable is created
+     */
     memcpy(varp->shape,  rvarp->shape,  (size_t)rvarp->ndims * SIZEOF_MPI_OFFSET);
     memcpy(varp->dsizes, rvarp->dsizes, (size_t)rvarp->ndims * SIZEOF_MPI_OFFSET);
     varp->xsz = rvarp->xsz;

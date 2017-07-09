@@ -508,7 +508,7 @@ write_NC(NC *ncp)
     }
 #endif
 
-#ifdef _CHECK_HEADER_IN_DETAIL
+#ifdef _CHECK_HEADER_CONSISTENCY
     /* check the header consistency across all processes and sync header.
      * When safe_mode is on:
      *   The returned status on root can be either NC_NOERR (all headers are

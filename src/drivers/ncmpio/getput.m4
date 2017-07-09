@@ -460,7 +460,7 @@ err_check:
             }
 
             /* perform array in-place byte-swap on xbuf */
-            ncmpio_in_swapn(xbuf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(xbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
 
             if (xbuf == buf) need_swap_back_buf = 1;
             /* user buf needs to be swapped back to its original contents */
@@ -590,7 +590,7 @@ mpi_io:
             NCI_Free(xbuf);
         } else {
             if (need_swap) /* perform array in-place byte-swap on xbuf */
-                ncmpio_in_swapn(xbuf, bnelems, ncmpix_len_nctype(varp->type));
+                ncmpio_in_swapn(xbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
             cbuf = xbuf;
         }
         /* done with xbuf */
@@ -635,7 +635,7 @@ mpi_io:
         if (xbuf != NULL && xbuf != buf) NCI_Free(xbuf);
 
         if (need_swap_back_buf) /* byte-swap back to buf's original contents */
-            ncmpio_in_swapn(buf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(buf, bnelems, ncmpio_xlen_nc_type(varp->type));
 
         if (IS_RECVAR(varp)) {
             /* update header's number of records in memory */

@@ -363,3 +363,24 @@ ncmpio_check_mpifh(NC  *ncp,
     return NC_NOERR;
 }
 
+/*----< ncmpio_xlen_nc_type() >----------------------------------------------*/
+/* return the length of external NC data type */
+int
+ncmpio_xlen_nc_type(nc_type type) {
+    switch(type) {
+        case NC_BYTE:
+        case NC_CHAR:
+        case NC_UBYTE:  return X_SIZEOF_CHAR;
+        case NC_SHORT:  return X_SIZEOF_SHORT;
+        case NC_USHORT: return X_SIZEOF_USHORT;
+        case NC_INT:    return X_SIZEOF_INT;
+        case NC_UINT:   return X_SIZEOF_UINT;
+        case NC_FLOAT:  return X_SIZEOF_FLOAT;
+        case NC_DOUBLE: return X_SIZEOF_DOUBLE;
+        case NC_INT64:  return X_SIZEOF_INT64;
+        case NC_UINT64: return X_SIZEOF_UINT64;
+        default: DEBUG_RETURN_ERROR(NC_EBADTYPE);
+    }
+    return NC_NOERR;
+}
+

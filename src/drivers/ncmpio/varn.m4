@@ -135,7 +135,7 @@ getput_varn(NC                *ncp,
         if (status != NC_NOERR) goto err_check;
 
         ptype = buftype;
-        el_size = ncmpix_len_nctype(varp->type);
+        el_size = ncmpio_xlen_nc_type(varp->type);
     }
 
     /* We allow counts == NULL and treat this the same as all 1s */

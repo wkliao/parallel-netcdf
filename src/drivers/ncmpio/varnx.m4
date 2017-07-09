@@ -885,7 +885,7 @@ ncmpio_getput_varnm(int                ncid,
             num = 0;
         else {
             ptype = buftype;
-            el_size = ncmpix_len_nctype(varp->type);
+            el_size = ncmpio_xlen_nc_type(varp->type);
         }
     }
 

@@ -86,19 +86,6 @@
 typedef struct NC NC; /* forward reference */
 
 /*
- *  The internal data types
- */
-typedef enum {
-    NC_UNSPECIFIED =  0,
-/*  NC_BITFIELD    =  7, */
-/*  NC_STRING      =  8, */
-    NC_DIMENSION   = 10,  /* \x00 \x00 \x00 \x0A */
-    NC_VARIABLE    = 11,  /* \x00 \x00 \x00 \x0B */
-    NC_ATTRIBUTE   = 12   /* \x00 \x00 \x00 \x0C */
-} NCtype;
-
-
-/*
  * Counted string for names and such
  */
 typedef struct {
@@ -517,7 +504,7 @@ typedef struct bufferinfo {
 } bufferinfo;
 
 extern int
-ncmpix_len_nctype(nc_type type);
+ncmpio_xlen_nc_type(nc_type type);
 
 extern MPI_Offset
 ncmpio_hdr_len_NC(const NC *ncp);
@@ -528,11 +515,6 @@ ncmpio_hdr_get_NC(NC *ncp);
 extern int
 ncmpio_hdr_put_NC(NC *ncp, void *buf);
 
-extern int
-ncmpio_NC_computeshapes(NC *ncp);
-
-extern int
-ncmpio_hdr_check_NC(bufferinfo *getbuf, NC *ncp);
 /* end defined in header.c */
 
 /* begin defined in ncmpio_file_misc.c */

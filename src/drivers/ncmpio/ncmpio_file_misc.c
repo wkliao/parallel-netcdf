@@ -41,7 +41,6 @@
 int
 ncmpio_redef(void *ncdp)
 {
-    int err=NC_NOERR;
     NC *ncp = (NC*)ncdp;
 
     if (NC_readonly(ncp)) DEBUG_RETURN_ERROR(NC_EPERM) /* read-only */
@@ -63,7 +62,7 @@ ncmpio_redef(void *ncdp)
      * calling ncmpio_end_indep_data()
      */
     if (NC_doFsync(ncp)) { /* re-read the header from file */
-        err = ncmpio_read_NC(ncp);
+        int err = ncmpio_read_NC(ncp);
         if (err != NC_NOERR) return err;
     }
 #endif

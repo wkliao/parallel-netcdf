@@ -28,18 +28,18 @@
 #endif
 
 /* for write case, buf needs to swapped back if swapped previously */
-#define FINAL_CLEAN_UP {                                                      \
-    if (is_buf_swapped) /* byte-swap back to buf's original contents */       \
-        ncmpio_in_swapn(buf, bnelems, ncmpix_len_nctype(varp->type));         \
-                                                                              \
-    if (cbuf != NULL && cbuf != buf) NCI_Free(cbuf);                          \
+#define FINAL_CLEAN_UP {                                                 \
+    if (is_buf_swapped) /* byte-swap back to buf's original contents */  \
+        ncmpio_in_swapn(buf, bnelems, ncmpio_xlen_nc_type(varp->type));  \
+                                                                         \
+    if (cbuf != NULL && cbuf != buf) NCI_Free(cbuf);                     \
 }
 
 /*----< getput_vard() >------------------------------------------------------*/
 static int
 getput_vard(NC               *ncp,
             NC_var           *varp,
-            MPI_Datatype      filetype,  /* data type of the variable */
+            MPI_Datatype      filetype, /* access layout in the file */
             void             *buf,
             MPI_Offset        bufcount,
             MPI_Datatype      buftype,  /* data type of the bufer */
@@ -56,7 +56,8 @@ getput_vard(NC               *ncp,
     MPI_File fh=MPI_FILE_NULL;
     MPI_Aint lb, extent=0, true_lb, true_extent;
 
-    if (filetype == MPI_DATATYPE_NULL) { /* this process does zero-length I/O */
+    if (filetype == MPI_DATATYPE_NULL) {
+        /* this process does zero-length I/O */
         if (io_method == INDEP_IO) return NC_NOERR;
         bufcount = 0;
         goto err_check;
@@ -191,7 +192,7 @@ getput_vard(NC               *ncp,
                 memcpy(cbuf, buf, (size_t)filetype_size);
             }
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
             is_buf_swapped = (cbuf == buf) ? 1 : 0;
             /* is_buf_swapped indicates if the contents of the original user
              * buffer, buf, have been changed, i.e. byte swapped. */
@@ -204,11 +205,12 @@ getput_vard(NC               *ncp,
 
 err_check:
     /* check API error from any proc before going into a collective call.
-     * optimization: to avoid MPI_Allreduce to check parameters at
-     * every call, we assume caller does the right thing most of the
-     * time.  If caller passed in bad parameters, we'll still conduct a
-     * zero-byte operation (everyone has to participate in the
-     * collective I/O call) but return error */
+     * optimization: to avoid MPI_Allreduce to check parameters at every call,
+     * we assume caller does the right thing most of the time.  If caller
+     * passed in bad parameters, we'll still conduct a zero-byte operation
+     * (everyone has to participate in the collective I/O call) but return
+     * the error at the end.
+     */
     if (err != NC_NOERR || bufcount == 0 || filetype_size == 0) {
         if (io_method == INDEP_IO) {
             FINAL_CLEAN_UP  /* swap back put buffer and free temp buffers */
@@ -271,20 +273,21 @@ err_check:
 
     /* No longer need to reset the file view, as the root's fileview includes
      * the whole file header.
-     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+     MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
      */
 
     if (rw_flag == READ_REQ) {
         if (need_swap)
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, ncmpix_len_nctype(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
 
         if (!buftype_is_contig && bnelems > 0) {
             /* unpack cbuf, a contiguous buffer, to buf using buftype */
             int position = 0;
             MPI_Offset insize = bnelems * el_size;
             if (insize != (int)insize) {
-                if (status == NC_NOERR) DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
+                if (status == NC_NOERR)
+                    DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
             }
             else
                 MPI_Unpack(cbuf, (int)insize, &position, buf,
@@ -350,7 +353,7 @@ err_check:
 int
 ncmpio_get_vard(void         *ncdp,
                 int           varid,
-                MPI_Datatype  filetype,  /* access layout to variable in file */
+                MPI_Datatype  filetype,  /* access layout in file */
                 void         *buf,
                 MPI_Offset    bufcount,
                 MPI_Datatype  buftype,   /* data type of the buffer */
@@ -386,7 +389,7 @@ ncmpio_get_vard(void         *ncdp,
 int
 ncmpio_put_vard(void         *ncdp,
                 int           varid,
-                MPI_Datatype  filetype,  /* access layout to variable in file */
+                MPI_Datatype  filetype, /* access layout in the file */
                 const void   *buf,
                 MPI_Offset    bufcount,
                 MPI_Datatype  buftype,   /* data type of the buffer */

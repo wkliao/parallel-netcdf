@@ -168,7 +168,7 @@ ncmpio_cancel(void *ncdp,
                 /* if user buffer is in-place byte-swapped, swap it back */
                 ncmpio_in_swapn(put_list[i].buf,
                                 put_list[i].bnelems * put_list[i].num_recs,
-                                ncmpix_len_nctype(put_list[i].varp->type));
+                                ncmpio_xlen_nc_type(put_list[i].varp->type));
 
             if (put_list[i].tmpBuf != NULL && put_list[i].abuf_index == -1)
                 NCI_Free(put_list[i].tmpBuf);
@@ -244,7 +244,7 @@ ncmpio_cancel(void *ncdp,
                             /* if user buffer is in-place byte-swapped, swap it back */
                             ncmpio_in_swapn(put_list[j].buf,
                                    put_list[j].bnelems * put_list[j].num_recs,
-                                   ncmpix_len_nctype(put_list[j].varp->type));
+                                   ncmpio_xlen_nc_type(put_list[j].varp->type));
 
                         if (put_list[j].tmpBuf != NULL &&
                             put_list[j].abuf_index == -1)
@@ -821,7 +821,7 @@ err_check:
         if (put_list[i].num_recs > 0 && put_list[i].need_swap_back_buf)
             ncmpio_in_swapn(put_list[i].buf,
                             put_list[i].bnelems * put_list[i].num_recs,
-                            ncmpix_len_nctype(put_list[i].varp->type));
+                            ncmpio_xlen_nc_type(put_list[i].varp->type));
     }
     for (i=0; i<num_w_reqs; i++) {
         /* free space allocated for the request objects
@@ -885,7 +885,7 @@ err_check:
         } else {
             if (ncmpio_need_swap(varp->type, get_list[i].ptype))
                 ncmpio_in_swapn(get_list[i].xbuf, bnelems,
-                                ncmpix_len_nctype(varp->type));
+                                ncmpio_xlen_nc_type(varp->type));
             cbuf = get_list[i].xbuf;
         }
 
