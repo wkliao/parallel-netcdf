@@ -640,9 +640,6 @@ ncmpio_get_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
                 const int rw_flag, MPI_Offset *offset_ptr);
 
 extern int
-ncmpio_check_mpifh(NC* ncp, int collective);
-
-extern int
 ncmpio_write_numrecs(NC *ncp, MPI_Offset new_numrecs);
 
 extern int

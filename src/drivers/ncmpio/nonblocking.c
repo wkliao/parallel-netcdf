@@ -610,18 +610,6 @@ req_commit(NC  *ncp,
     MPI_Offset newnumrecs=0;
     NC_req *put_list=NULL, *get_list=NULL;
 
-    if (NC_indef(ncp)) { /* wait must be called in data mode */
-        DEBUG_ASSIGN_ERROR(err, NC_EINDEFINE)
-        goto err_check;
-    }
-
-    /* check the MPI file handles for collective or independent mode */
-    if (io_method == INDEP_IO)
-        err = ncmpio_check_mpifh(ncp, 0);
-    else /* if (io_method == COLL_IO) */
-        err = ncmpio_check_mpifh(ncp, 1);
-    if (err != NC_NOERR) goto err_check;
-
     num_r_reqs = 0;
     num_w_reqs = 0;
     if (num_reqs == NC_GET_REQ_ALL || num_reqs == NC_REQ_ALL) {
@@ -760,10 +748,10 @@ req_commit(NC  *ncp,
     for (i=0; i<num_w_reqs; i++) {
         if (!IS_RECVAR(put_list[i].varp)) continue; /* not a record var */
         if (put_list[i].bnelems == 0) continue; /* 0-len or invalid request */
-        newnumrecs = MAX(newnumrecs, put_list[i].start[0] + put_list[i].count[0]);
+        newnumrecs = MAX(newnumrecs, put_list[i].start[0] +
+                                     put_list[i].count[0]);
     }
 
-err_check:
     if (io_method == COLL_IO) {
         int mpireturn;
         MPI_Offset io_req[4], do_io[4];  /* [0]: read [1]: write [2]: error */
@@ -971,17 +959,27 @@ ncmpio_wait(void *ncdp,
             int  *statuses,  /* [num_reqs] */
             int   io_method) /* COLL_IO or INDEP_IO */
 {
+    NC *ncp = (NC*)ncdp;
+
+    if (NC_indef(ncp)) /* wait must be called in data mode */
+        DEBUG_RETURN_ERROR(NC_EINDEFINE)
+
 #ifdef ENABLE_REQ_AGGREGATION
-    return req_commit((NC*)ncdp, num_reqs, req_ids, statuses, io_method);
+    /* check collective or independent mode */
+    if (io_method == INDEP_IO && !NC_indep(ncp))
+        DEBUG_RETURN_ERROR(NC_ENOTINDEP)
+    else if (io_method == COLL_IO && NC_indep(ncp))
+        DEBUG_RETURN_ERROR(NC_EINDEP)
+
+    return req_commit(ncp, num_reqs, req_ids, statuses, io_method);
 #else
     /* If request aggregation is disabled, we call an independent wait() for
      * each request
      */
-    NC *ncp = (NC*)ncdp;
     int i, status=NC_NOERR, err, *reqids=NULL;
 
     if (io_method == INDEP_IO) {
-        /* ncmpi_wait() is an independent call
+        /* This is called from ncmpi_wait(), which is an independent call
 	 * Argument num_reqs can be NC_REQ_ALL which means to flush all pending
 	 * nonblocking requests. In this case, arguments req_ids and statuses
 	 * will be ignored.
@@ -999,7 +997,7 @@ ncmpio_wait(void *ncdp,
         if (!NC_indep(ncp)) DEBUG_RETURN_ERROR(NC_ENOTINDEP);
     }
     else {
-        /* ncmpi_wait_all() is a collective call
+        /* This is called from ncmpi_wait_all(), which is a collective call
          * Argument num_reqs can be NC_REQ_ALL which means to flush all pending
 	 * nonblocking requests. In this case, arguments req_ids and statuses
 	 * will be ignored.

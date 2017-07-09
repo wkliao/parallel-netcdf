@@ -38,7 +38,7 @@ int ncmpio_sanity_check(NC                *ncp,
                         NC_var          **varp)  /* OUT */
 {
     /* all errors detected here are fatal, must return immediately */
-    int i, firstDim, err;
+    int i, firstDim, err=NC_NOERR;
 
     /* check file write permission if this is write request */
     if (rw_flag == WRITE_REQ && NC_readonly(ncp)) {
@@ -54,9 +54,11 @@ int ncmpio_sanity_check(NC                *ncp,
     }
 
     if (io_method != NONBLOCKING_IO) { /* for blocking APIs */
-        /* check if in the right collective or independent mode and initialize
-         * MPI file handlers */
-        err = ncmpio_check_mpifh(ncp, io_method);
+        /* check if in the right collective or independent mode */
+        if (io_method == INDEP_IO && !NC_indep(ncp))
+            DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEP)
+        else if (io_method == COLL_IO && NC_indep(ncp))
+            DEBUG_ASSIGN_ERROR(err, NC_EINDEP)
         if (err != NC_NOERR) goto fn_exit;
     }
 
@@ -333,34 +335,6 @@ void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
     }
     if (ncp->subfile_mode == 0) ncp->num_subfiles = 0;
 #endif
-}
-
-/*----< ncmpio_check_mpifh() >-----------------------------------------------*/
-int
-ncmpio_check_mpifh(NC  *ncp,
-                   int  collective)
-{
-    int mpireturn;
-
-    if (collective && NC_indep(ncp)) /* collective handle but in indep mode */
-        DEBUG_RETURN_ERROR(NC_EINDEP)
-
-    if (!collective && !NC_indep(ncp)) /* indep handle but in collective mode */
-        DEBUG_RETURN_ERROR(NC_ENOTINDEP)
-
-    /* PnetCDF's default mode is collective. MPI file handle, collective_fh,
-     * will never be MPI_FILE_NULL
-     */
-
-    if (!collective && ncp->independent_fh == MPI_FILE_NULL) {
-        TRACE_IO(MPI_File_open)(MPI_COMM_SELF, (char*)ncp->path,
-                                ncp->mpiomode, ncp->mpiinfo,
-                                &ncp->independent_fh);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_open");
-    }
-
-    return NC_NOERR;
 }
 
 /*----< ncmpio_xlen_nc_type() >----------------------------------------------*/

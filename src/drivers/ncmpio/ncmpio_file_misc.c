@@ -82,7 +82,6 @@ ncmpio_redef(void *ncdp)
 int
 ncmpio_begin_indep_data(void *ncdp)
 {
-    int err=NC_NOERR;
     NC *ncp = (NC*)ncdp;
 
     if (NC_indef(ncp))  /* must not be in define mode */
@@ -111,10 +110,22 @@ ncmpio_begin_indep_data(void *ncdp)
     /* raise independent flag */
     fSet(ncp->flags, NC_INDEP);
 
-    /* open MPI_COMM_SELF file handler, if not yet opened */
-    err = ncmpio_check_mpifh(ncp, 0);
-
-    return err;
+    /* PnetCDF's default mode is collective. MPI file handle, collective_fh,
+     * will never be MPI_FILE_NULL. We must use a separate MPI file handle
+     * opened with MPI_COMM_SELF, because MPI_File_set_view is a collective
+     * call and accessing a subarray requires a call to MPI_File_set_view.
+     * In independent data mode, no collective MPI operation can be implicitly
+     * called.
+     */
+    if (ncp->independent_fh == MPI_FILE_NULL) {
+        int mpireturn;
+        TRACE_IO(MPI_File_open)(MPI_COMM_SELF, (char*)ncp->path,
+                                ncp->mpiomode, ncp->mpiinfo,
+                                &ncp->independent_fh);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpio_handle_error(mpireturn, "MPI_File_open");
+    }
+    return NC_NOERR;
 }
 
 /*----< ncmpio_end_indep_data() >--------------------------------------------*/
