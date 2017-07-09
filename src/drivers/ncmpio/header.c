@@ -1916,8 +1916,8 @@ ncmpio_comp_dims(int          safe_mode,
 
         if (i >= local_dim->ndefined) { /* if local list is shorter */
             /* copy root's dim to local */
-            NC_dim *new_dim = dup_NC_dim(root_dim->value[i]);
-            err = incr_NC_dimarray(local_dim, new_dim);
+            NC_dim *new_dim = ncmpio_dup_NC_dim(root_dim->value[i]);
+            err = ncmpio_incr_NC_dimarray(local_dim, new_dim);
             if (err != NC_NOERR) return err; /* this is a fatal error */
             continue;
         }
@@ -1953,7 +1953,7 @@ ncmpio_comp_dims(int          safe_mode,
         /* overwrite local's dim with root's */
         if (err != NC_NOERR) {
             ncmpio_free_NC_dim(local_dim->value[i]);
-            local_dim->value[i] = dup_NC_dim(root_dim->value[i]);
+            local_dim->value[i] = ncmpio_dup_NC_dim(root_dim->value[i]);
         }
     }
 
@@ -2014,8 +2014,8 @@ ncmpio_comp_attrs(int           safe_mode,
 
         if (i >= local_attr->ndefined) { /* if local list is shorter */
             /* copy root's attr to local */
-            NC_attr *new_attr = dup_NC_attr(root_attr->value[i]);
-            err = incr_NC_attrarray(local_attr, new_attr);
+            NC_attr *new_attr = ncmpio_dup_NC_attr(root_attr->value[i]);
+            err = ncmpio_incr_NC_attrarray(local_attr, new_attr);
             if (err != NC_NOERR) return err; /* a fatal error */
             continue;
         }
@@ -2195,7 +2195,7 @@ ncmpio_comp_attrs(int           safe_mode,
         /* overwrite local's attr with root's */
         if (ErrIsHeaderDiff(err)) {
             ncmpio_free_NC_attr(local_attr->value[i]);
-            local_attr->value[i] = dup_NC_attr(root_attr->value[i]);
+            local_attr->value[i] = ncmpio_dup_NC_attr(root_attr->value[i]);
         }
     }
 
@@ -2232,10 +2232,10 @@ ncmpio_comp_vars(int          safe_mode,
 
         if (i >= local_var->ndefined) { /* if local list is shorter */
             /* copy root's variable to local */
-            NC_var *new_var = dup_NC_var(root_var->value[i]);
-            err = incr_NC_vararray(local_var, new_var);
+            NC_var *new_var = ncmpio_dup_NC_var(root_var->value[i]);
+            err = ncmpio_incr_NC_vararray(local_var, new_var);
             if (err != NC_NOERR) return err; /* a fatal error */
-            /* local_var->ndefined is increased by 1 in incr_NC_vararray() */
+            /* local_var->ndefined is increased by 1 in ncmpio_incr_NC_vararray() */
             continue;
         }
 
@@ -2298,7 +2298,7 @@ ncmpio_comp_vars(int          safe_mode,
         /* if there is any inconsistency, overwrite local's var with root's */
         if (ErrIsHeaderDiff(err)) {
             ncmpio_free_NC_var(local_var->value[i]);
-            local_var->value[i] = dup_NC_var(root_var->value[i]);
+            local_var->value[i] = ncmpio_dup_NC_var(root_var->value[i]);
             /* note once a new var is created, one must call
              * ncmpio_NC_computeshapes() to recalculate the shape */
         }

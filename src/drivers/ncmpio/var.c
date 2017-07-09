@@ -124,7 +124,7 @@ ncmpio_new_NC_var(NC_vararray  *vcap,
         nameT[key].list[nameT[key].num] = vcap->ndefined;
         nameT[key].num++;
     }
-    /* else case is for variable duplication called from dup_NC_var() */
+    /* else case is for variable duplication called from ncmpio_dup_NC_var() */
 #endif
 
     return NC_NOERR;
@@ -184,9 +184,9 @@ ncmpio_update_name_lookup_table(NC_nametable *nameT,
 }
 
 
-/*----< dup_NC_var() >--------------------------------------------------------*/
+/*----< ncmpio_dup_NC_var() >------------------------------------------------*/
 NC_var *
-dup_NC_var(const NC_var *rvarp)
+ncmpio_dup_NC_var(const NC_var *rvarp)
 {
     int err;
     NC_var *varp;
@@ -274,7 +274,7 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = dup_NC_var(ref->value[i]);
+        ncap->value[i] = ncmpio_dup_NC_var(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -309,8 +309,8 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
 NC_incr_array(array, tail)
  */
 int
-incr_NC_vararray(NC_vararray *ncap,
-                 NC_var      *newvarp)
+ncmpio_incr_NC_vararray(NC_vararray *ncap,
+                        NC_var      *newvarp)
 {
     NC_var **vp;
 
@@ -761,7 +761,7 @@ err_check:
     }
 
     /* Add a new handle to the end of an array of handles */
-    err = incr_NC_vararray(&ncp->vars, varp);
+    err = ncmpio_incr_NC_vararray(&ncp->vars, varp);
     if (err != NC_NOERR) {
         ncmpio_free_NC_var(varp);
         DEBUG_RETURN_ERROR(err)
@@ -769,7 +769,7 @@ err_check:
 
     assert(varp != NULL);
 
-    /* ncp->vars.ndefined has been increased in incr_NC_vararray() */
+    /* ncp->vars.ndefined has been increased in ncmpio_incr_NC_vararray() */
     varp->varid = (int)ncp->vars.ndefined - 1; /* varid */
 
     if (varidp != NULL) *varidp = varp->varid;

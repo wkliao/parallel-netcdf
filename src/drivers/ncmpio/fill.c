@@ -84,13 +84,13 @@ ncmpio_inq_default_fill_value(int xtype, void *fillp)
     return NC_NOERR;
 }
 
-/*----< ncmpio_fill_var_buf() >----------------------------------------------*/
+/*----< fill_var_buf() >----------------------------------------------------*/
 /* fill the buffer, buf, with either user-defined fill values or default
  * values */
 static int
-ncmpio_fill_var_buf(const NC_var *varp,
-                    MPI_Offset    bnelems, /* number of elements in buf */
-                    void         *buf)
+fill_var_buf(const NC_var *varp,
+             MPI_Offset    bnelems, /* number of elements in buf */
+             void         *buf)
 {
     int i, indx;
 
@@ -141,9 +141,9 @@ ncmpio_fill_var_buf(const NC_var *varp,
  * variable with pre-defined/supplied fill value.
  */
 static int
-ncmpiio_fill_var_rec(NC         *ncp,
-                     NC_var     *varp,
-                     MPI_Offset  recno) /* record number */
+fill_var_rec(NC         *ncp,
+             NC_var     *varp,
+             MPI_Offset  recno) /* record number */
 {
     int err, mpireturn, rank, nprocs;
     void *buf;
@@ -178,7 +178,7 @@ ncmpiio_fill_var_rec(NC         *ncp,
     buf = NCI_Malloc((size_t)(count * varp->xsz));
 
     /* fill buffer with fill values */
-    err = ncmpio_fill_var_buf(varp, count, buf);
+    err = fill_var_buf(varp, count, buf);
     if (err != NC_NOERR) {
         NCI_Free(buf);
         return err;
@@ -241,7 +241,7 @@ ncmpiio_fill_var_rec(NC         *ncp,
 int
 ncmpio_fill_var_rec(void      *ncdp,
                     int        varid,
-                    MPI_Offset recno) /* record number, ignored if non-record var */
+                    MPI_Offset recno) /* record index, ignored if non-record var */
 {
     int     indx, err=NC_NOERR;
     NC     *ncp=(NC*)ncdp;
@@ -318,7 +318,7 @@ err_check:
 
     assert(varp != NULL);
 
-    return ncmpiio_fill_var_rec(ncp, varp, recno);
+    return fill_var_rec(ncp, varp, recno);
 }
 
 /*----< ncmpio_set_fill() >--------------------------------------------------*/
@@ -549,7 +549,7 @@ fillerup(NC *ncp)
         if (ncp->vars.value[i]->no_fill && indx == -1) continue;
 
         /* collectively fill the entire variable */
-        err = ncmpiio_fill_var_rec(ncp, ncp->vars.value[i], 0);
+        err = fill_var_rec(ncp, ncp->vars.value[i], 0);
         if (err != NC_NOERR) break;
     }
     return err;
@@ -576,7 +576,7 @@ fill_added(NC *ncp, NC *old_ncp)
         if (ncp->vars.value[varid]->no_fill && indx == -1) continue;
 
         /* collectively fill the entire variable */
-        err = ncmpiio_fill_var_rec(ncp, ncp->vars.value[varid], 0);
+        err = fill_var_rec(ncp, ncp->vars.value[varid], 0);
         if (err != NC_NOERR) break;
     }
     return err;
@@ -587,7 +587,7 @@ fill_added(NC *ncp, NC *old_ncp)
 static int
 fill_added_recs(NC *ncp, NC *old_ncp)
 {
-    MPI_Offset old_nrecs = NC_get_numrecs(old_ncp);
+    MPI_Offset old_nrecs = old_ncp->numrecs;
     int indx, err=NC_NOERR, recno, varid;
 
     /* loop thru all old records */
@@ -605,7 +605,7 @@ fill_added_recs(NC *ncp, NC *old_ncp)
             if (ncp->vars.value[varid]->no_fill && indx == -1) continue;
 
             /* collectively fill the record */
-            err = ncmpiio_fill_var_rec(ncp, ncp->vars.value[varid], recno);
+            err = fill_var_rec(ncp, ncp->vars.value[varid], recno);
             if (err != NC_NOERR) return err;
         }
     }
@@ -641,7 +641,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
     nrecs = 0;  /* the current number of records */
     if (old_ncp != NULL) {
         start_vid = old_ncp->vars.ndefined;
-        nrecs = NC_get_numrecs(old_ncp);
+        nrecs = old_ncp->numrecs;
     }
 
     noFill = (char*) NCI_Malloc((size_t)(ncp->vars.ndefined - start_vid));
@@ -780,7 +780,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
             offset[k] = offset[j];
         }
         j++;
-        err = ncmpio_fill_var_buf(varp, count[k], buf_ptr);
+        err = fill_var_buf(varp, count[k], buf_ptr);
         if (err != NC_NOERR) {
             if (status == NC_NOERR) status = err;
             continue; /* skip this request */
@@ -811,7 +811,7 @@ fillerup_aggregate(NC *ncp, NC *old_ncp)
                 offset[k] = offset[j];
             }
             j++;
-            err = ncmpio_fill_var_buf(varp, count[k], buf_ptr);
+            err = fill_var_buf(varp, count[k], buf_ptr);
             if (err != NC_NOERR) {
                 if (status == NC_NOERR) status = err;
                 continue; /* skip this request */

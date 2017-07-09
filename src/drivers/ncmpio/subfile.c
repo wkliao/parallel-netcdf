@@ -19,25 +19,22 @@
 #include "subfile.h"
 #include "ncmpidtype.h"
 
-static int DEBUG = 1;
 enum {ONE, BALANCED};
-int min_ndims = 1;
+#define SUBFILING_MIN_NDIMS 1
 
 /* set default values for the following values */
-int delegate_scheme = BALANCED; /* default: any proc can be delegate proc */
+static int delegate_scheme = BALANCED; /* default: any proc can be delegate proc */
 static int is_partitioned = 0;
 
-#define check_err(fn_name_)                                                    \
-    if (mpireturn != MPI_SUCCESS) {                                            \
-        errs++;                                                                \
-        if (DEBUG) {                                                           \
-            int _len;                                                          \
-            char err_str_[MPI_MAX_ERROR_STRING];                               \
-            MPI_Error_string(mpireturn, err_str_, &_len);                      \
-            fprintf(stderr, #fn_name_ " failed at line %d, mpireturn=%d: %s\n",\
-                    __LINE__, mpireturn, err_str_);                            \
-        }                                                                      \
-    }                                                                          \
+#define check_err(fn_name_)                                                 \
+    if (mpireturn != MPI_SUCCESS) {                                         \
+        errs++;                                                             \
+        int _len;                                                           \
+        char err_str_[MPI_MAX_ERROR_STRING];                                \
+        MPI_Error_string(mpireturn, err_str_, &_len);                       \
+        fprintf(stderr, #fn_name_ " failed at line %d, mpireturn=%d: %s\n", \
+                __LINE__, mpireturn, err_str_);                             \
+    }                                                                       \
 
 #if 0
 static int ncmpio_itoa(int val, char* buf)
@@ -86,7 +83,8 @@ static int ncmpio_itoa(int val, char* buf)
 }
 #endif
 
-int ncmpio_subfile_create(NC *ncp, int *ncidp)
+static int
+subfile_create(NC *ncp, int *ncidp)
 {
     int myrank, nprocs, color, status=NC_NOERR, mpireturn;
     char path_sf[1024];
@@ -239,7 +237,7 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
                             &num_subfiles, NC_INT);
 
     if (status == NC_ENOTATT) { /* if such attr doesn't exist */
-        status = ncmpio_subfile_create(ncp, ncidp);
+        status = subfile_create(ncp, ncidp);
         TEST_HANDLE_ERR(status)
 
         status = ncmpio_put_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
@@ -312,8 +310,10 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
 #endif
         /* divide only when dim is partitionable */
         /* 1. skip sizeof(par_dim_id) is smaller than num_subfiles */
-        /* 2. skip if ndims < min_ndims */
-        if ( (dpp[vpp[i]->dimids[par_dim_id]]->size)/(ncp->num_subfiles) != 0 && (vpp[i]->ndims >= par_dim_id+1) && (vpp[i]->ndims >= min_ndims)) {
+        /* 2. skip if ndims < SUBFILING_MIN_NDIMS */
+        if (dpp[vpp[i]->dimids[par_dim_id]]->size/ncp->num_subfiles > 0 &&
+            vpp[i]->ndims >= par_dim_id+1 &&
+            vpp[i]->ndims >= SUBFILING_MIN_NDIMS) {
             int varid, j, jj, k;
             int var_ndims = vpp[i]->ndims; /* keep org ndims */
             int dimids[var_ndims];
@@ -481,7 +481,8 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     int nasyncios=0;
 
     /* check whether start, count, and stride are valid */
-    status = NC_start_count_stride_ck(ncp, varp, start, count, stride, rw_flag);
+    status = ncmpio_start_count_stride_check(ncp, varp, start, count, stride,
+                                             rw_flag);
     if (status != NC_NOERR) return status;
 
     MPI_Comm_rank(ncp->comm, &myrank);

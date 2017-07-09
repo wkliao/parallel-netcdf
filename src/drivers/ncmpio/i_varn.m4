@@ -28,19 +28,19 @@ dnl
 #include "ncx.h"
 #include "ncmpidtype.h"
 
-/*----< ncmpio_igetput_varn() >-----------------------------------------------*/
+/*----< igetput_varn() >-----------------------------------------------------*/
 static int
-ncmpio_igetput_varn(NC                *ncp,
-                    NC_var            *varp,
-                    int                num,
-                    MPI_Offset* const *starts,  /* [num][varp->ndims] */
-                    MPI_Offset* const *counts,  /* [num][varp->ndims] */
-                    void              *buf,
-                    MPI_Offset         bufcount,
-                    MPI_Datatype       buftype,   /* data type of the bufer */
-                    int               *reqidp,    /* OUT: request ID */
-                    int                rw_flag,   /* WRITE_REQ or READ_REQ */
-                    int                use_abuf)  /* if use attached buffer */
+igetput_varn(NC                *ncp,
+             NC_var            *varp,
+             int                num,
+             MPI_Offset* const *starts,  /* [num][varp->ndims] */
+             MPI_Offset* const *counts,  /* [num][varp->ndims] */
+             void              *buf,
+             MPI_Offset         bufcount,
+             MPI_Datatype       buftype,   /* data type of the bufer */
+             int               *reqidp,    /* OUT: request ID */
+             int                rw_flag,   /* WRITE_REQ or READ_REQ */
+             int                use_abuf)  /* if use attached buffer */
 {
     int i, j, el_size, status=NC_NOERR, free_cbuf=0, isSameGroup, reqid;
     void *cbuf=NULL;
@@ -80,7 +80,7 @@ ncmpio_igetput_varn(NC                *ncp,
         ptype = ncmpio_nc2mpitype(varp->type);
         MPI_Type_size(ptype, &el_size); /* buffer element size */
     }
-    else if (bufcount == -1) { /* if (IsPrimityMPIType(buftype)) */
+    else if (bufcount == -1) { /* buftype is an MPI primitive data type */
         /* this subroutine is called from a high-level API
          * Also, it means the user buf is contiguous.
          * Assign ptype to buftype, and buftype will no longer be used.
@@ -122,9 +122,10 @@ ncmpio_igetput_varn(NC                *ncp,
 
     /* We allow counts == NULL and treat this the same as all 1s */
     if (counts == NULL) {
-        _counts    = (MPI_Offset**) NCI_Malloc((size_t)num * sizeof(MPI_Offset*));
+        _counts    = (MPI_Offset**) NCI_Malloc((size_t)num *
+                                               sizeof(MPI_Offset*));
         _counts[0] = (MPI_Offset*)  NCI_Malloc((size_t)(num * varp->ndims *
-                                                        SIZEOF_MPI_OFFSET));
+                                               SIZEOF_MPI_OFFSET));
         for (i=1; i<num; i++)
             _counts[i] = _counts[i-1] + varp->ndims;
         for (i=0; i<num; i++)
@@ -144,7 +145,8 @@ ncmpio_igetput_varn(NC                *ncp,
         MPI_Offset buflen;
 
         /* check whether start, count, and stride are valid */
-        status = NC_start_count_stride_ck(ncp, varp, starts[i], _counts[i], NULL, rw_flag);
+        status = ncmpio_start_count_stride_check(ncp, varp, starts[i],
+                                                 _counts[i], NULL, rw_flag);
         if (status != NC_NOERR) goto err_check;
 
         for (buflen=1, j=0; j<varp->ndims; j++)
@@ -245,9 +247,8 @@ ncmpio_$1_varn(void               *ncdp,
                                  ReadWrite($1), NONBLOCKING_IO, &varp);
     if (status != NC_NOERR) return status;
 
-    return ncmpio_igetput_varn(ncp, varp, num, starts, counts, (void*)buf,
-                               bufcount, buftype, reqid, ReadWrite($1),
-                               IsBput($1));
+    return igetput_varn(ncp, varp, num, starts, counts, (void*)buf, bufcount,
+                        buftype, reqid, ReadWrite($1), IsBput($1));
 }
 ')dnl
 dnl

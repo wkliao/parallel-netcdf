@@ -96,15 +96,15 @@ ncmpio_new_NC_dim(NC_dimarray  *ncap,
         nameT[key].list[nameT[key].num] = ncap->ndefined;
         nameT[key].num++;
     }
-    /* else case is for dimension duplication called from dup_NC_dim() */
+    /* else case is for dimension duplication called from ncmpio_dup_NC_dim() */
 #endif
 
     return NC_NOERR;
 }
 
-/*----< dup_NC_dim() >-------------------------------------------------------*/
+/*----< ncmpio_dup_NC_dim() >------------------------------------------------*/
 NC_dim*
-dup_NC_dim(const NC_dim *rdimp)
+ncmpio_dup_NC_dim(const NC_dim *rdimp)
 {
     int err;
     NC_dim *dimp;
@@ -266,7 +266,7 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = dup_NC_dim(ref->value[i]);
+        ncap->value[i] = ncmpio_dup_NC_dim(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -295,14 +295,14 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
 }
 
 
-/*----< incr_NC_dimarray() >---------------------------------------------- --*/
+/*----< ncmpio_incr_NC_dimarray() >------------------------------------------*/
 /*
  * Add a new handle to the end of an array of handles
  * Formerly, NC_incr_array(array, tail)
  */
 int
-incr_NC_dimarray(NC_dimarray *ncap,
-                 NC_dim      *newdimp)
+ncmpio_incr_NC_dimarray(NC_dimarray *ncap,
+                        NC_dim      *newdimp)
 {
     NC_dim **vp;
 
@@ -519,13 +519,13 @@ err_check:
     }
 
     /* Add a new dim handle to the end of handle array */
-    err = incr_NC_dimarray(&ncp->dims, dimp);
+    err = ncmpio_incr_NC_dimarray(&ncp->dims, dimp);
     if (err != NC_NOERR) {
         if (dimp != NULL) ncmpio_free_NC_dim(dimp);
         DEBUG_RETURN_ERROR(err)
     }
 
-    /* ncp->dims.ndefined has been increased in incr_NC_dimarray() */
+    /* ncp->dims.ndefined has been increased in ncmpio_incr_NC_dimarray() */
     dimid = (int)ncp->dims.ndefined - 1;
 
     if (size == NC_UNLIMITED) ncp->dims.unlimited_id = dimid;
@@ -580,7 +580,7 @@ ncmpio_inq_dim(void       *ncdp,
 
     if (sizep != NULL) {
         if (dimp->size == NC_UNLIMITED)
-            *sizep = NC_get_numrecs(ncp);
+            *sizep = ncp->numrecs;
         else
             *sizep = dimp->size;
     }

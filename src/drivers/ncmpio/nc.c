@@ -234,32 +234,6 @@ ncmpio_cktype(int     cdf_ver,
     return NC_NOERR;
 }
 
-
-/*
- * How many objects of 'type'
- * will fit into xbufsize?
- */
-inline MPI_Offset
-ncmpix_howmany(nc_type type, MPI_Offset xbufsize)
-{
-    switch(type){
-        case NC_BYTE:
-        case NC_UBYTE:
-        case NC_CHAR:   return xbufsize;
-        case NC_SHORT:  return xbufsize/X_SIZEOF_SHORT;
-        case NC_USHORT: return xbufsize/X_SIZEOF_USHORT;
-        case NC_INT:    return xbufsize/X_SIZEOF_INT;
-        case NC_UINT:   return xbufsize/X_SIZEOF_UINT;
-        case NC_FLOAT:  return xbufsize/X_SIZEOF_FLOAT;
-        case NC_DOUBLE: return xbufsize/X_SIZEOF_DOUBLE;
-        case NC_INT64:  return xbufsize/X_SIZEOF_INT64;
-        case NC_UINT64: return xbufsize/X_SIZEOF_UINT64;
-        default:
-                assert("ncmpix_howmany: Bad type" == 0);
-                return(0);
-    }
-}
-
 /*
  * Read in the header
  * It is expensive.
@@ -279,21 +253,6 @@ ncmpio_read_NC(NC *ncp) {
       fClr(ncp->flags, NC_NDIRTY);
 
   return status;
-}
-
-inline int
-ncmpio_dset_has_recvars(NC *ncp)
-{
-    /* possible further optimization: set a flag on the header data
-     * structure when record variable created so we can skip this loop*/
-    int i;
-    NC_var **vpp;
-
-    vpp = ncp->vars.value;
-    for (i=0; i< ncp->vars.ndefined; i++, vpp++) {
-        if (IS_RECVAR(*vpp)) return 1;
-    }
-    return 0;
 }
 
 /*

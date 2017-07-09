@@ -27,7 +27,7 @@
         _dimid = (varp->num_subfiles>1)?varp->dimids_org[_i]:varp->dimids[_i];\
         dimp = ncmpio_elem_NC_dimarray(&ncp->dims, _dimid);                   \
         if (dimp->size == NC_UNLIMITED)                                       \
-            count[_i] = NC_get_numrecs(ncp);                                  \
+            count[_i] = ncp->numrecs;                                         \
         else                                                                  \
             count[_i] = dimp->size;                                           \
         start[_i] = 0;                                                        \
@@ -40,7 +40,7 @@
     count = start + varp->ndims;                                              \
                                                                               \
     if (IS_RECVAR(varp)) { /* find current numrec if varp is record var */    \
-        count[0] = NC_get_numrecs(ncp);                                       \
+        count[0] = ncp->numrecs;                                              \
         start[0] = 0;                                                         \
         _i = 1;                                                               \
     }                                                                         \

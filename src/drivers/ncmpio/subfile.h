@@ -37,8 +37,6 @@ typedef struct {
         return status;                                                 \
     }
 
-extern int ncmpio_subfile_create(NC *ncp, int *ncidp);
-
 extern int ncmpio_subfile_open(NC *ncp, int *ncidp);
 
 extern int ncmpio_subfile_close(NC *ncp);

@@ -31,17 +31,17 @@ dnl
 #include "macro.h"
 
 
-/*----< ncmpio_abuf_malloc() >------------------------------------------------*/
+/*----< abuf_malloc() >------------------------------------------------------*/
 /* allocate memory space from the attached buffer pool */
 static int
-ncmpio_abuf_malloc(NC *ncp, MPI_Offset nbytes, void **buf, int *abuf_index)
+abuf_malloc(NC *ncp, MPI_Offset nbytes, void **buf, int *abuf_index)
 {
     /* extend the table size if more entries are needed */
     if (ncp->abuf->tail + 1 == ncp->abuf->table_size) {
         ncp->abuf->table_size += NC_ABUF_DEFAULT_TABLE_SIZE;
         ncp->abuf->occupy_table = (NC_buf_status*)
                    NCI_Realloc(ncp->abuf->occupy_table,
-                               (size_t)ncp->abuf->table_size * sizeof(NC_buf_status));
+                   (size_t)ncp->abuf->table_size * sizeof(NC_buf_status));
     }
     /* mark the new entry is used and store the requested buffer size */
     ncp->abuf->occupy_table[ncp->abuf->tail].is_used  = 1;
@@ -153,8 +153,8 @@ ncmpio_igetput_varm(NC               *ncp,
      * ptype: element data type (MPI primitive type) in buftype
      * bufcount: If it is -1, then this is called from a high-level API and in
      * this case buftype will be an MPI primitive data type. If not, then this
-     * is called from a flexible API. In the former case, we recalculate bufcount
-     * to match with count[].
+     * is called from a flexible API. In the former case, we recalculate
+     * bufcount to match with count[].
      * bnelems: number of ptypes in user buffer
      * nbytes: number of bytes (in external data representation) to read/write
      * from/to the file
@@ -237,7 +237,7 @@ ncmpio_igetput_varm(NC               *ncp,
 
             /* allocate lbuf */
             if (use_abuf && imaptype == MPI_DATATYPE_NULL && !need_convert) {
-                status = ncmpio_abuf_malloc(ncp, nbytes, &lbuf, &abuf_index);
+                status = abuf_malloc(ncp, nbytes, &lbuf, &abuf_index);
                 if (status != NC_NOERR) return status;
                 abuf_allocated = 1;
             }
@@ -256,7 +256,7 @@ ncmpio_igetput_varm(NC               *ncp,
             /* allocate cbuf */
             if (use_abuf && !need_convert) {
                 assert(abuf_allocated == 0);
-                status = ncmpio_abuf_malloc(ncp, nbytes, &cbuf, &abuf_index);
+                status = abuf_malloc(ncp, nbytes, &cbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (lbuf != buf) NCI_Free(lbuf);
                     return status;
@@ -287,7 +287,7 @@ ncmpio_igetput_varm(NC               *ncp,
 
             if (use_abuf) { /* use attached buffer to allocate xbuf */
                 assert(abuf_allocated == 0);
-                status = ncmpio_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
+                status = abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (cbuf != buf) NCI_Free(cbuf);
                     return status;
@@ -318,7 +318,7 @@ ncmpio_igetput_varm(NC               *ncp,
         else {
             if (use_abuf && buftype_is_contig && imaptype == MPI_DATATYPE_NULL){
                 assert(abuf_allocated == 0);
-                status = ncmpio_abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
+                status = abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
                     if (cbuf != buf) NCI_Free(cbuf);
                     return status;
@@ -362,8 +362,8 @@ ncmpio_igetput_varm(NC               *ncp,
         /* allocate write/read request array */
         if (ncp->numPutReqs % NC_REQUEST_CHUNK == 0)
             ncp->put_list = (NC_req*) NCI_Realloc(ncp->put_list,
-                                      ((size_t)ncp->numPutReqs + NC_REQUEST_CHUNK) *
-                                      sizeof(NC_req));
+                            ((size_t)ncp->numPutReqs + NC_REQUEST_CHUNK) *
+                            sizeof(NC_req));
         req = ncp->put_list + ncp->numPutReqs;
 
         /* the new request ID will be an even number (max of write ID + 2) */
@@ -377,8 +377,8 @@ ncmpio_igetput_varm(NC               *ncp,
         /* allocate write/read request array */
         if (ncp->numGetReqs % NC_REQUEST_CHUNK == 0)
             ncp->get_list = (NC_req*) NCI_Realloc(ncp->get_list,
-                                      ((size_t)ncp->numGetReqs + NC_REQUEST_CHUNK) *
-                                      sizeof(NC_req));
+                            ((size_t)ncp->numGetReqs + NC_REQUEST_CHUNK) *
+                            sizeof(NC_req));
         req = ncp->get_list + ncp->numGetReqs;
 
         /* the new request ID will be an odd number (max of read ID + 2) */

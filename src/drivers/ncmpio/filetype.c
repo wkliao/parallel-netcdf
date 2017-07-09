@@ -47,7 +47,7 @@ check_recsize_too_big(NC *ncp)
 }
 #endif
 
-/*----< NC_start_count_stride_ck() >-----------------------------------------*/
+/*----< ncmpio_start_count_stride_check() >----------------------------------*/
 /*
  * Check whether start, count, stride values are valid for the variable.
  * Note that even if the request size is zero, this check is enforced in both
@@ -55,12 +55,12 @@ check_recsize_too_big(NC *ncp)
  * Arguments count and stride can be NULL.
  */
 int
-NC_start_count_stride_ck(const NC         *ncp,
-                         const NC_var     *varp,
-                         const MPI_Offset *start,
-                         const MPI_Offset *count,
-                         const MPI_Offset *stride,
-                         const int         rw_flag) /* for read or write */
+ncmpio_start_count_stride_check(const NC         *ncp,
+                                const NC_var     *varp,
+                                const MPI_Offset *start,
+                                const MPI_Offset *count,
+                                const MPI_Offset *stride,
+                                const int         rw_flag) /* read or write */
 {
     int i=0;
 
@@ -199,10 +199,11 @@ ncmpio_get_offset(NC               *ncp,
     }
 
     /* check whether end_off is valid */
-    status = NC_start_count_stride_ck(ncp, varp, end_off, NULL, NULL, rw_flag);
+    status = ncmpio_start_count_stride_check(ncp, varp, end_off, NULL, NULL,
+                                             rw_flag);
     if (status != NC_NOERR) {
 #ifdef CDEBUG
-        printf("%s(): NC_start_count_stride_ck() fails\n",__func__);
+        printf("%s(): ncmpio_start_count_stride_check() fails\n",__func__);
 #endif
         if (end_off != NULL && end_off != starts) NCI_Free(end_off);
         return status;
@@ -233,12 +234,12 @@ ncmpio_get_offset(NC               *ncp,
     return NC_NOERR;
 }
 
-/*----< ncmpio_is_request_contiguous() >-------------------------------------*/
-int
-ncmpio_is_request_contiguous(NC               *ncp,
-                             NC_var           *varp,
-                             const MPI_Offset  starts[],
-                             const MPI_Offset  counts[])
+/*----< is_request_contiguous() >-------------------------------------------*/
+static int
+is_request_contiguous(NC               *ncp,
+                      NC_var           *varp,
+                      const MPI_Offset  starts[],
+                      const MPI_Offset  counts[])
 {
     /* determine whether the get/put request to this variable using
        starts[] and counts[] is contiguous in file */
@@ -621,24 +622,25 @@ ncmpio_type_create_subarray64(int           ndims,
     return NC_NOERR;
 }
 
-/*----< ncmpio_vara_create_filetype() >--------------------------------------*/
+/*----< filetype_create_vara() >--------------------------------------------*/
 static int
-ncmpio_vara_create_filetype(NC               *ncp,
-                            NC_var           *varp,
-                            const MPI_Offset *start,
-                            const MPI_Offset *count,
-                            int               rw_flag,
-                            int              *blocklen,
-                            MPI_Offset       *offset_ptr,
-                            MPI_Datatype     *filetype_ptr,
-                            int              *is_filetype_contig)
+filetype_create_vara(NC               *ncp,
+                     NC_var           *varp,
+                     const MPI_Offset *start,
+                     const MPI_Offset *count,
+                     int               rw_flag,
+                     int              *blocklen,
+                     MPI_Offset       *offset_ptr,
+                     MPI_Datatype     *filetype_ptr,
+                     int              *is_filetype_contig)
 {
     int          dim, status, err;
     MPI_Offset   nbytes, offset;
     MPI_Datatype filetype;
 
     /* check whether start, count are valid */
-    status = NC_start_count_stride_ck(ncp, varp, start, count, NULL, rw_flag);
+    status = ncmpio_start_count_stride_check(ncp, varp, start, count, NULL,
+                                             rw_flag);
     if (status != NC_NOERR) return status;
 
     /* calculate the request size */
@@ -658,7 +660,7 @@ ncmpio_vara_create_filetype(NC               *ncp,
     }
 
     /* if the request is contiguous in file, no need to create a filetype */
-    if (ncmpio_is_request_contiguous(ncp, varp, start, count)) {
+    if (is_request_contiguous(ncp, varp, start, count)) {
         status = ncmpio_get_offset(ncp, varp, start, NULL, NULL, rw_flag,
                                    &offset);
         *offset_ptr   = offset;
@@ -853,9 +855,9 @@ stride_flatten(int               isRecVar, /* whether record variable */
     return 1;
 }
 
-/*----< ncmpio_vars_create_filetype() >--------------------------------------*/
+/*----< ncmpio_filetype_create_vars() >--------------------------------------*/
 int
-ncmpio_vars_create_filetype(NC               *ncp,
+ncmpio_filetype_create_vars(NC               *ncp,
                             NC_var           *varp,
                             const MPI_Offset  start[],
                             const MPI_Offset  count[],
@@ -872,9 +874,9 @@ ncmpio_vars_create_filetype(NC               *ncp,
     MPI_Datatype  filetype=MPI_BYTE;
 
     if (stride == NULL)
-        return ncmpio_vara_create_filetype(ncp, varp, start, count, rw_flag,
-                                           blocklen, offset_ptr, filetype_ptr,
-                                           is_filetype_contig);
+        return filetype_create_vara(ncp, varp, start, count, rw_flag,
+                                    blocklen, offset_ptr, filetype_ptr,
+                                    is_filetype_contig);
 
     /* check if a true vars (skip stride[] when count[] == 1) */
     for (dim=0; dim<varp->ndims; dim++)
@@ -882,14 +884,15 @@ ncmpio_vars_create_filetype(NC               *ncp,
             break;
 
     if (dim == varp->ndims) /* not a true vars */
-        return ncmpio_vara_create_filetype(ncp, varp, start, count, rw_flag,
-                                           blocklen, offset_ptr, filetype_ptr,
-                                           is_filetype_contig);
+        return filetype_create_vara(ncp, varp, start, count, rw_flag,
+                                    blocklen, offset_ptr, filetype_ptr,
+                                    is_filetype_contig);
 
     /* now stride[] indicates a non-contiguous fileview */
 
     /* check whether start, count, stride are valid */
-    err = NC_start_count_stride_ck(ncp, varp, start, count, stride, rw_flag);
+    err = ncmpio_start_count_stride_check(ncp, varp, start, count, stride,
+                                          rw_flag);
     if (err != NC_NOERR) return err;
 
     /* calculate request amount */

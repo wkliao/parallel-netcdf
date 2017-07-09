@@ -131,9 +131,9 @@ ncmpio_new_NC_attr(const char *name,
 }
 
 
-/*----< dup_NC_attr() >------------------------------------------------------*/
+/*----< ncmpio_dup_NC_attr() >-----------------------------------------------*/
 NC_attr *
-dup_NC_attr(const NC_attr *rattrp)
+ncmpio_dup_NC_attr(const NC_attr *rattrp)
 {
     NC_attr *attrp = ncmpio_new_NC_attr(rattrp->name->cp,
                                         rattrp->type,
@@ -192,7 +192,7 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = dup_NC_attr(ref->value[i]);
+        ncap->value[i] = ncmpio_dup_NC_attr(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -210,10 +210,10 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 }
 
 
-/*----< incr_NC_attrarray() >------------------------------------------------*/
+/*----< ncmpio_incr_NC_attrarray() >-----------------------------------------*/
 /* Add a new handle on the end of an array of handles */
 int
-incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
+ncmpio_incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
 {
     NC_attr **vp;
 
@@ -785,7 +785,7 @@ err_check:
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-        err = incr_NC_attrarray(ncap_out, attrp);
+        err = ncmpio_incr_NC_attrarray(ncap_out, attrp);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
@@ -1434,7 +1434,7 @@ err_check:
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-        err = incr_NC_attrarray(ncap, attrp);
+        err = ncmpio_incr_NC_attrarray(ncap, attrp);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
@@ -1463,7 +1463,7 @@ err_check:
         `err = ncmpix_putn_$1(&xp, nelems, buf, xtype, &fill);')
 
         /* no immediately return error code here? Strange ...
-         * Instead, we continue and call incr_NC_attrarray() to add
+         * Instead, we continue and call ncmpio_incr_NC_attrarray() to add
          * this attribute (for create case) as it is legal. But if
          * we return error and reject this attribute, then nc_test will
          * fail with this error message below:

@@ -28,18 +28,18 @@ dnl
 #include "ncx.h"
 #include "ncmpidtype.h"
 
-/*----< ncmpio_getput_varn() >------------------------------------------------*/
+/*----< getput_varn() >------------------------------------------------------*/
 static int
-ncmpio_getput_varn(NC                *ncp,
-                   NC_var            *varp,
-                   int                num,
-                   MPI_Offset* const *starts,  /* [num][varp->ndims] */
-                   MPI_Offset* const *counts,  /* [num][varp->ndims] */
-                   void              *buf,
-                   MPI_Offset         bufcount,
-                   MPI_Datatype       buftype,   /* data type of the buffer */
-                   int                rw_flag,   /* WRITE_REQ or READ_REQ */
-                   int                io_method) /* COLL_IO or INDEP_IO */
+getput_varn(NC                *ncp,
+            NC_var            *varp,
+            int                num,
+            MPI_Offset* const *starts,  /* [num][varp->ndims] */
+            MPI_Offset* const *counts,  /* [num][varp->ndims] */
+            void              *buf,
+            MPI_Offset         bufcount,
+            MPI_Datatype       buftype,   /* data type of the buffer */
+            int                rw_flag,   /* WRITE_REQ or READ_REQ */
+            int                io_method) /* COLL_IO or INDEP_IO */
 {
     int i, j, el_size, status=NC_NOERR, min_st, err, free_cbuf=0;
     int req_id=NC_REQ_NULL, st, isSameGroup, position;
@@ -140,9 +140,10 @@ ncmpio_getput_varn(NC                *ncp,
 
     /* We allow counts == NULL and treat this the same as all 1s */
     if (counts == NULL) {
-        _counts    = (MPI_Offset**) NCI_Malloc((size_t)num * sizeof(MPI_Offset*));
-        _counts[0] = (MPI_Offset*)  NCI_Malloc((size_t)(num * varp->ndims *
-                                                        SIZEOF_MPI_OFFSET));
+        _counts    = (MPI_Offset**) NCI_Malloc((size_t)num *
+                                               sizeof(MPI_Offset*));
+        _counts[0] = (MPI_Offset*)  NCI_Malloc((size_t)num * varp->ndims *
+                                               SIZEOF_MPI_OFFSET);
         for (i=1; i<num; i++)
             _counts[i] = _counts[i-1] + varp->ndims;
         for (i=0; i<num; i++)
@@ -275,8 +276,8 @@ ncmpio_$1_varn(void              *ncdp,
         return status;
     }
 
-    return ncmpio_getput_varn(ncp, varp, num, starts, counts, (void*)buf,
-                              bufcount, buftype, ReadWrite($1), io_method);
+    return getput_varn(ncp, varp, num, starts, counts, (void*)buf,
+                       bufcount, buftype, ReadWrite($1), io_method);
 }
 ')dnl
 

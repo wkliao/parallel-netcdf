@@ -64,7 +64,7 @@ ncmpio_calc_datatype_elems(NC_var           *varp,
     /* Sanity check for error codes should have already done before reaching
      * here
      *
-     * when (*bufcount == -1), same as if (IsPrimityMPIType(buftype)),
+     * when (*bufcount == -1), buftype is an MPI primitive data type,
      * it means this subroutine is called from a high-level API.
      */
     if (*bufcount != -1 && buftype != MPI_DATATYPE_NULL) {
@@ -84,7 +84,7 @@ ncmpio_calc_datatype_elems(NC_var           *varp,
     for (i=0; i<varp->ndims; i++)
         fnelems *= count[i];
 
-    if (*bufcount == -1) { /* if (IsPrimityMPIType(buftype)) */
+    if (*bufcount == -1) { /* buftype is an MPI primitive data type */
         /* this subroutine is called from a high-level API */
         *bnelems = *bufcount = fnelems;
         *ptype = buftype;
@@ -224,7 +224,7 @@ ncmpio_create_imaptype(NC_var           *varp,
     return NC_NOERR;
 }
 
-/*----< ncmpio_getput_varm() >------------------------------------------------*/
+/*----< getput_varm() >------------------------------------------------------*/
 /* buffer layers:
 
    User Level              buf     (user defined buffer of MPI_Datatype)
@@ -273,17 +273,17 @@ ncmpio_create_imaptype(NC_var           *varp,
 */
 
 static int
-ncmpio_getput_varm(NC               *ncp,
-                   NC_var           *varp,
-                   const MPI_Offset  start[],
-                   const MPI_Offset  count[],
-                   const MPI_Offset  stride[],  /* can be NULL */
-                   const MPI_Offset  imap[],    /* can be NULL */
-                   void             *buf,
-                   MPI_Offset        bufcount,  /* -1: from high-level API */
-                   MPI_Datatype      buftype,
-                   int               rw_flag,   /* WRITE_REQ or READ_REQ */
-                   int               io_method) /* COLL_IO or INDEP_IO */
+getput_varm(NC               *ncp,
+            NC_var           *varp,
+            const MPI_Offset  start[],
+            const MPI_Offset  count[],
+            const MPI_Offset  stride[],  /* can be NULL */
+            const MPI_Offset  imap[],    /* can be NULL */
+            void             *buf,
+            MPI_Offset        bufcount,  /* -1: from high-level API */
+            MPI_Datatype      buftype,
+            int               rw_flag,   /* WRITE_REQ or READ_REQ */
+            int               io_method) /* COLL_IO or INDEP_IO */
 {
     void *lbuf=NULL, *cbuf=NULL, *xbuf=NULL;
     int mpireturn, err=NC_NOERR, status=NC_NOERR, warning=NC_NOERR;
@@ -315,8 +315,8 @@ ncmpio_getput_varm(NC               *ncp,
      * ptype: element data type (MPI primitive type) in buftype
      * bufcount: If it is -1, then this is called from a high-level API and in
      * this case buftype will be an MPI primitive data type. If not, then this
-     * is called from a flexible API. In the former case, we recalculate bufcount
-     * to match with count[].
+     * is called from a flexible API. In the former case, we recalculate
+     * bufcount to match with count[].
      * bnelems: number of ptypes in user buffer
      * nbytes: number of bytes (in external data representation) to read/write
      * from/to the file
@@ -349,7 +349,7 @@ ncmpio_getput_varm(NC               *ncp,
      * then filetype == MPI_BYTE. Otherwise filetype will be an MPI derived
      * data type.
      */
-    err = ncmpio_vars_create_filetype(ncp, varp, start, count, stride, rw_flag,
+    err = ncmpio_filetype_create_vars(ncp, varp, start, count, stride, rw_flag,
                                       NULL, &offset, &filetype, NULL);
     if (err != NC_NOERR) goto err_check;
 
@@ -749,9 +749,8 @@ ncmpio_$1_var(void             *ncdp,
          if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
-    status = ncmpio_getput_varm(ncp, varp, _start, _count, stride, imap,
-                                (void*)buf, bufcount, buftype,
-                                ReadWrite($1), io_method);
+    status = getput_varm(ncp, varp, _start, _count, stride, imap, (void*)buf,
+                         bufcount, buftype, ReadWrite($1), io_method);
 
          if (api == API_VAR)  NCI_Free(_start);
     else if (api == API_VAR1) NCI_Free(_count);
