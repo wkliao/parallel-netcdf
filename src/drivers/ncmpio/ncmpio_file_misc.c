@@ -57,10 +57,16 @@ ncmpio_redef(void *ncdp)
     if (NC_indep(ncp)) /* exit independent mode, if in independent mode */
         ncmpio_end_indep_data(ncp);
 
+#if 0
+    /* header metadata is always sync-ed among all processes, except for
+     * numrecs when in independent data mode. It has been sync-ed above when
+     * calling ncmpio_end_indep_data()
+     */
     if (NC_doFsync(ncp)) { /* re-read the header from file */
         err = ncmpio_read_NC(ncp);
         if (err != NC_NOERR) return err;
     }
+#endif
 
     /* duplicate a header to be used in enddef() for checking if header grows */
     ncp->old = ncmpio_dup_NC(ncp);

@@ -213,9 +213,16 @@ ncmpio_sync(void *ncdp)
     /* cannot be in define mode */
     if (NC_indef(ncp)) DEBUG_RETURN_ERROR(NC_EINDEFINE)
 
+#if 0
+    /* In PnetCDF, header metadata is always sync-ed among all processes.
+     * There is no need to re-read the header from file.
+     */
     if (NC_readonly(ncp))
         /* calling sync for file opened for read only means re-read header */
         return ncmpio_read_NC(ncp);
+#else
+    if (NC_readonly(ncp)) return NC_NOERR;
+#endif
 
     /* the only part of header that can be dirty is numrecs (caused only by
      * independent APIs) */
