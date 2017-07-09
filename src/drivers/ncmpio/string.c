@@ -21,9 +21,7 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
 #include "rnd.h"
-
 
 /*----< ncmpio_free_NC_string() >--------------------------------------------*/
 /*
@@ -34,61 +32,68 @@ NC_free_string()
 inline void
 ncmpio_free_NC_string(NC_string *ncstrp)
 {
-    if (ncstrp==NULL) return;
+    if (ncstrp == NULL) return;
     /* ncstrp->cp is allocated as part of ncstrp object */
     NCI_Free(ncstrp);
 }
 
-#ifdef _CONFORM_NETCDF_3_5_1
+/*----< ncmpio_new_NC_string() >---------------------------------------------*/
 /*
- * For CDF-1, Verify that a name string is valid
- * CDL syntax, eg, all the characters are
- * alphanumeric, '-', '_', or '.'.
- * Also permit ':', '@', '(', or ')' in names for chemists currently making
- * use of these characters, but don't document until ncgen and ncdump can
- * also handle these characters in names.
+ * Allocate a NC_string structure large enough
+ * to hold slen characters.
  */
-static int
-ncmpio_NC_check_name_CDF1(const char *name)
+NC_string *
+ncmpio_new_NC_string(size_t      slen,
+                     const char *str)  /* must be already normalized */
 {
-    const char *cp = name;
-    assert(name != NULL);
+    /* str may not be NULL terminated */
+    NC_string *ncstrp;
+    size_t sizeof_NC_string = M_RNDUP(sizeof(NC_string));
+    size_t sz = slen + sizeof_NC_string + 1;
+    /* one char more space for NULL terminate char */
 
-    if (*name == 0)
-        DEBUG_RETURN_ERROR(NC_EBADNAME) /* empty names disallowed */
+    ncstrp = (NC_string *) NCI_Calloc(sz, sizeof(char));
+    if (ncstrp == NULL) return NULL;
 
-    for (; *cp != 0; cp++) {
-        int ch = *cp;
-        if (!isalnum(ch)) {
-            if (ch != '_' && ch != '-' && ch != '+' && ch != '.' &&
-                ch != ':' && ch != '@' && ch != '(' && ch != ')')
-                DEBUG_RETURN_ERROR(NC_EBADNAME)
-        }
+    /* make space occupied by ncstrp->cp part of ncstrp */
+    ncstrp->nchars = (MPI_Offset)slen;
+    ncstrp->cp = (char *)ncstrp + sizeof_NC_string;
+
+    /* in PnetCDF, we want to make name->cp always NULL character terminated */
+    if (str != NULL && *str != '\0') {
+        strncpy(ncstrp->cp, str, slen);
+        ncstrp->cp[slen] = '\0';  /* NULL terminated */
     }
-    if (cp - name > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EMAXNAME)
+
+    return(ncstrp);
+}
+
+
+/*----< ncmpio_set_NC_string() >---------------------------------------------*/
+/*
+ * If possible, change the value of an NC_string to 'str'.
+ */
+int
+ncmpio_set_NC_string(NC_string  *ncstrp,
+                     const char *str)
+{
+    size_t slen;
+
+    assert(str != NULL && *str != '\0');
+
+    slen = strlen(str);
+
+    if (ncstrp->nchars < (MPI_Offset)slen) DEBUG_RETURN_ERROR(NC_ENOTINDEFINE)
+
+    memcpy(ncstrp->cp, str, slen);
+
+    /* in PnetCDF, we want to make name->cp always NULL character terminated */
+    if (ncstrp->nchars > (MPI_Offset)slen)
+        memset(ncstrp->cp + slen, 0, (size_t)ncstrp->nchars - slen);
+
+    ncstrp->nchars = (MPI_Offset)slen;
 
     return NC_NOERR;
-}
-#endif
-
-static int ncmpio_NC_check_name_CDF2(const char *name);
-
-/*----< ncmpio_NC_check_name() >---------------------------------------------*/
-int
-ncmpio_NC_check_name(const char *name,
-                     int         file_ver) /* CDF version: 1, 2, or 5 */
-{
-    /* NetCDF4 has made CDF-1 no different from CDF-2 except the size of
-     * OFFSET (i.e. 32-bit vs. 64-bit integer. Both formats support extended
-     * names now.
-     */
-#ifdef _CONFORM_NETCDF_3_5_1
-    if (file_ver == 1)
-        return ncmpio_NC_check_name_CDF1(name);
-#endif
-
-    return ncmpio_NC_check_name_CDF2(name);
 }
 
 #include "utf8proc.h"
@@ -217,6 +222,39 @@ nextUTF8(const char* cp)
 }
 
 
+#ifdef _CONFORM_NETCDF_3_5_1
+/*
+ * For CDF-1, Verify that a name string is valid
+ * CDL syntax, eg, all the characters are
+ * alphanumeric, '-', '_', or '.'.
+ * Also permit ':', '@', '(', or ')' in names for chemists currently making
+ * use of these characters, but don't document until ncgen and ncdump can
+ * also handle these characters in names.
+ */
+static int
+check_name_CDF1(const char *name)
+{
+    const char *cp = name;
+    assert(name != NULL);
+
+    if (*name == 0)
+        DEBUG_RETURN_ERROR(NC_EBADNAME) /* empty names disallowed */
+
+    for (; *cp != 0; cp++) {
+        int ch = *cp;
+        if (!isalnum(ch)) {
+            if (ch != '_' && ch != '-' && ch != '+' && ch != '.' &&
+                ch != ':' && ch != '@' && ch != '(' && ch != ')')
+                DEBUG_RETURN_ERROR(NC_EBADNAME)
+        }
+    }
+    if (cp - name > NC_MAX_NAME)
+        DEBUG_RETURN_ERROR(NC_EMAXNAME)
+
+    return NC_NOERR;
+}
+#endif
+
 /*
  * Verify that a name string is valid syntax.  The allowed name
  * syntax (in RE form) is:
@@ -232,7 +270,7 @@ nextUTF8(const char* cp)
  * normalize UTF-8 strings to NFC to facilitate matching and queries.
  */
 static int
-ncmpio_NC_check_name_CDF2(const char *name)
+check_name_CDF2(const char *name)
 {
 	int skip;
 	int ch;
@@ -284,70 +322,20 @@ ncmpio_NC_check_name_CDF2(const char *name)
 	return NC_NOERR;
 }
 
-/*----< ncmpio_new_NC_string() >---------------------------------------------*/
-/*
- * Allocate a NC_string structure large enough
- * to hold slen characters.
- * Formerly
-NC_new_string(count, str)
- */
-NC_string *
-ncmpio_new_NC_string(size_t      slen,
-                     const char *str)  /* must be already normalized */
+/*----< ncmpio_NC_check_name() >---------------------------------------------*/
+int
+ncmpio_NC_check_name(const char *name,
+                     int         file_ver) /* CDF version: 1, 2, or 5 */
 {
-    /* str may not be NULL terminated */
-    NC_string *ncstrp;
-    size_t sizeof_NC_string = M_RNDUP(sizeof(NC_string));
-    size_t sz = slen + sizeof_NC_string + 1;
-    /* one char more space for NULL terminate char */
-
-#if 0
-    sz = _RNDUP(sz, X_ALIGN);
+    /* NetCDF4 has made CDF-1 no different from CDF-2 except the size of
+     * OFFSET (i.e. 32-bit vs. 64-bit integer. Both formats support extended
+     * names now.
+     */
+#ifdef _CONFORM_NETCDF_3_5_1
+    if (file_ver == 1)
+        return check_name_CDF1(name);
 #endif
 
-    ncstrp = (NC_string *) NCI_Calloc(sz, sizeof(char));
-    if (ncstrp == NULL) return NULL;
-
-    /* make space occupied by ncstrp->cp part of ncstrp */
-    ncstrp->nchars = (MPI_Offset)slen;
-    ncstrp->cp = (char *)ncstrp + sizeof_NC_string;
-
-    /* in PnetCDF, we want to make name->cp always NULL character terminated */
-    if (str != NULL && *str != '\0') {
-        strncpy(ncstrp->cp, str, slen);
-        ncstrp->cp[slen] = '\0';  /* NULL terminated */
-    }
-
-    return(ncstrp);
+    return check_name_CDF2(name);
 }
 
-
-/*----< ncmpio_set_NC_string() >---------------------------------------------*/
-/*
- * If possible, change the value of an NC_string to 'str'.
- *
- * Formerly
-NC_re_string()
- */
-int
-ncmpio_set_NC_string(NC_string  *ncstrp,
-                     const char *str)
-{
-    size_t slen;
-
-    assert(str != NULL && *str != '\0');
-
-    slen = strlen(str);
-
-    if (ncstrp->nchars < (MPI_Offset)slen) DEBUG_RETURN_ERROR(NC_ENOTINDEFINE)
-
-    memcpy(ncstrp->cp, str, slen);
-
-    /* in PnetCDF, we want to make name->cp always NULL character terminated */
-    if (ncstrp->nchars > (MPI_Offset)slen)
-        memset(ncstrp->cp + slen, 0, (size_t)ncstrp->nchars - slen);
-
-    ncstrp->nchars = (MPI_Offset)slen;
-
-    return NC_NOERR;
-}
