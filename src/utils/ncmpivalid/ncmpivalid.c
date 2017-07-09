@@ -49,6 +49,80 @@ static const schar ncmagic[] = {'C', 'D', 'F', 0x01};
 #define X_SIZEOF_INT 4
 static int x_sizeof_NON_NEG;
 
+/*----< ncmpio_xlen_nc_type() >----------------------------------------------*/
+/* return the length of external NC data type */
+static int
+xlen_nc_type(nc_type type) {
+    switch(type) {
+        case NC_BYTE:
+        case NC_CHAR:
+        case NC_UBYTE:  return X_SIZEOF_CHAR;
+        case NC_SHORT:  return X_SIZEOF_SHORT;
+        case NC_USHORT: return X_SIZEOF_USHORT;
+        case NC_INT:    return X_SIZEOF_INT;
+        case NC_UINT:   return X_SIZEOF_UINT;
+        case NC_FLOAT:  return X_SIZEOF_FLOAT;
+        case NC_DOUBLE: return X_SIZEOF_DOUBLE;
+        case NC_INT64:  return X_SIZEOF_INT64;
+        case NC_UINT64: return X_SIZEOF_UINT64;
+        default: return NC_EBADTYPE;
+    }
+    return NC_NOERR;
+}
+
+static int
+compute_var_shape(NC *ncp)
+{
+    int i, err;
+    NC_var *first_var = NULL;       /* first "non-record" var */
+    NC_var *first_rec = NULL;       /* first "record" var */
+
+    if (ncp->vars.ndefined == 0) return NC_NOERR;
+
+    ncp->begin_var = ncp->xsz;
+    ncp->begin_rec = ncp->xsz;
+    ncp->recsize   = 0;
+
+    for (i=0; i<ncp->vars.ndefined; i++) {
+        /* ncp->vars.value[i]->len will be recomputed from dimensions in
+         * ncmpio_NC_var_shape64() */
+        err = ncmpio_NC_var_shape64(ncp->vars.value[i], &ncp->dims);
+        if (err != NC_NOERR) return err;
+
+        if (IS_RECVAR(ncp->vars.value[i])) {
+            if (first_rec == NULL) first_rec = ncp->vars.value[i];
+            ncp->recsize += ncp->vars.value[i]->len;
+        }
+        else { /* fixed-size variable */
+            if (first_var == NULL) first_var = ncp->vars.value[i];
+            ncp->begin_rec = ncp->vars.value[i]->begin
+                           + ncp->vars.value[i]->len;
+        }
+    }
+
+    if (first_rec != NULL) {
+        if (ncp->begin_rec > first_rec->begin)
+            return NC_ENOTNC; /* not a netCDF file or corrupted */
+
+        ncp->begin_rec = first_rec->begin;
+        /*
+         * for special case of exactly one record variable, pack value
+         */
+        if (ncp->recsize == first_rec->len)
+            ncp->recsize = *first_rec->dsizes * first_rec->xsz;
+    }
+
+    if (first_var != NULL)
+        ncp->begin_var = first_var->begin;
+    else
+        ncp->begin_var = ncp->begin_rec;
+
+    if (ncp->begin_var <= 0 || ncp->xsz > ncp->begin_var ||
+        ncp->begin_rec <= 0 || ncp->begin_var > ncp->begin_rec)
+        return NC_ENOTNC; /* not a netCDF file or corrupted */
+
+    return NC_NOERR;
+}
 
 /*
  * Fetch the next header chunk.
@@ -123,7 +197,7 @@ val_check_buffer(int         fd,
 } 
 
 static int
-val_get_NCtype(int fd, bufferinfo *gbp, NCtype *typep)
+val_get_NC_tag(int fd, bufferinfo *gbp, NC_tag *tagp)
 {
     unsigned int type = 0;
     int status = val_check_buffer(fd, gbp, x_sizeof_NON_NEG);
@@ -134,7 +208,7 @@ val_get_NCtype(int fd, bufferinfo *gbp, NCtype *typep)
 
     status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
     if (status != NC_NOERR) return status;
-    *typep = (NCtype) type;
+    *tagp = (NC_tag) type;
     return NC_NOERR;
 }
 
@@ -268,7 +342,7 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
      *                <non-negative INT64>        // CDF-5
      */
     int status;
-    NCtype type = NC_UNSPECIFIED; 
+    NC_tag tag = NC_UNSPECIFIED; 
     int dim;
     unsigned long long err_addr;
     MPI_Offset tmp;
@@ -277,7 +351,7 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
     assert(ncap != NULL);
     assert(ncap->value == NULL);
 
-    status = val_get_NCtype(fd, gbp, &type);
+    status = val_get_NC_tag(fd, gbp, &tag);
     if (status != NC_NOERR) {
         printf("preamble of \n");
         return status; 
@@ -296,15 +370,15 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
 
     if (ncap->ndefined == 0) {
         /* no dimension defined */
-        if (type != ABSENT) {
+        if (tag != ABSENT) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while ABSENT is expected for ");
+            printf("\tInvalid NC component tag, while ABSENT is expected for ");
             return NC_ENOTNC;
         }
     } else {
-        if (type != NC_DIMENSION) {
+        if (tag != NC_DIMENSION) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while NC_DIMENSION is expected as number of dimensions is %d for ", ncap->ndefined);
+            printf("\tInvalid NC component tag, while NC_DIMENSION is expected as number of dimensions is %d for ", ncap->ndefined);
             return NC_ENOTNC;
         }
 
@@ -329,7 +403,7 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
 
 static int
 val_get_nc_type(int fd, bufferinfo *gbp, nc_type *typep) {
-    /* NCtype is 4-byte integer */
+    /* nc_type is 4-byte integer */
     unsigned int type = 0;
     int status = val_check_buffer(fd, gbp, 4);
     if (status != NC_NOERR) return status;
@@ -370,7 +444,7 @@ val_get_NC_attrV(int fd, bufferinfo *gbp, NC_attr *attrp) {
     MPI_Offset nvalues, padding, bufremain, attcount;
     MPI_Aint pos_addr, base_addr;
 
-    nvalues = attrp->nelems * ncmpix_len_nctype(attrp->type);
+    nvalues = attrp->nelems * xlen_nc_type(attrp->type);
     padding = attrp->xsz - nvalues;
 #ifdef HAVE_MPI_GET_ADDRESS
     MPI_Get_address(gbp->pos,  &pos_addr);
@@ -472,7 +546,7 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
      *                <non-negative INT64>        // CDF-5
      */
     int status;
-    NCtype type = NC_UNSPECIFIED;
+    NC_tag tag = NC_UNSPECIFIED;
     int att;
     MPI_Offset tmp;
     unsigned long long err_addr;
@@ -481,7 +555,7 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
     assert(ncap != NULL);
     assert(ncap->value == NULL);
 
-    status = val_get_NCtype(fd, gbp, &type);
+    status = val_get_NC_tag(fd, gbp, &tag);
     if (status != NC_NOERR) {
         printf("preamble of ");
         return status; 
@@ -500,15 +574,15 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
 
     if (ncap->ndefined == 0) {
         /* no attribute defined */
-        if (type != ABSENT) {
+        if (tag != ABSENT) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while ABSENT is expected for ");
+            printf("\tInvalid NC component tag, while ABSENT is expected for ");
             return NC_ENOTNC;
         }
     } else {
-        if (type != NC_ATTRIBUTE) {
+        if (tag != NC_ATTRIBUTE) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while NC_ATTRIBUTE is expected as number of dimensions is %d for ", ncap->ndefined);
+            printf("\tInvalid NC component tag, while NC_ATTRIBUTE is expected as number of dimensions is %d for ", ncap->ndefined);
             return NC_ENOTNC;
         }
 
@@ -659,7 +733,7 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
      *               <non-negative INT64>        // CDF-5
      */
     int status;
-    NCtype type = NC_UNSPECIFIED;
+    NC_tag tag = NC_UNSPECIFIED;
     int var;
     MPI_Offset tmp;
     unsigned long long err_addr;
@@ -668,7 +742,7 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
     assert(ncap != NULL);
     assert(ncap->value == NULL); 
 
-    status = val_get_NCtype(fd, gbp, &type);
+    status = val_get_NC_tag(fd, gbp, &tag);
     if (status != NC_NOERR) {
         printf("preamble of ");
         return status;
@@ -685,15 +759,15 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
                 (X_SIZEOF_INT + x_sizeof_NON_NEG);
 
     if(ncap->ndefined == 0) {
-        if (type != ABSENT) {
+        if (tag != ABSENT) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while ABSENT is expected for ");
+            printf("\tInvalid NC component tag, while ABSENT is expected for ");
             return NC_ENOTNC;
         }
     } else {
-        if (type != NC_VARIABLE) {
+        if (tag != NC_VARIABLE) {
             printf("Error @ [0x%8.8Lx]:\n", err_addr);
-            printf("\tInvalid NC component type, while NC_VARIABLE is expected as number of dimensions is %d for ", ncap->ndefined);
+            printf("\tInvalid NC component tag, while NC_VARIABLE is expected as number of dimensions is %d for ", ncap->ndefined);
             return NC_ENOTNC;
         }
  
@@ -950,7 +1024,7 @@ val_get_NC(int fd, NC *ncp)
     }
 
     ncp->xsz = ncmpio_hdr_len_NC(ncp);
-    status = ncmpio_NC_computeshapes(ncp);
+    status = compute_var_shape(ncp);
     if (status != NC_NOERR) goto fn_exit;
 
     status = val_NC_check_vlens(ncp);
