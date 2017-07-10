@@ -732,8 +732,14 @@ req_commit(NC  *ncp,
             ncp->put_list = NULL;
         }
 
-        if (num_w_reqs == 0) NCI_Free(put_list);
-        if (num_r_reqs == 0) NCI_Free(get_list);
+        if (num_w_reqs == 0) {
+            NCI_Free(put_list);
+            put_list = NULL;
+        }
+        if (num_r_reqs == 0) {
+            NCI_Free(get_list);
+            get_list = NULL;
+        }
     }
 
     /* calculate new number of records:
