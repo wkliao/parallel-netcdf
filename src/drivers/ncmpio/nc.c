@@ -86,6 +86,29 @@ ncmpio_cktype(int cdf_ver, nc_type type)
     return NC_NOERR;
 }
 
+/*----< NC_check_vlen() >----------------------------------------------------*/
+/* Check whether variable size is less than or equal to vlen_max,
+ * without overflowing in arithmetic calculations.  If OK, return 1,
+ * else, return 0.  For CDF1 format or for CDF2 format on non-LFS
+ * platforms, vlen_max should be 2^31 - 4, but for CDF2 format on
+ * systems with LFS it should be 2^32 - 4.
+ */
+static int
+NC_check_vlen(NC_var     *varp,
+              MPI_Offset  vlen_max)
+{
+    int i;
+    MPI_Offset prod=varp->xsz;     /* product of xsz and dimensions so far */
+
+    for (i = IS_RECVAR(varp) ? 1 : 0; i < varp->ndims; i++) {
+        if (varp->shape[i] > vlen_max / prod) {
+            return 0;           /* size in bytes won't fit in a 32-bit int */
+        }
+        prod *= varp->shape[i];
+    }
+    return 1;
+}
+
 /*----< ncmpio_NC_check_vlens() >--------------------------------------------*/
 /* Given a valid ncp, check all variables for their sizes against the maximal
  * allowable sizes. Different CDF formation versions have different maximal
@@ -123,7 +146,7 @@ ncmpio_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (!IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_fix_vars_count++;
                 last = 1;
@@ -154,7 +177,7 @@ ncmpio_NC_check_vlens(NC *ncp)
     for (ii = 0; ii < ncp->vars.ndefined; ii++, vpp++) {
         if (IS_RECVAR(*vpp)) {
             last = 0;
-            if (ncmpio_NC_check_vlen(*vpp, vlen_max) == 0) {
+            if (NC_check_vlen(*vpp, vlen_max) == 0) {
                 /* check this variable's shape product against vlen_max */
                 large_rec_vars_count++;
                 last = 1;
@@ -175,27 +198,5 @@ ncmpio_NC_check_vlens(NC *ncp)
         DEBUG_RETURN_ERROR(NC_EVARSIZE)
 
     return NC_NOERR;
-}
-
-/*----< ncmpio_read_NC() >---------------------------------------------------*/
-/* Re-read in the header.
- * On PnetCDF, this is of no use, as header metadata is always sync-ed among
- * all processes, except for numrecs, which can be sync-ed by calling
- * ncmpio_sync_numrecs()
- */
-int
-ncmpio_read_NC(NC *ncp) {
-  int status = NC_NOERR;
-
-  ncmpio_free_NC_dimarray(&ncp->dims);
-  ncmpio_free_NC_attrarray(&ncp->attrs);
-  ncmpio_free_NC_vararray(&ncp->vars);
-
-  status = ncmpio_hdr_get_NC(ncp);
-
-  if (status == NC_NOERR)
-      fClr(ncp->flags, NC_NDIRTY);
-
-  return status;
 }
 

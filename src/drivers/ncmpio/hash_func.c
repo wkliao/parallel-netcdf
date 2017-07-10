@@ -13,9 +13,14 @@
 #endif
 #include <stdio.h>
 #include <string.h> /* strlen() */
+#include <assert.h>
 
+#include <pnc_debug.h>
+#include <common.h>
 #include "nc.h"
+#include "utf8proc.h"
 
+/*----< ncmpio_jenkins_one_at_a_time_hash() >--------------------------------*/
 /* borrow Jenkins hash function:
  * https://en.wikipedia.org/wiki/Jenkins_hash_function
  */
@@ -42,6 +47,7 @@ int ncmpio_jenkins_one_at_a_time_hash(const char *str_name)
     /* return value will be used as an array index */
 }
 
+/*----< ncmpio_additive_hash() >---------------------------------------------*/
 /* try different hash functions described in
  * http://www.burtleburtle.net/bob/hash/doobs.html
  */
@@ -55,6 +61,7 @@ int ncmpio_additive_hash(const char *str_name)
     return (hash % 251); /* 251 is the largest prime <= 255 */
 }
 
+/*----< ncmpio_rotating_hash() >---------------------------------------------*/
 int ncmpio_rotating_hash(const char *str_name)
 {
     size_t i, len = strlen(str_name);
@@ -66,6 +73,7 @@ int ncmpio_rotating_hash(const char *str_name)
     return (int)((hash ^ (hash>>10) ^ (hash>>20)) & (HASH_TABLE_SIZE-1));
 }
 
+/*----< ncmpio_Bernstein_hash() >--------------------------------------------*/
 int ncmpio_Bernstein_hash(const char *str_name)
 {
     size_t i, len = strlen(str_name);
@@ -77,6 +85,7 @@ int ncmpio_Bernstein_hash(const char *str_name)
     return (int)((hash ^ (hash>>10) ^ (hash>>20)) & (HASH_TABLE_SIZE-1));
 }
 
+/*----< ncmpio_Pearson_hash() >----------------------------------------------*/
 int ncmpio_Pearson_hash(const char *str_name)
 {
 #if HASH_TABLE_SIZE == 256
@@ -110,5 +119,58 @@ int ncmpio_Pearson_hash(const char *str_name)
 
     return (int)((hash ^ (hash>>10) ^ (hash>>20)) & (HASH_TABLE_SIZE-1));
 #endif
+}
+
+/*----< ncmpio_update_name_lookup_table() >----------------------------------*/
+/* remove the entry in lookup table for oldname and add a new entry for
+ * newname
+ */
+int
+ncmpio_update_name_lookup_table(NC_nametable *nameT,
+                                const int     id,
+                                const char   *oldname,  /*    normalized */
+                                const char   *unewname) /* un-normalized */
+{
+    int i, key;
+    char *name; /* normalized name string */
+
+    /* remove the old name from the lookup table
+     * hash the var name into a key for name lookup
+     */
+    key = HASH_FUNC(oldname);
+    for (i=0; i<nameT[key].num; i++) {
+        if (nameT[key].list[i] == id) break;
+    }
+    assert(i!=nameT[key].num);
+
+    /* coalesce the id array */
+    for (; i<nameT[key].num-1; i++)
+        nameT[key].list[i] = nameT[key].list[i+1]; 
+
+    /* decrease the number of IDs and free space if necessary */
+    nameT[key].num--;
+    if (nameT[key].num == 0) {
+        NCI_Free(nameT[key].list);
+        nameT[key].list = NULL;
+    }
+
+    /* normalized version of uname */
+    name = (char *)ncmpii_utf8proc_NFC((const unsigned char *)unewname);
+    if (name == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+
+    /* hash the var name into a key for name lookup */
+    key = HASH_FUNC(name);
+    free(name);
+
+    /* add the new name to the lookup table
+     * Note unewname must have already been checked for existence
+     */
+    if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
+        nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
+                          (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
+    nameT[key].list[nameT[key].num] = id;
+    nameT[key].num++;
+
+    return NC_NOERR;
 }
 

@@ -54,6 +54,7 @@ dnl
  *  In OpenMPI, this assumption will fail
  */
 
+/*----< ncmpio_nc2mpitype() >------------------------------------------------*/
 inline MPI_Datatype
 ncmpio_nc2mpitype(nc_type xtype)
 {
@@ -71,23 +72,6 @@ ncmpio_nc2mpitype(nc_type xtype)
         case NC_UINT64 : return MPI_UNSIGNED_LONG_LONG;
         default:         return MPI_DATATYPE_NULL;
     }
-}
-
-inline nc_type
-ncmpio_mpi2nctype(MPI_Datatype itype)
-{
-    if (itype == MPI_SIGNED_CHAR)        return NC_BYTE ;
-    if (itype == MPI_CHAR)               return NC_CHAR ;
-    if (itype == MPI_SHORT)              return NC_SHORT ;
-    if (itype == MPI_INT)                return NC_INT ;
-    if (itype == MPI_FLOAT)              return NC_FLOAT ;
-    if (itype == MPI_DOUBLE)             return NC_DOUBLE ;
-    if (itype == MPI_UNSIGNED_CHAR)      return NC_UBYTE ;
-    if (itype == MPI_UNSIGNED_SHORT)     return NC_USHORT ;
-    if (itype == MPI_UNSIGNED)           return NC_UINT ;
-    if (itype == MPI_LONG_LONG_INT)      return NC_INT64 ;
-    if (itype == MPI_UNSIGNED_LONG_LONG) return NC_UINT64 ;
-    return NC_EBADTYPE;
 }
 
 /*----< ncmpio_need_convert() >----------------------------------------------*/
@@ -152,66 +136,6 @@ ncmpio_need_swap(nc_type      xtype,  /* external NC type */
 
 /* Endianness byte swap: done in-place */
 #define SWAP(x,y) {tmp = (x); (x) = (y); (y) = tmp;}
-
-/*----< ncmpio_swap() >-------------------------------------------------------*/
-/* out-place byte swap, i.e. dest_p != src_p */
-void
-ncmpio_swapn(void       *dest_p,  /* destination array */
-             const void *src_p,   /* source array */
-             MPI_Offset  nelems,  /* number of elements in buf[] */
-             int         esize)   /* byte size of each element */
-{
-    int  i;
-
-    if (esize <= 1 || nelems <= 0) return;  /* no need */
-
-    if (esize == 4) { /* this is the most common case */
-              uint32_t *dest = (uint32_t*)       dest_p;
-        const uint32_t *src  = (const uint32_t*) src_p;
-        for (i=0; i<nelems; i++) {
-            dest[i] = src[i];
-            dest[i] =  ((dest[i]) << 24)
-                    | (((dest[i]) & 0x0000ff00) << 8)
-                    | (((dest[i]) & 0x00ff0000) >> 8)
-                    | (((dest[i]) >> 24));
-        }
-    }
-    else if (esize == 8) {
-              uint64_t *dest = (uint64_t*)       dest_p;
-        const uint64_t *src  = (const uint64_t*) src_p;
-        for (i=0; i<nelems; i++) {
-            dest[i] = src[i];
-            dest[i] = ((dest[i] & 0x00000000000000FFULL) << 56) | 
-                      ((dest[i] & 0x000000000000FF00ULL) << 40) | 
-                      ((dest[i] & 0x0000000000FF0000ULL) << 24) | 
-                      ((dest[i] & 0x00000000FF000000ULL) <<  8) | 
-                      ((dest[i] & 0x000000FF00000000ULL) >>  8) | 
-                      ((dest[i] & 0x0000FF0000000000ULL) >> 24) | 
-                      ((dest[i] & 0x00FF000000000000ULL) >> 40) | 
-                      ((dest[i] & 0xFF00000000000000ULL) >> 56);
-        }
-    }
-    else if (esize == 2) {
-              uint16_t *dest =       (uint16_t*) dest_p;
-        const uint16_t *src  = (const uint16_t*) src_p;
-        for (i=0; i<nelems; i++) {
-            dest[i] = src[i];
-            dest[i] = (uint16_t)(((dest[i] & 0xff) << 8) |
-                                 ((dest[i] >> 8) & 0xff));
-        }
-    }
-    else {
-              uchar *op = (uchar*) dest_p;
-        const uchar *ip = (uchar*) src_p;
-        /* for esize is not 1, 2, or 4 */
-        while (nelems-- > 0) {
-            for (i=0; i<esize; i++)
-                op[i] = ip[esize-1-i];
-            op += esize;
-            ip += esize;
-        }
-    }
-}
 
 /* Other options to in-place byte-swap
 htonl() is for 4-byte swap

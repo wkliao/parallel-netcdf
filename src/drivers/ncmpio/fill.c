@@ -134,7 +134,7 @@ fill_var_buf(const NC_var *varp,
     return NC_NOERR;
 }
 
-/*----< ncmpio_fill_var() >--------------------------------------------------*/
+/*----< fill_var_rec() >-----------------------------------------------------*/
 /* This function is a collective.
  * For fixed-size variables, write the entire variable with fill values and
  * ignore argument recno. For record variables, write one record of that
@@ -235,7 +235,7 @@ fill_var_rec(NC         *ncp,
     return NC_NOERR;
 }
 
-/*----< ncmpio_fill_var() >--------------------------------------------------*/
+/*----< ncmpio_fill_var_rec() >----------------------------------------------*/
 /* fill an entire record of a record variable
  * this API is collective, must be called in data mode */
 int
@@ -388,7 +388,7 @@ err_check:
     return NC_NOERR;
 }
 
-/*----< ncmpio_def_var_fill() >-----------------------------------------------*/
+/*----< ncmpio_def_var_fill() >----------------------------------------------*/
 /* this API is collective, and must be called in define mode */
 int
 ncmpio_def_var_fill(void       *ncdp,

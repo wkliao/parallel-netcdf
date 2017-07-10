@@ -291,17 +291,17 @@ is_request_contiguous(NC               *ncp,
 }
 
 #ifndef HAVE_MPI_TYPE_CREATE_SUBARRAY
-/*----< ncmpio_type_create_subarray() >--------------------------------------*/
+/*----< type_create_subarray() >---------------------------------------------*/
 /* this is to be used when MPI_Type_create_subarray() is not available,
  * typically for MPI-1 implementation only */
 static int
-ncmpio_type_create_subarray(int           ndims,
-                            int          *array_of_sizes,    /* [ndims] */
-                            int          *array_of_subsizes, /* [ndims] */
-                            int          *array_of_starts,   /* [ndims] */
-                            int           order,
-                            MPI_Datatype  oldtype,
-                            MPI_Datatype *newtype)
+type_create_subarray(int           ndims,
+                     int          *array_of_sizes,    /* [ndims] */
+                     int          *array_of_subsizes, /* [ndims] */
+                     int          *array_of_starts,   /* [ndims] */
+                     int           order,
+                     MPI_Datatype  oldtype,
+                     MPI_Datatype *newtype)
 {
     int i, err, blklens[3] = {1, 1, 1};
     MPI_Datatype type1, type2;
@@ -424,19 +424,19 @@ ncmpio_type_create_subarray(int           ndims,
 }
 #endif
 
-/*----< ncmpio_type_create_subarray64() >------------------------------------*/
+/*----< type_create_subarray64() >-------------------------------------------*/
 /* This subroutine is to achieve the same result as MPI_Type_create_subarray()
  * but it takes arguments in type of MPI_Offset, instead of int. It also
  * checked for any possible 4-byte integer overflow.
  */
 static int
-ncmpio_type_create_subarray64(int           ndims,
-                              MPI_Offset   *array_of_sizes,    /* [ndims] */
-                              MPI_Offset   *array_of_subsizes, /* [ndims] */
-                              MPI_Offset   *array_of_starts,   /* [ndims] */
-                              int           order,
-                              MPI_Datatype  oldtype,
-                              MPI_Datatype *newtype)
+type_create_subarray64(int           ndims,
+                       MPI_Offset   *array_of_sizes,    /* [ndims] */
+                       MPI_Offset   *array_of_subsizes, /* [ndims] */
+                       MPI_Offset   *array_of_starts,   /* [ndims] */
+                       int           order,
+                       MPI_Datatype  oldtype,
+                       MPI_Datatype *newtype)
 {
     int i, err, tag, blklens[3] = {1, 1, 1};
     MPI_Datatype type1, type2;
@@ -478,8 +478,8 @@ ncmpio_type_create_subarray64(int           ndims,
         if (err != MPI_SUCCESS)
             return ncmpio_handle_error(err, "MPI_Type_create_subarray");
 #else
-        err = ncmpio_type_create_subarray(ndims, sizes, subsizes, starts,
-                                          order, oldtype, newtype);
+        err = type_create_subarray(ndims, sizes, subsizes, starts,
+                                   order, oldtype, newtype);
         NCI_Free(sizes);
 #endif
         return err;
@@ -713,7 +713,7 @@ filetype_create_vara(NC               *ncp,
             subcount64[varp->ndims-1] *= varp->xsz;
             substart64[varp->ndims-1] *= varp->xsz;
 
-            status = ncmpio_type_create_subarray64(varp->ndims-1, shape64+1,
+            status = type_create_subarray64(varp->ndims-1, shape64+1,
                                  subcount64+1, substart64+1, MPI_ORDER_C,
                                  MPI_BYTE, &rectype);
             NCI_Free(shape64);
@@ -754,9 +754,9 @@ filetype_create_vara(NC               *ncp,
         subcount64[varp->ndims-1] *= varp->xsz;
         substart64[varp->ndims-1] *= varp->xsz;
 
-        status = ncmpio_type_create_subarray64(varp->ndims, shape64, subcount64,
-                                               substart64, MPI_ORDER_C,
-                                               MPI_BYTE, &filetype);
+        status = type_create_subarray64(varp->ndims, shape64, subcount64,
+                                        substart64, MPI_ORDER_C,
+                                        MPI_BYTE, &filetype);
         NCI_Free(shape64);
         if (status != NC_NOERR) return status;
     }

@@ -101,15 +101,9 @@ typedef struct {
     char       *cp;     /* [nchars+1] one additional char for '\0' */
 } NC_string;
 
-extern NC *
-ncmpio_dup_NC(const NC *ref);
-
-/* Begin defined in string.c */
+/* Begin defined in string.c ------------------------------------------------*/
 extern void
 ncmpio_free_NC_string(NC_string *ncstrp);
-
-extern int
-ncmpio_NC_check_name(const char *name, int file_ver);
 
 extern NC_string *
 ncmpio_new_NC_string(size_t slen, const char *str);
@@ -117,7 +111,8 @@ ncmpio_new_NC_string(size_t slen, const char *str);
 extern int
 ncmpio_set_NC_string(NC_string *ncstrp, const char *str);
 
-/* End defined in string.c */
+extern int
+ncmpio_NC_check_name(const char *name, int file_ver);
 
 /*
  * NC dimension structure
@@ -174,24 +169,12 @@ typedef struct NC_dimarray {
                     */
 } NC_dimarray;
 
-/* Begin defined in dim.c */
-
+/* Begin defined in dim.c ---------------------------------------------------*/
 extern void
 ncmpio_free_NC_dim(NC_dim *dimp);
 
 extern NC_dim *
 ncmpio_new_x_NC_dim(NC_string *name);
-
-extern int
-ncmpio_find_NC_Udim(const NC_dimarray *ncap, NC_dim **dimpp);
-
-extern int
-ncmpio_incr_NC_dimarray(NC_dimarray *ncap, NC_dim *newdimp);
-
-extern NC_dim*
-ncmpio_dup_NC_dim(const NC_dim *dimp);
-
-/* dimarray */
 
 extern void
 ncmpio_free_NC_dimarray(NC_dimarray *ncap);
@@ -201,8 +184,6 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref);
 
 extern NC_dim *
 ncmpio_elem_NC_dimarray(const NC_dimarray *ncap, int elem);
-
-/* End defined in dim.c */
 
 /*
  * NC attribute
@@ -225,8 +206,7 @@ typedef struct NC_attrarray {
     NC_attr **value;
 } NC_attrarray;
 
-/* Begin defined in attr.c */
-
+/* Begin defined in attr.c --------------------------------------------------*/
 extern void
 ncmpio_free_NC_attr(NC_attr *attrp);
 
@@ -234,26 +214,13 @@ extern NC_attr *
 ncmpio_new_x_NC_attr(NC_string *strp, nc_type type, MPI_Offset nelems);
 
 extern int
-ncmpio_incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp);
-
-extern NC_attr*
-ncmpio_dup_NC_attr(const NC_attr *rattrp);
-
-extern int
 ncmpio_NC_findattr(const NC_attrarray *ncap, const char *uname);
-
-/* attrarray */
 
 extern void
 ncmpio_free_NC_attrarray(NC_attrarray *ncap);
 
 extern int
 ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref);
-
-extern NC_attr *
-ncmpio_elem_NC_attrarray(const NC_attrarray *ncap, MPI_Offset elem);
-
-/* End defined in attr.c */
 
 /*
  * NC variable: description and data
@@ -295,21 +262,12 @@ typedef struct NC_vararray {
                     */
 } NC_vararray;
 
-/* Begin defined in var.c */
-
+/* Begin defined in var.c ---------------------------------------------------*/
 extern void
 ncmpio_free_NC_var(NC_var *varp);
 
 extern NC_var *
 ncmpio_new_x_NC_var(NC_string *strp, int ndims);
-
-extern NC_var*
-ncmpio_dup_NC_var(const NC_var *rvarp);
-
-extern int
-ncmpio_incr_NC_vararray(NC_vararray *ncap, NC_var *newvarp);
-
-/* vararray */
 
 extern void
 ncmpio_free_NC_vararray(NC_vararray *ncap);
@@ -321,12 +279,7 @@ extern int
 ncmpio_NC_var_shape64(NC_var *varp, const NC_dimarray *dims);
 
 extern int
-ncmpio_NC_check_vlen(NC_var *varp, MPI_Offset vlen_max);
-
-extern int
 ncmpio_NC_lookupvar(NC *ncp, int varid, NC_var **varp);
-
-/* End defined in var.c */
 
 #define IS_RECVAR(vp) \
         ((vp)->shape != NULL ? (*(vp)->shape == NC_UNLIMITED) : 0 )
@@ -481,23 +434,20 @@ struct NC {
 #define ErrIsHeaderDiff(err) \
         (NC_EMULTIDEFINE_FIRST >= (err) && (err) >= NC_EMULTIDEFINE_LAST)
 
-/* Begin defined in nc.c */
+/* Begin defined in nc.c ----------------------------------------------------*/
+extern void
+ncmpio_free_NC(NC *ncp);
+
+extern NC *
+ncmpio_dup_NC(const NC *ref);
 
 extern int
 ncmpio_cktype(int cdf_ver, nc_type datatype);
 
 extern int
-ncmpio_write_header(NC *ncp);
+ncmpio_NC_check_vlens(NC *ncp);
 
-extern void
-ncmpio_free_NC(NC *ncp);
-
-extern int
-ncmpio_read_NC(NC *ncp);
-
-/* End defined in nc.c */
-
-/* Begin defined in header.c */
+/* Begin defined in ncmpio_header_get.c -------------------------------------*/
 typedef struct bufferinfo {
     MPI_Comm    comm;
     MPI_File    collective_fh;
@@ -510,42 +460,64 @@ typedef struct bufferinfo {
     void       *pos;      /* current position in buffer */
 } bufferinfo;
 
-extern int
-ncmpio_xlen_nc_type(nc_type type);
-
 extern MPI_Offset
 ncmpio_hdr_len_NC(const NC *ncp);
 
 extern int
 ncmpio_hdr_get_NC(NC *ncp);
 
+/* Begin defined in ncmpio_header_put.c -------------------------------------*/
 extern int
 ncmpio_hdr_put_NC(NC *ncp, void *buf);
 
-/* end defined in header.c */
+extern int
+ncmpio_write_header(NC *ncp);
 
-/* begin defined in ncmpio_file_misc.c */
+/* Begin defined in ncmpio_sync.c -------------------------------------------*/
 extern int
 ncmpio_file_sync(NC *ncp);
 
 extern int
-NC_computeshapes(NC *ncp);
+ncmpio_write_numrecs(NC *ncp, MPI_Offset new_numrecs);
 
-/* end defined in ncmpio_file_misc.c */
-
-/* begin defined in error.c */
-
+/* Begin defined in error.c -------------------------------------------------*/
 extern int
 ncmpio_handle_error(int mpi_errorcode, char *msg);
 
-/* end defined in error.c */
-/*
- * These functions are used to support
- * interface version 2 backward compatibility.
- * N.B. these are tested in ../nc_test even though they are
- * not public. So, be careful to change the declarations in
- * ../nc_test/tests.h if you change these.
- */
+/* Begin defined in ncmpio_filetype.c ---------------------------------------*/
+extern int
+ncmpio_start_count_stride_check(const NC *ncp, const NC_var *varp,
+                const MPI_Offset *start, const MPI_Offset *count,
+                const MPI_Offset *stride, const int rw_flag);
+
+extern int
+ncmpio_get_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
+                const MPI_Offset counts[], const MPI_Offset strides[],
+                const int rw_flag, MPI_Offset *offset_ptr);
+
+extern int
+ncmpio_filetype_create_vars(NC* ncp, NC_var* varp,
+                const MPI_Offset start[], const MPI_Offset count[],
+                const MPI_Offset stride[], int rw_flag, int *blocklen,
+                MPI_Offset *offset, MPI_Datatype *filetype,
+                int *is_filetype_contig);
+
+extern int                
+ncmpio_file_set_view(NC *ncp, MPI_File fh, MPI_Offset *offset,
+                MPI_Datatype filetype);
+
+/* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
+extern MPI_Datatype
+ncmpio_nc2mpitype(nc_type type);
+
+extern int
+ncmpio_need_convert(int format, nc_type nctype, MPI_Datatype mpitype);
+
+extern int
+ncmpio_need_swap(nc_type nctype,MPI_Datatype mpitype);
+
+extern void
+ncmpio_in_swapn(void *buf, MPI_Offset nelems, int esize);
 
 extern int
 ncmpio_x_putn_NC_CHAR  (void *xbuf, const void *buf, MPI_Offset nelems,
@@ -617,38 +589,7 @@ extern int
 ncmpio_x_getn_NC_UINT64(const void *xbuf, void *buf, MPI_Offset nelems,
                        MPI_Datatype datatype);
 
-extern int
-ncmpio_start_count_stride_check(const NC *ncp, const NC_var *varp,
-                const MPI_Offset *start, const MPI_Offset *count,
-                const MPI_Offset *stride, const int rw_flag);
-
-extern int
-ncmpio_need_convert(int format, nc_type nctype, MPI_Datatype mpitype);
-
-extern int
-ncmpio_need_swap(nc_type nctype,MPI_Datatype mpitype);
-
-extern void
-ncmpio_swapn(void *dest_p, const void* src_p, MPI_Offset nelems, int esize);
-
-extern void
-ncmpio_in_swapn(void *buf, MPI_Offset nelems, int esize);
-
-extern int
-ncmpio_get_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
-                const MPI_Offset counts[], const MPI_Offset strides[],
-                const int rw_flag, MPI_Offset *offset_ptr);
-
-extern int
-ncmpio_write_numrecs(NC *ncp, MPI_Offset new_numrecs);
-
-extern int
-ncmpio_filetype_create_vars(NC* ncp, NC_var* varp,
-                const MPI_Offset start[], const MPI_Offset count[],
-                const MPI_Offset stride[], int rw_flag, int *blocklen,
-                MPI_Offset *offset, MPI_Datatype *filetype,
-                int *is_filetype_contig);
-
+/* Begin defined in ncmpio_igetput.m4 ---------------------------------------*/
 extern int
 ncmpio_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
                 const MPI_Offset *stride, const MPI_Offset *imap,
@@ -656,21 +597,7 @@ ncmpio_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
                 MPI_Datatype datatype, int *reqid, int rw_flag, int use_abuf,
                 int isSameGroup);
 
-extern MPI_Datatype
-ncmpio_nc2mpitype(nc_type type);
-
-extern nc_type
-ncmpio_mpi2nctype(MPI_Datatype itype);
-
-extern int                
-ncmpio_file_set_view(NC *ncp, MPI_File fh, MPI_Offset *offset, MPI_Datatype filetype);
-
-extern int
-ncmpio_create_imaptype(NC_var *varp, const MPI_Offset *count,
-                       const MPI_Offset *imap, const MPI_Offset  bnelems,
-                       const int el_size, MPI_Datatype ptype,
-                       MPI_Datatype *imaptype);
-
+/* Begin defined in ncmpio_getput.m4 ----------------------------------------*/
 extern int
 ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
                            MPI_Datatype buftype,
@@ -679,15 +606,12 @@ ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
                            int *el_size, int *buftype_is_contig);
 
 extern int
-ncmpio_fill_vars(NC *ncp);
+ncmpio_create_imaptype(NC_var *varp, const MPI_Offset *count,
+                       const MPI_Offset *imap, const MPI_Offset  bnelems,
+                       const int el_size, MPI_Datatype ptype,
+                       MPI_Datatype *imaptype);
 
-extern int
-ncmpio_sanity_check(NC *ncp, int varid, const MPI_Offset *start,
-                    const MPI_Offset *count, const MPI_Offset *stride,
-                    MPI_Offset bufcount, MPI_Datatype buftype,
-                    api_kind api, int isFlexibleAPI, int mustInDataMode,
-                    int rw_flag, int io_method, NC_var **varp);
-
+/* Begin defined in ncmpio_hash_func.c --------------------------------------*/
 extern int
 ncmpio_jenkins_one_at_a_time_hash(const char *str_name);
 
@@ -707,22 +631,36 @@ extern int
 ncmpio_update_name_lookup_table(NC_nametable *nameT, const int id,
                                 const char *oldname, const char *newname);
 
-extern int
-ncmpio_inq_var_fill(NC_var *varp, void *fill_value);
-
+/* Begin defined in ncmpio_fill.c -------------------------------------------*/
 extern int
 ncmpio_inq_default_fill_value(int type, void *fill_value);
 
 extern int
-ncmpio_getput_zero_req(NC *ncp, int rw_flag);
+ncmpio_inq_var_fill(NC_var *varp, void *fill_value);
 
 extern int
-ncmpio_NC_check_vlens(NC *ncp);
+ncmpio_fill_vars(NC *ncp);
+
+/* Begin defined in ncmpio_nonblocking.c ------------------------------------*/
+extern int
+ncmpio_getput_zero_req(NC *ncp, int rw_flag);
+
+/* Begin defined in ncmpio_close.c */
+extern int
+ncmpio_close_files(NC *ncp, int doUnlink);
+
+/* Begin defined in ncmpio_utils.c ------------------------------------------*/
+extern int
+ncmpio_sanity_check(NC *ncp, int varid, const MPI_Offset *start,
+                    const MPI_Offset *count, const MPI_Offset *stride,
+                    MPI_Offset bufcount, MPI_Datatype buftype,
+                    api_kind api, int isFlexibleAPI, int mustInDataMode,
+                    int rw_flag, int io_method, NC_var **varp);
 
 extern void
 ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
 
 extern int
-ncmpio_close_files(NC *ncp, int doUnlink);
+ncmpio_xlen_nc_type(nc_type type);
 
 #endif /* _NC_H */

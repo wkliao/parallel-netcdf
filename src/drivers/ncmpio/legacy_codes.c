@@ -752,3 +752,170 @@ NC_check_header(NC         *ncp,
 }
 #endif
 
+/*----< ncmpio_read_NC() >---------------------------------------------------*/
+/* Re-read in the header.
+ * On PnetCDF, this is of no use, as header metadata is always sync-ed among
+ * all processes, except for numrecs, which can be sync-ed by calling
+ * ncmpio_sync_numrecs()
+ */
+int
+ncmpio_read_NC(NC *ncp) {
+    int status = NC_NOERR;
+
+    ncmpio_free_NC_dimarray(&ncp->dims);
+    ncmpio_free_NC_attrarray(&ncp->attrs);
+    ncmpio_free_NC_vararray(&ncp->vars);
+
+    status = ncmpio_hdr_get_NC(ncp);
+
+    if (status == NC_NOERR)
+        fClr(ncp->flags, NC_NDIRTY);
+
+    return status;
+}
+
+/*----< ncmpio_find_NC_Udim() >----------------------------------------------*/
+/*
+ * Step thru NC_DIMENSION array, seeking the UNLIMITED dimension.
+ * Return dimid or -1 on not found.
+ * *dimpp is set to the appropriate NC_dim.
+ */
+int
+ncmpio_find_NC_Udim(const NC_dimarray  *ncap,
+                    NC_dim            **dimpp)
+{
+    int dimid;
+
+    assert(ncap != NULL);
+
+    if (ncap->ndefined == 0) return -1;
+
+    /* note that the number of dimensions allowed is < 2^32 */
+    for (dimid=0; dimid<ncap->ndefined; dimid++)
+        if (ncap->value[dimid]->size == NC_UNLIMITED) {
+            /* found the matched name */
+            if (dimpp != NULL)
+                *dimpp = ncap->value[dimid];
+            return dimid;
+        }
+
+    /* not found */
+    return -1;
+}
+
+/*----< ncmpio_swapn() >-----------------------------------------------------*/
+/* out-place byte swap, i.e. dest_p != src_p */
+void
+ncmpio_swapn(void       *dest_p,  /* destination array */
+             const void *src_p,   /* source array */
+             MPI_Offset  nelems,  /* number of elements in buf[] */
+             int         esize)   /* byte size of each element */
+{
+    int  i;
+
+    if (esize <= 1 || nelems <= 0) return;  /* no need */
+
+    if (esize == 4) { /* this is the most common case */
+              uint32_t *dest = (uint32_t*)       dest_p;
+        const uint32_t *src  = (const uint32_t*) src_p;
+        for (i=0; i<nelems; i++) {
+            dest[i] = src[i];
+            dest[i] =  ((dest[i]) << 24)
+                    | (((dest[i]) & 0x0000ff00) << 8)
+                    | (((dest[i]) & 0x00ff0000) >> 8)
+                    | (((dest[i]) >> 24));
+        }
+    }
+    else if (esize == 8) {
+              uint64_t *dest = (uint64_t*)       dest_p;
+        const uint64_t *src  = (const uint64_t*) src_p;
+        for (i=0; i<nelems; i++) {
+            dest[i] = src[i];
+            dest[i] = ((dest[i] & 0x00000000000000FFULL) << 56) | 
+                      ((dest[i] & 0x000000000000FF00ULL) << 40) | 
+                      ((dest[i] & 0x0000000000FF0000ULL) << 24) | 
+                      ((dest[i] & 0x00000000FF000000ULL) <<  8) | 
+                      ((dest[i] & 0x000000FF00000000ULL) >>  8) | 
+                      ((dest[i] & 0x0000FF0000000000ULL) >> 24) | 
+                      ((dest[i] & 0x00FF000000000000ULL) >> 40) | 
+                      ((dest[i] & 0xFF00000000000000ULL) >> 56);
+        }
+    }
+    else if (esize == 2) {
+              uint16_t *dest =       (uint16_t*) dest_p;
+        const uint16_t *src  = (const uint16_t*) src_p;
+        for (i=0; i<nelems; i++) {
+            dest[i] = src[i];
+            dest[i] = (uint16_t)(((dest[i] & 0xff) << 8) |
+                                 ((dest[i] >> 8) & 0xff));
+        }
+    }
+    else {
+              uchar *op = (uchar*) dest_p;
+        const uchar *ip = (uchar*) src_p;
+        /* for esize is not 1, 2, or 4 */
+        while (nelems-- > 0) {
+            for (i=0; i<esize; i++)
+                op[i] = ip[esize-1-i];
+            op += esize;
+            ip += esize;
+        }
+    }
+}
+
+inline nc_type
+ncmpio_mpi2nctype(MPI_Datatype itype)
+{
+    if (itype == MPI_SIGNED_CHAR)        return NC_BYTE ;
+    if (itype == MPI_CHAR)               return NC_CHAR ;
+    if (itype == MPI_SHORT)              return NC_SHORT ;
+    if (itype == MPI_INT)                return NC_INT ;
+    if (itype == MPI_FLOAT)              return NC_FLOAT ;
+    if (itype == MPI_DOUBLE)             return NC_DOUBLE ;
+    if (itype == MPI_UNSIGNED_CHAR)      return NC_UBYTE ;
+    if (itype == MPI_UNSIGNED_SHORT)     return NC_USHORT ;
+    if (itype == MPI_UNSIGNED)           return NC_UINT ;
+    if (itype == MPI_LONG_LONG_INT)      return NC_INT64 ;
+    if (itype == MPI_UNSIGNED_LONG_LONG) return NC_UINT64 ;
+    return NC_EBADTYPE;
+}
+
+/*----< ncmpi_print_all_var_offsets() >---------------------------------------*/
+/* This is an independent subroutine */
+int
+ncmpi_print_all_var_offsets(int ncid) {
+    int i, err;
+    NC_var **vpp=NULL;
+    NC *ncp=NULL;
+    PNC *pncp;
+
+    err = PNC_check_id(ncid, &pncp);
+    if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
+    ncp = (NC*)pncp->ncp;
+
+    if (ncp->begin_var%1048576)
+        printf("%s header size (ncp->begin_var)=%lld MB + %lld\n",
+        ncp->path, ncp->begin_var/1048575, ncp->begin_var%1048576);
+    else
+        printf("%s header size (ncp->begin_var)=%lld MB\n",
+        ncp->path, ncp->begin_var/1048575);
+
+    vpp = ncp->vars.value;
+    for (i=0; i<ncp->vars.ndefined; i++, vpp++) {
+        char str[1024];
+        MPI_Offset off = (*vpp)->begin;
+        MPI_Offset rem = off % 1048576;;
+
+        if (IS_RECVAR(*vpp))
+            sprintf(str,"    Record variable \"%20s\": ",(*vpp)->name->cp);
+        else
+            sprintf(str,"non-record variable \"%20s\": ",(*vpp)->name->cp);
+
+        if (rem)
+            printf("%s offset=%12lld MB + %7lld len=%lld\n", str, off/1048576, rem,(*vpp)->len);
+        else
+            printf("%s offset=%12lld MB len=%lld\n", str, off/1048576,(*vpp)->len);
+    }
+    return NC_NOERR;
+}
+

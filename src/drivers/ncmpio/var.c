@@ -50,7 +50,7 @@ ncmpio_free_NC_var(NC_var *varp)
 
 /*----< ncmpio_new_x_NC_var() >-----------------------------------------------*/
 /*
- * Used by ncmpio_new_NC_var() and ncx_get_NC_var()
+ * Used by new_NC_var() and ncx_get_NC_var()
  */
 NC_var *
 ncmpio_new_x_NC_var(NC_string *strp,
@@ -77,17 +77,17 @@ ncmpio_new_x_NC_var(NC_string *strp,
     return varp;
 }
 
-/*----< ncmpio_new_NC_var() >------------------------------------------------*/
+/*----< new_NC_var() >-------------------------------------------------------*/
 /*
  * Formerly, NC_new_var()
  */
 static int
-ncmpio_new_NC_var(NC_vararray  *vcap,
-                  const char   *name,  /* normalized variable name (NULL terminated) */
-                  nc_type       type,
-                  int           ndims,
-                  const int    *dimids,
-                  NC_var      **varp)
+new_NC_var(NC_vararray  *vcap,
+           const char   *name,  /* normalized variable name (NULL terminated) */
+           nc_type       type,
+           int           ndims,
+           const int    *dimids,
+           NC_var      **varp)
 {
     NC_string *strp;
 
@@ -124,76 +124,22 @@ ncmpio_new_NC_var(NC_vararray  *vcap,
         nameT[key].list[nameT[key].num] = vcap->ndefined;
         nameT[key].num++;
     }
-    /* else case is for variable duplication called from ncmpio_dup_NC_var() */
+    /* else case is for variable duplication called from dup_NC_var() */
 #endif
 
     return NC_NOERR;
 }
 
-/*----< ncmpio_update_name_lookup_table() >----------------------------------*/
-/* remove the entry in lookup table for oldname and add a new entry for
- * newname
- */
-int
-ncmpio_update_name_lookup_table(NC_nametable *nameT,
-                                const int     id,
-                                const char   *oldname,  /*    normalized */
-                                const char   *unewname) /* un-normalized */
-{
-    int i, key;
-    char *name; /* normalized name string */
-
-    /* remove the old name from the lookup table
-     * hash the var name into a key for name lookup
-     */
-    key = HASH_FUNC(oldname);
-    for (i=0; i<nameT[key].num; i++) {
-        if (nameT[key].list[i] == id) break;
-    }
-    assert(i!=nameT[key].num);
-
-    /* coalesce the id array */
-    for (; i<nameT[key].num-1; i++)
-        nameT[key].list[i] = nameT[key].list[i+1]; 
-
-    /* decrease the number of IDs and free space if necessary */
-    nameT[key].num--;
-    if (nameT[key].num == 0) {
-        NCI_Free(nameT[key].list);
-        nameT[key].list = NULL;
-    }
-
-    /* normalized version of uname */
-    name = (char *)ncmpii_utf8proc_NFC((const unsigned char *)unewname);
-    if (name == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    /* hash the var name into a key for name lookup */
-    key = HASH_FUNC(name);
-    free(name);
-
-    /* add the new name to the lookup table
-     * Note unewname must have already been checked for existence
-     */
-    if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
-        nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                          (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
-    nameT[key].list[nameT[key].num] = id;
-    nameT[key].num++;
-
-    return NC_NOERR;
-}
-
-
-/*----< ncmpio_dup_NC_var() >------------------------------------------------*/
-NC_var *
-ncmpio_dup_NC_var(const NC_var *rvarp)
+/*----< dup_NC_var() >-------------------------------------------------------*/
+static NC_var *
+dup_NC_var(const NC_var *rvarp)
 {
     int err;
     NC_var *varp;
 
     /* note that name in rvarp->name->cp is already normalized */
-    err = ncmpio_new_NC_var(NULL, rvarp->name->cp, rvarp->type, rvarp->ndims,
-                            rvarp->dimids, &varp);
+    err = new_NC_var(NULL, rvarp->name->cp, rvarp->type, rvarp->ndims,
+                     rvarp->dimids, &varp);
     if (err != NC_NOERR) return NULL;
 
     if (ncmpio_dup_NC_attrarray(&varp->attrs, &rvarp->attrs) != NC_NOERR) {
@@ -215,12 +161,7 @@ ncmpio_dup_NC_var(const NC_var *rvarp)
 
 /* vararray */
 
-/*----< ncmpio_free_NC_vararray() >-------------------------------------------*/
-/*
- * Free NC_vararray values.
- * formerly
-NC_free_array()
- */
+/*----< ncmpio_free_NC_vararray() >------------------------------------------*/
 inline void
 ncmpio_free_NC_vararray(NC_vararray *ncap)
 {
@@ -249,7 +190,7 @@ ncmpio_free_NC_vararray(NC_vararray *ncap)
 }
 
 
-/*----< ncmpio_dup_NC_vararray() >--------------------------------------------*/
+/*----< ncmpio_dup_NC_vararray() >-------------------------------------------*/
 int
 ncmpio_dup_NC_vararray(NC_vararray       *ncap,
                        const NC_vararray *ref)
@@ -274,7 +215,7 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = ncmpio_dup_NC_var(ref->value[i]);
+        ncap->value[i] = dup_NC_var(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -303,14 +244,11 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
 }
 
 
-/*
- * Add a new handle on the end of an array of handles
- * Formerly
-NC_incr_array(array, tail)
- */
-int
-ncmpio_incr_NC_vararray(NC_vararray *ncap,
-                        NC_var      *newvarp)
+/*----< incr_NC_vararray() >-------------------------------------------------*/
+/* Add a new handle on the end of an array of handles */
+static int
+incr_NC_vararray(NC_vararray *ncap,
+                 NC_var      *newvarp)
 {
     NC_var **vp;
 
@@ -342,7 +280,7 @@ ncmpio_incr_NC_vararray(NC_vararray *ncap,
     return NC_NOERR;
 }
 
-
+/*----< elem_NC_vararray() >-------------------------------------------------*/
 inline static NC_var *
 elem_NC_vararray(const NC_vararray *ncap,
                  int                varid)
@@ -362,16 +300,15 @@ elem_NC_vararray(const NC_vararray *ncap,
 
 
 #ifdef SEARCH_NAME_LINEARLY
+/*----< NC_findvar() >-------------------------------------------------------*/
 /*
  * Step thru NC_VARIABLE array, seeking match on name.
  * If found, set the variable ID pointed by vardip, otherwise return NC_ENOTVAR
- * Formerly (sort of)
-NC_hvarid
  */
 static int
-ncmpio_NC_findvar(const NC_vararray *ncap,
-                  const char        *name,  /* normalized name */
-                  int               *varidp)
+NC_findvar(const NC_vararray *ncap,
+           const char        *name,  /* normalized name */
+           int               *varidp)
 {
     int varid;
     size_t nchars;
@@ -393,14 +330,14 @@ ncmpio_NC_findvar(const NC_vararray *ncap,
     return NC_ENOTVAR; /* not found */
 }
 #else
-/*----< ncmpio_NC_findvar() >------------------------------------------------*/
+/*----< NC_findvar() >-------------------------------------------------------*/
 /* Check if the name has been used.
  * If yes, set the variable ID pointed by vardip, otherwise return NC_ENOTVAR
  */
 static int
-ncmpio_NC_findvar(const NC_vararray  *ncap,
-                  const char         *name,  /* normalized name */
-                  int                *varidp)
+NC_findvar(const NC_vararray  *ncap,
+           const char         *name,  /* normalized name */
+           int                *varidp)
 {
     int i, key, varid;
 
@@ -424,13 +361,9 @@ ncmpio_NC_findvar(const NC_vararray  *ncap,
 }
 #endif
 
-/*
- * For a netcdf type
- *  return the size of one element in the external representation.
- * Note that arrays get rounded up to X_ALIGN boundaries.
- * Formerly
-NC_xtypelen
- * See also ncx_len()
+/*----< ncx_szof() >---------------------------------------------------------*/
+/* For a netcdf type, return the size of one element in the external
+ * representation. Note that arrays get rounded up to X_ALIGN boundaries.
  */
 static int
 ncx_szof(nc_type type)
@@ -539,36 +472,8 @@ out :
     return NC_NOERR;
 }
 
-/*
- * Check whether variable size is less than or equal to vlen_max,
- * without overflowing in arithmetic calculations.  If OK, return 1,
- * else, return 0.  For CDF1 format or for CDF2 format on non-LFS
- * platforms, vlen_max should be 2^31 - 4, but for CDF2 format on
- * systems with LFS it should be 2^32 - 4.
- */
-inline int
-ncmpio_NC_check_vlen(NC_var     *varp,
-                     MPI_Offset  vlen_max)
-{
-    int ii;
-    MPI_Offset prod=varp->xsz;     /* product of xsz and dimensions so far */
-
-    for (ii = IS_RECVAR(varp) ? 1 : 0; ii < varp->ndims; ii++) {
-        if (varp->shape[ii] > vlen_max / prod) {
-            return 0;           /* size in bytes won't fit in a 32-bit int */
-        }
-        prod *= varp->shape[ii];
-    }
-    return 1;                  /* OK */
-}
-
 /*----< ncmpio_NC_lookupvar() >----------------------------------------------*/
-/*
- * Given valid ncp and varid, return var
- *  else NULL on error
- * Formerly
-NC_hlookupvar()
- */
+/* Given valid ncp and varid, return varp */
 int
 ncmpio_NC_lookupvar(NC      *ncp,
                     int      varid,
@@ -658,7 +563,7 @@ ncmpio_def_var(void       *ncdp,
 
     /* check whether new name is already in use, for this API (def_var) the
      * name should NOT already exist */
-    err = ncmpio_NC_findvar(&ncp->vars, nname, NULL);
+    err = NC_findvar(&ncp->vars, nname, NULL);
     if (err != NC_ENOTVAR) {
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
@@ -749,7 +654,7 @@ err_check:
     assert(nname != NULL);
 
     /* create a new variable */
-    err = ncmpio_new_NC_var(&ncp->vars, nname, type, ndims, dimids, &varp);
+    err = new_NC_var(&ncp->vars, nname, type, ndims, dimids, &varp);
     free(nname);
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
@@ -761,7 +666,7 @@ err_check:
     }
 
     /* Add a new handle to the end of an array of handles */
-    err = ncmpio_incr_NC_vararray(&ncp->vars, varp);
+    err = incr_NC_vararray(&ncp->vars, varp);
     if (err != NC_NOERR) {
         ncmpio_free_NC_var(varp);
         DEBUG_RETURN_ERROR(err)
@@ -769,7 +674,7 @@ err_check:
 
     assert(varp != NULL);
 
-    /* ncp->vars.ndefined has been increased in ncmpio_incr_NC_vararray() */
+    /* ncp->vars.ndefined has been increased in incr_NC_vararray() */
     varp->varid = (int)ncp->vars.ndefined - 1; /* varid */
 
     if (varidp != NULL) *varidp = varp->varid;
@@ -802,7 +707,7 @@ ncmpio_inq_varid(void       *ncdp,
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    err = ncmpio_NC_findvar(&ncp->vars, nname, varid);
+    err = NC_findvar(&ncp->vars, nname, varid);
     free(nname);
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
@@ -940,7 +845,7 @@ ncmpio_rename_var(void       *ncdp,
 
     /* check whether new name is already in use, for this API (rename) the
      * name should NOT already exist */
-    err = ncmpio_NC_findvar(&ncp->vars, nnewname, NULL);
+    err = NC_findvar(&ncp->vars, nnewname, NULL);
     if (err != NC_ENOTVAR) { /* expecting NC_ENOTVAR */
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
@@ -1041,45 +946,3 @@ err_check:
     return err;
 }
 
-#ifdef __DEBUG
-
-/*----< ncmpi_print_all_var_offsets() >---------------------------------------*/
-/* This is an independent subroutine */
-int
-ncmpi_print_all_var_offsets(int ncid) {
-    int i, err;
-    NC_var **vpp=NULL;
-    NC *ncp=NULL;
-    PNC *pncp;
-
-    err = PNC_check_id(ncid, &pncp);
-    if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-    ncp = (NC*)pncp->ncp;
-
-    if (ncp->begin_var%1048576)
-        printf("%s header size (ncp->begin_var)=%lld MB + %lld\n",
-        ncp->path, ncp->begin_var/1048575, ncp->begin_var%1048576);
-    else
-        printf("%s header size (ncp->begin_var)=%lld MB\n",
-        ncp->path, ncp->begin_var/1048575);
-
-    vpp = ncp->vars.value;
-    for (i=0; i<ncp->vars.ndefined; i++, vpp++) {
-        char str[1024];
-        MPI_Offset off = (*vpp)->begin;
-        MPI_Offset rem = off % 1048576;;
-
-        if (IS_RECVAR(*vpp))
-            sprintf(str,"    Record variable \"%20s\": ",(*vpp)->name->cp);
-        else
-            sprintf(str,"non-record variable \"%20s\": ",(*vpp)->name->cp);
-
-        if (rem)
-            printf("%s offset=%12lld MB + %7lld len=%lld\n", str, off/1048576, rem,(*vpp)->len);
-        else
-            printf("%s offset=%12lld MB len=%lld\n", str, off/1048576,(*vpp)->len);
-    }
-    return NC_NOERR;
-}
-
-#endif

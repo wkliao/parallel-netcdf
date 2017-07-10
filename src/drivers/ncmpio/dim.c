@@ -24,11 +24,7 @@
 #include "fbits.h"
 #include <utf8proc.h>
 
-/*
- * Free dim
- * Formerly
-NC_free_dim(dim)
- */
+/*----< ncmpio_free_NC_dim() >-----------------------------------------------*/
 inline void
 ncmpio_free_NC_dim(NC_dim *dimp)
 {
@@ -38,6 +34,7 @@ ncmpio_free_NC_dim(NC_dim *dimp)
 }
 
 
+/*----< ncmpio_new_x_NC_dim() >----------------------------------------------*/
 /* allocate and return a new NC_dim object */
 inline NC_dim *
 ncmpio_new_x_NC_dim(NC_string *name)
@@ -53,15 +50,15 @@ ncmpio_new_x_NC_dim(NC_string *name)
     return(dimp);
 }
 
-/*----< ncmpio_new_NC_dim() >------------------------------------------------*/
+/*----< new_NC_dim() >-------------------------------------------------------*/
 /*
  * Formerly, NC_new_dim(const char *name, long size)
  */
 static int
-ncmpio_new_NC_dim(NC_dimarray  *ncap,
-                  const char   *name, /* normalized dim name */
-                  MPI_Offset    size,
-                  NC_dim      **dimp)
+new_NC_dim(NC_dimarray  *ncap,
+           const char   *name, /* normalized dim name */
+           MPI_Offset    size,
+           NC_dim      **dimp)
 {
     NC_string *strp;
 
@@ -96,64 +93,35 @@ ncmpio_new_NC_dim(NC_dimarray  *ncap,
         nameT[key].list[nameT[key].num] = ncap->ndefined;
         nameT[key].num++;
     }
-    /* else case is for dimension duplication called from ncmpio_dup_NC_dim() */
+    /* else case is for dimension duplication called from dup_NC_dim() */
 #endif
 
     return NC_NOERR;
 }
 
-/*----< ncmpio_dup_NC_dim() >------------------------------------------------*/
-NC_dim*
-ncmpio_dup_NC_dim(const NC_dim *rdimp)
+/*----< dup_NC_dim() >-------------------------------------------------------*/
+static NC_dim*
+dup_NC_dim(const NC_dim *rdimp)
 {
     int err;
     NC_dim *dimp;
 
     /* rdimp->name->cp is a normalized string */
-    err = ncmpio_new_NC_dim(NULL, rdimp->name->cp, rdimp->size, &dimp);
+    err = new_NC_dim(NULL, rdimp->name->cp, rdimp->size, &dimp);
     if (err != NC_NOERR) return NULL;
     return dimp;
 }
 
-/*----< ncmpio_find_NC_Udim() >----------------------------------------------*/
-/*
- * Step thru NC_DIMENSION array, seeking the UNLIMITED dimension.
- * Return dimid or -1 on not found.
- * *dimpp is set to the appropriate NC_dim.
- */
-int
-ncmpio_find_NC_Udim(const NC_dimarray  *ncap,
-                    NC_dim            **dimpp)
-{
-    int dimid;
-
-    assert(ncap != NULL);
-
-    if (ncap->ndefined == 0) return -1;
-
-    /* note that the number of dimensions allowed is < 2^32 */
-    for (dimid=0; dimid<ncap->ndefined; dimid++)
-        if (ncap->value[dimid]->size == NC_UNLIMITED) {
-            /* found the matched name */
-            if (dimpp != NULL)
-                *dimpp = ncap->value[dimid];
-            return dimid;
-        }
-
-    /* not found */
-    return -1;
-}
-
 #ifdef SEARCH_NAME_LINEARLY
-/*----< ncmpio_NC_finddim() >------------------------------------------------*/
+/*----< NC_finddim() >-------------------------------------------------------*/
 /*
  * Step thru NC_DIMENSION array, seeking match on name.
  * If found, set the dim ID pointed by dimidp, otherwise return NC_EBADDIM
  */
 static int
-ncmpio_NC_finddim(const NC_dimarray *ncap,
-                  const char        *name,  /* normalized dim name */
-                  int               *dimidp)
+NC_finddim(const NC_dimarray *ncap,
+           const char        *name,  /* normalized dim name */
+           int               *dimidp)
 {
     int dimid;
     size_t nchars=strlen(name);
@@ -174,15 +142,15 @@ ncmpio_NC_finddim(const NC_dimarray *ncap,
     return NC_EBADDIM; /* the name is not found */
 }
 #else
-/*----< ncmpio_NC_finddim() >------------------------------------------------*/
+/*----< NC_finddim() >-------------------------------------------------------*/
 /*
  * Search name from hash table ncap->nameT.
  * If found, set the dim ID pointed by dimidp, otherwise return NC_EBADDIM
  */
 static int
-ncmpio_NC_finddim(const NC_dimarray *ncap,
-                  const char        *name,  /* normalized dim name */
-                  int               *dimidp)
+NC_finddim(const NC_dimarray *ncap,
+           const char        *name,  /* normalized dim name */
+           int               *dimidp)
 {
     int i, key, dimid;
 
@@ -211,11 +179,6 @@ ncmpio_NC_finddim(const NC_dimarray *ncap,
 
 
 /*----< ncmpio_free_NC_dimarray() >------------------------------------------*/
-/*
- * Free NC_dimarray values.
- * formerly
-NC_free_array()
- */
 inline void
 ncmpio_free_NC_dimarray(NC_dimarray *ncap)
 {
@@ -266,7 +229,7 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = ncmpio_dup_NC_dim(ref->value[i]);
+        ncap->value[i] = dup_NC_dim(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -295,14 +258,13 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
 }
 
 
-/*----< ncmpio_incr_NC_dimarray() >------------------------------------------*/
+/*----< incr_NC_dimarray() >-------------------------------------------------*/
 /*
  * Add a new handle to the end of an array of handles
- * Formerly, NC_incr_array(array, tail)
  */
-int
-ncmpio_incr_NC_dimarray(NC_dimarray *ncap,
-                        NC_dim      *newdimp)
+static int
+incr_NC_dimarray(NC_dimarray *ncap,
+                 NC_dim      *newdimp)
 {
     NC_dim **vp;
 
@@ -351,8 +313,6 @@ ncmpio_elem_NC_dimarray(const NC_dimarray *ncap,
     return ncap->value[dimid];
 }
 
-
-/* Public */
 
 /*----< ncmpio_def_dim() >---------------------------------------------------*/
 int
@@ -445,7 +405,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
     }
 
     /* check if the name string is previously used */
-    err = ncmpio_NC_finddim(&ncp->dims, nname, NULL);
+    err = NC_finddim(&ncp->dims, nname, NULL);
     if (err != NC_EBADDIM) {
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
@@ -511,7 +471,7 @@ err_check:
     assert(nname != NULL);
 
     /* create a new dimension object */
-    err = ncmpio_new_NC_dim(&ncp->dims, nname, size, &dimp);
+    err = new_NC_dim(&ncp->dims, nname, size, &dimp);
     free(nname);
     if (err != NC_NOERR) {
         if (dimp != NULL) ncmpio_free_NC_dim(dimp);
@@ -519,13 +479,13 @@ err_check:
     }
 
     /* Add a new dim handle to the end of handle array */
-    err = ncmpio_incr_NC_dimarray(&ncp->dims, dimp);
+    err = incr_NC_dimarray(&ncp->dims, dimp);
     if (err != NC_NOERR) {
         if (dimp != NULL) ncmpio_free_NC_dim(dimp);
         DEBUG_RETURN_ERROR(err)
     }
 
-    /* ncp->dims.ndefined has been increased in ncmpio_incr_NC_dimarray() */
+    /* ncp->dims.ndefined has been increased in incr_NC_dimarray() */
     dimid = (int)ncp->dims.ndefined - 1;
 
     if (size == NC_UNLIMITED) ncp->dims.unlimited_id = dimid;
@@ -554,7 +514,7 @@ ncmpio_inq_dimid(void       *ncdp,
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    err = ncmpio_NC_finddim(&ncp->dims, nname, dimid);
+    err = NC_finddim(&ncp->dims, nname, dimid);
     free(nname);
 
     return err;
@@ -635,7 +595,7 @@ ncmpio_rename_dim(void       *ncdp,
     }
 
     /* check whether newname is already in use */
-    err = ncmpio_NC_finddim(&ncp->dims, nnewname, NULL);
+    err = NC_finddim(&ncp->dims, nnewname, NULL);
     if (err != NC_EBADDIM) { /* expecting NC_EBADDIM */
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;

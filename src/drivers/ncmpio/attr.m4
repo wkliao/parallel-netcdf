@@ -46,13 +46,13 @@ ncmpio_free_NC_attr(NC_attr *attrp)
 }
 
 
-/*----< ncmpix_len_NC_attrV() >----------------------------------------------*/
+/*----< x_len_NC_attrV() >---------------------------------------------------*/
 /* How much space will 'nelems' of 'type' take in
  * external representation (as the values of an attribute)?
  */
 inline static MPI_Offset
-ncmpix_len_NC_attrV(nc_type    type,
-                    MPI_Offset nelems)
+x_len_NC_attrV(nc_type    type,
+               MPI_Offset nelems)
 {
     switch(type) {
         case NC_BYTE:
@@ -79,7 +79,7 @@ ncmpio_new_x_NC_attr(NC_string  *strp,
                      MPI_Offset  nelems)
 {
     NC_attr *attrp;
-    const MPI_Offset xsz = ncmpix_len_NC_attrV(type, nelems);
+    const MPI_Offset xsz = x_len_NC_attrV(type, nelems);
     size_t sz = M_RNDUP(sizeof(NC_attr));
 
     assert(!(xsz == 0 && nelems != 0));
@@ -103,15 +103,15 @@ ncmpio_new_x_NC_attr(NC_string  *strp,
 }
 
 
-/*----< ncmpio_new_NC_attr() >-----------------------------------------------*/
+/*----< new_NC_attr() >------------------------------------------------------*/
 /*
  * IN:  name is an already normalized attribute name (NULL terminated)
  * OUT: attrp->xvalue is malloc-ed with a space of an aligned size
  */
-static NC_attr *
-ncmpio_new_NC_attr(const char *name,
-                   nc_type     type,
-                   MPI_Offset  nelems)
+static NC_attr*
+new_NC_attr(const char *name,
+            nc_type     type,
+            MPI_Offset  nelems)
 {
     NC_string *strp;
     NC_attr *attrp;
@@ -131,13 +131,13 @@ ncmpio_new_NC_attr(const char *name,
 }
 
 
-/*----< ncmpio_dup_NC_attr() >-----------------------------------------------*/
-NC_attr *
-ncmpio_dup_NC_attr(const NC_attr *rattrp)
+/*----< dup_NC_attr() >------------------------------------------------------*/
+static NC_attr *
+dup_NC_attr(const NC_attr *rattrp)
 {
-    NC_attr *attrp = ncmpio_new_NC_attr(rattrp->name->cp,
-                                        rattrp->type,
-                                        rattrp->nelems);
+    NC_attr *attrp;
+
+    attrp = new_NC_attr(rattrp->name->cp, rattrp->type, rattrp->nelems);
     if (attrp == NULL) return NULL;
     memcpy(attrp->xvalue, rattrp->xvalue, (size_t)rattrp->xsz);
     return attrp;
@@ -192,7 +192,7 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = ncmpio_dup_NC_attr(ref->value[i]);
+        ncap->value[i] = dup_NC_attr(ref->value[i]);
         if (ncap->value[i] == NULL) {
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
@@ -210,10 +210,10 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 }
 
 
-/*----< ncmpio_incr_NC_attrarray() >-----------------------------------------*/
+/*----< incr_NC_attrarray() >------------------------------------------------*/
 /* Add a new handle on the end of an array of handles */
-int
-ncmpio_incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
+static int
+incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
 {
     NC_attr **vp;
 
@@ -768,7 +768,7 @@ err_check:
              * chunk, so we cannot realloc attrp->xvalue only
              */
             ncmpio_free_NC_attr(attrp);
-            attrp = ncmpio_new_NC_attr(nname, iattrp->type, iattrp->nelems);
+            attrp = new_NC_attr(nname, iattrp->type, iattrp->nelems);
             free(nname);
             if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
             ncap_out->value[indx] = attrp;
@@ -781,11 +781,11 @@ err_check:
         }
     }
     else { /* attribute does not exit in ncdp_out */
-        attrp = ncmpio_new_NC_attr(nname, iattrp->type, iattrp->nelems);
+        attrp = new_NC_attr(nname, iattrp->type, iattrp->nelems);
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-        err = ncmpio_incr_NC_attrarray(ncap_out, attrp);
+        err = incr_NC_attrarray(ncap_out, attrp);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
@@ -1271,7 +1271,7 @@ ncmpio_put_att_$1(void       *ncdp,
         goto err_check;
     }
 
-    xsz = ncmpix_len_NC_attrV(xtype, nelems);
+    xsz = x_len_NC_attrV(xtype, nelems);
     /* xsz is the total size of this attribute */
 
     if (xsz != (int)xsz) {
@@ -1417,7 +1417,7 @@ err_check:
              * chunk, so we cannot realloc attrp->xvalue only
              */
             ncmpio_free_NC_attr(attrp);
-            attrp = ncmpio_new_NC_attr(nname, xtype, nelems);
+            attrp = new_NC_attr(nname, xtype, nelems);
             free(nname);
             if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
             ncap->value[indx] = attrp;
@@ -1430,11 +1430,11 @@ err_check:
         }
     }
     else { /* attribute does not exit in ncid */
-        attrp = ncmpio_new_NC_attr(nname, xtype, nelems);
+        attrp = new_NC_attr(nname, xtype, nelems);
         free(nname);
         if (attrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-        err = ncmpio_incr_NC_attrarray(ncap, attrp);
+        err = incr_NC_attrarray(ncap, attrp);
         if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
     }
 
@@ -1463,7 +1463,7 @@ err_check:
         `err = ncmpix_putn_$1(&xp, nelems, buf, xtype, &fill);')
 
         /* no immediately return error code here? Strange ...
-         * Instead, we continue and call ncmpio_incr_NC_attrarray() to add
+         * Instead, we continue and call incr_NC_attrarray() to add
          * this attribute (for create case) as it is legal. But if
          * we return error and reject this attribute, then nc_test will
          * fail with this error message below:
