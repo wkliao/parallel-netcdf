@@ -26,7 +26,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -46,9 +45,6 @@ ncmpio_open(MPI_Comm     comm,
     MPI_Comm dup_comm;
     MPI_Info info_used;
     NC *ncp=NULL;
-#ifndef SEARCH_NAME_LINEARLY
-    NC_nametable *nameT;
-#endif
 
     *ncpp = NULL;
 
@@ -81,18 +77,18 @@ ncmpio_open(MPI_Comm     comm,
 
     TRACE_IO(MPI_File_open)(comm, (char *)path, mpiomode, info, &fh);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_File_open");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_File_open");
 
     /* duplicate MPI communicator as user may free it later */
     mpireturn = MPI_Comm_dup(comm, &dup_comm);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_Comm_dup");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Comm_dup");
 
     /* get the file info used by MPI-IO */
     mpireturn = MPI_File_get_info(fh, &info_used);
     if (mpireturn != MPI_SUCCESS) {
         MPI_Comm_free(&dup_comm);
-        return ncmpio_handle_error(mpireturn, "MPI_File_get_info");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_File_get_info");
     }
 
     /* Now the file has been successfully opened, allocate/set NC object */
@@ -105,7 +101,8 @@ ncmpio_open(MPI_Comm     comm,
     if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* PnetCDF default fill mode is no fill */
-    fSet(ncp->flags, NC_NOFILL);
+    fClr(ncp->flags, NC_MODE_FILL);
+    if (fIsSet(omode, NC_NOWRITE)) fSet(ncp->flags, NC_MODE_RDONLY);
 
     ncp->ncid         = ncid;
     ncp->safe_mode    = 0;
@@ -201,37 +198,9 @@ ncmpio_open(MPI_Comm     comm,
         ncp->vars.num_rec_vars += IS_RECVAR(ncp->vars.value[i]);
 
 #ifndef SEARCH_NAME_LINEARLY
-    /* initialize dim name lookup table -------------------------------------*/
-    nameT = ncp->dims.nameT;
-    memset(nameT, 0, sizeof(NC_nametable) * HASH_TABLE_SIZE);
-
-    /* populate dim name lookup table */
-    for (i=0; i<ncp->dims.ndefined; i++) {
-        /* hash the dim name into a key for name lookup */
-        int key = HASH_FUNC(ncp->dims.value[i]->name->cp);
-        nameT = &ncp->dims.nameT[key];
-        if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
-            nameT->list = (int*) NCI_Realloc(nameT->list,
-                          (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) *SIZEOF_INT);
-        nameT->list[nameT->num] = i;
-        nameT->num++;
-    }
-
-    /* initialize var name lookup table */
-    nameT = ncp->vars.nameT;
-    memset(nameT, 0, sizeof(NC_nametable) * HASH_TABLE_SIZE);
-
-    /* populate var name lookup table */
-    for (i=0; i<ncp->vars.ndefined; i++) {
-        /* hash the var name into a key for name lookup */
-        int key = HASH_FUNC(ncp->vars.value[i]->name->cp);
-        nameT = &ncp->vars.nameT[key];
-        if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
-            nameT->list = (int*) NCI_Realloc(nameT->list,
-                          (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) *SIZEOF_INT);
-        nameT->list[nameT->num] = i;
-        nameT->num++;
-    }
+    /* initialize and populate name lookup tables ---------------------------*/
+    ncmpio_hash_table_populate_NC_dim(&ncp->dims);
+    ncmpio_hash_table_populate_NC_var(&ncp->vars);
 #endif
 
     *ncpp = (void*)ncp;

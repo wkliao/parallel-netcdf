@@ -25,19 +25,17 @@ endif
 
 M4_HFILES = ncx_h.m4
 
-M4_SRCS   = getput.m4 \
-            i_getput.m4 \
+M4_SRCS   = ncmpio_getput.m4 \
+            ncmpio_i_getput.m4 \
             ncx.m4 \
-            varn.m4 \
-            i_varn.m4 \
-            attr.m4 \
+            ncmpio_varn.m4 \
+            ncmpio_i_varn.m4 \
+            ncmpio_attr.m4 \
             convert_swap.m4
 
 H_SRCS = ncmpio_dispatch.h \
-         fbits.h \
          nc.h \
          rnd.h \
-         ncmpidtype.h \
          macro.h \
          subfile.h
 
@@ -50,19 +48,16 @@ C_SRCS = ncmpio_dispatch.c \
          ncmpio_file_misc.c \
          ncmpio_header_get.c \
          ncmpio_header_put.c \
-         dim.c \
-         error.c \
+         ncmpio_dim.c \
          nc.c \
-         string.c \
-         var.c \
-         bput.c \
-         ncmpidtype.c \
+         ncmpio_var.c \
+         ncmpio_bput.c \
          filetype.c \
-         nonblocking.c   \
-         vard.c \
-         fill.c \
+         ncmpio_wait.c   \
+         ncmpio_vard.c \
+         ncmpio_fill.c \
          util.c \
-         hash_func.c
+         ncmpio_hash_func.c
 
 $(M4_SRCS:.m4=.c): Makefile
 

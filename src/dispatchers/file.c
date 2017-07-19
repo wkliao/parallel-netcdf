@@ -241,8 +241,11 @@ ncmpi_create(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode = cmode;
+    pncp->mode     = cmode;
     pncp->dispatch = dispatcher;
+    pncp->flag     = NC_MODE_DEF;
+    if (safe_mode) pncp->flag |= NC_MODE_SAFE;
+    MPI_Comm_dup(comm, &pncp->comm);
 
     /* combine user's info and PNETCDF_HINTS env variable */
     combine_env_hints(info, &combined_info);
@@ -255,6 +258,7 @@ ncmpi_create(MPI_Comm    comm,
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_CMODE) {
         *ncidp = -1;
+        MPI_Comm_free(&pncp->comm);
         free(pncp->path);
         free(pncp);
         return status;
@@ -274,6 +278,7 @@ ncmpi_create(MPI_Comm    comm,
     err = add_to_PNCList(pncp, *ncidp);
     if (err != NC_NOERR) {
         *ncidp = -1;
+        MPI_Comm_free(&pncp->comm);
         free(pncp->path);
         free(pncp);
         return err;
@@ -396,8 +401,10 @@ ncmpi_open(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode = omode;
+    pncp->mode     = omode;
     pncp->dispatch = dispatcher;
+    if (safe_mode) pncp->flag |= NC_MODE_SAFE;
+    MPI_Comm_dup(comm, &pncp->comm);
 
     /* combine user's info and PNETCDF_HINTS env variable */
     combine_env_hints(info, &combined_info);
@@ -410,6 +417,7 @@ ncmpi_open(MPI_Comm    comm,
 
     if (status != NC_NOERR && status != NC_EMULTIDEFINE_OMODE) {
         *ncidp = -1;
+        MPI_Comm_free(&pncp->comm);
         free(pncp->path);
         free(pncp);
         return status;
@@ -421,6 +429,7 @@ ncmpi_open(MPI_Comm    comm,
     err = add_to_PNCList(pncp, *ncidp);
     if (err != NC_NOERR) {
         *ncidp = -1;
+        MPI_Comm_free(&pncp->comm);
         free(pncp->path);
         free(pncp);
         return err;
@@ -447,6 +456,7 @@ ncmpi_close(int ncid)
     del_from_PNCList(ncid);
 
     /* free the PNC object */
+    MPI_Comm_free(&pncp->comm);
     free(pncp->path);
     free(pncp);
 
@@ -542,6 +552,7 @@ ncmpi_abort(int ncid)
     del_from_PNCList(ncid);
 
     /* free the PNC object */
+    MPI_Comm_free(&pncp->comm);
     free(pncp->path);
     free(pncp);
 
@@ -675,7 +686,7 @@ ncmpi_inq(int  ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    /* calling the subroutine that implements ncmpi_abort() */
+    /* calling the subroutine that implements ncmpi_inq() */
     return pncp->dispatch->inq(pncp->ncp, ndimsp, nvarsp, nattsp, xtendimp);
 }
 
@@ -889,7 +900,7 @@ ncmpi_inq_file_info(int ncid, MPI_Info *info)
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    /* calling the subroutine that implements ncmpi_end_indep_data() */
+    /* calling the subroutine that implements ncmpi_inq_file_info() */
     return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                     NULL, info, NULL, NULL, NULL);
@@ -1031,7 +1042,7 @@ ncmpi_inq_nreqs(int  ncid,
 
     if (nreqs == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
-    /* calling the subroutine that implements ncmpi_inq_path() */
+    /* calling the subroutine that implements ncmpi_inq_nreqs() */
     return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                     NULL, NULL, nreqs, NULL, NULL);
@@ -1052,7 +1063,7 @@ ncmpi_inq_buffer_usage(int         ncid,
 
     if (usage == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
-    /* calling the subroutine that implements ncmpi_inq_path() */
+    /* calling the subroutine that implements ncmpi_inq_buffer_usage() */
     return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, usage, NULL);
@@ -1073,7 +1084,7 @@ ncmpi_inq_buffer_size(int         ncid,
 
     if (buf_size == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
-    /* calling the subroutine that implements ncmpi_inq_path() */
+    /* calling the subroutine that implements ncmpi_inq_buffer_size() */
     return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, buf_size);
@@ -1122,4 +1133,75 @@ ncmpi_buffer_detach(int ncid)
  * This API is implemented in src/driver/ncmpio/ncmpio_file.c
  *
  */
+
+/*----< ncmpi_wait() >-------------------------------------------------------*/
+/* This API is an independent subroutine. */
+int
+ncmpi_wait(int  ncid,
+           int  num_reqs, /* number of requests */
+           int *req_ids,  /* [num_reqs]: IN/OUT */
+           int *statuses) /* [num_reqs], can be NULL */
+{
+    int err;
+    PNC *pncp;
+
+    /* check if ncid is valid.
+     * For invalid ncid, we must return error now, as there is no way to
+     * continue with invalid ncp. However, collective APIs might hang if this
+     * error occurs only on a subset of processes
+     */
+    err = PNC_check_id(ncid, &pncp);
+    if (err != NC_NOERR) return err;
+
+    /* calling the subroutine that implements ncmpi_wait() */
+    return pncp->dispatch->wait(pncp->ncp, num_reqs, req_ids, statuses,
+                                NC_REQ_INDEP);
+}
+
+/*----< ncmpi_wait_all() >---------------------------------------------------*/
+/* This API is a collective subroutine. */
+int
+ncmpi_wait_all(int  ncid,
+               int  num_reqs, /* number of requests */
+               int *req_ids,  /* [num_reqs]: IN/OUT */
+               int *statuses) /* [num_reqs], can be NULL */
+{
+    int err;
+    PNC *pncp;
+
+    /* check if ncid is valid.
+     * For invalid ncid, we must return error now, as there is no way to
+     * continue with invalid ncp. However, collective APIs might hang if this
+     * error occurs only on a subset of processes
+     */
+    err = PNC_check_id(ncid, &pncp);
+    if (err != NC_NOERR) return err;
+
+    /* calling the subroutine that implements ncmpi_wait_all() */
+    return pncp->dispatch->wait(pncp->ncp, num_reqs, req_ids, statuses,
+                                NC_REQ_COLL);
+}
+
+/*----< ncmpi_cancel() >-----------------------------------------------------*/
+/* This is an independent subroutine */
+int
+ncmpi_cancel(int  ncid,
+             int  num_reqs, /* number of requests */
+             int *req_ids,  /* [num_reqs]: IN/OUT */
+             int *statuses) /* [num_reqs], can be NULL */
+{
+    int err;
+    PNC *pncp;
+
+    /* check if ncid is valid.
+     * For invalid ncid, we must return error now, as there is no way to
+     * continue with invalid ncp. However, collective APIs might hang if this
+     * error occurs only on a subset of processes
+     */
+    err = PNC_check_id(ncid, &pncp);
+    if (err != NC_NOERR) return err;
+
+    /* calling the subroutine that implements ncmpi_cancel() */
+    return pncp->dispatch->cancel(pncp->ncp, num_reqs, req_ids, statuses);
+}
 

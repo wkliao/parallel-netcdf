@@ -7,8 +7,8 @@
 /*
  * This file implements the corresponding APIs defined in src/dispatchers/file.c
  *
- * ncmpi_enddef()           : dispatcher->enddef()
- * ncmpi__enddef()          : dispatcher->_enddef()
+ * ncmpi_enddef()  : dispatcher->enddef()
+ * ncmpi__enddef() : dispatcher->_enddef()
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,8 +27,7 @@
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "fbits.h"
-#include "rnd.h"    /* D_RNDUP(), M_RNDUP() */
+#include "rnd.h"    /* D_RNDUP() */
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -89,7 +88,7 @@ move_file_block(NC         *ncp,
                                        from+nbytes+rank*chunk_size,
                                        buf, bufcount, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at_all");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EREAD)
         }
         else {
@@ -131,7 +130,7 @@ move_file_block(NC         *ncp,
                                         buf, get_size /* bufcount */,
                                         MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at_all");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
         else {
@@ -242,7 +241,7 @@ NC_begins(NC *ncp)
         /* only root's header size matters */
         TRACE_COMM(MPI_Bcast)(&root_xsz, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Bcast"); 
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast"); 
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -252,7 +251,7 @@ NC_begins(NC *ncp)
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) DEBUG_RETURN_ERROR(status)
@@ -482,7 +481,7 @@ write_NC(NC *ncp)
 
         TRACE_COMM(MPI_Bcast)(root_header, h_size, MPI_BYTE, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -495,7 +494,7 @@ write_NC(NC *ncp)
         /* report error if header is inconsistency */
         TRACE_COMM(MPI_Allreduce)(&status, &err, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (err != NC_NOERR) {
@@ -532,7 +531,7 @@ write_NC(NC *ncp)
         TRACE_COMM(MPI_Allreduce)(&err, &max_err, 1, MPI_INT, MPI_MAX,
                                   ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpii_error_mpi2nc(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
     }
@@ -554,7 +553,7 @@ write_NC(NC *ncp)
         TRACE_IO(MPI_File_write_at)(ncp->collective_fh, 0, buf,
                                     (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
             /* write has failed, which is more serious than inconsistency */
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
@@ -589,7 +588,7 @@ write_NC(NC *ncp)
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,   \
                                   ncp->comm);                           \
         if (mpireturn != MPI_SUCCESS) {                                 \
-            err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");      \
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");      \
             DEBUG_RETURN_ERROR(err)                                     \
         }                                                               \
         if (status != NC_NOERR) return status;                          \
@@ -633,7 +632,7 @@ ncmpio__enddef(void       *ncdp,
         err = status;
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpii_error_mpi2nc(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) return status;
@@ -648,7 +647,7 @@ ncmpio__enddef(void       *ncdp,
         root_args[3] = r_align;
         TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Bcast"); 
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast"); 
             DEBUG_RETURN_ERROR(err)
         }
 
@@ -665,7 +664,7 @@ ncmpio__enddef(void       *ncdp,
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn,"MPI_Allreduce");
+            err = ncmpii_error_mpi2nc(mpireturn,"MPI_Allreduce");
             DEBUG_RETURN_ERROR(err)
         }
         if (status != NC_NOERR) return status;
@@ -787,7 +786,7 @@ ncmpio__enddef(void       *ncdp,
          */
 
         assert(!NC_IsNew(ncp));
-        assert(fIsSet(ncp->flags, NC_INDEF));
+        assert(fIsSet(ncp->flags, NC_MODE_DEF));
         assert(ncp->begin_rec >= ncp->old->begin_rec);
         assert(ncp->begin_var >= ncp->old->begin_var);
         assert(ncp->vars.ndefined >= ncp->old->vars.ndefined);
@@ -850,11 +849,11 @@ ncmpio__enddef(void       *ncdp,
         ncmpio_free_NC(ncp->old);
         ncp->old = NULL;
     }
-    fClr(ncp->flags, NC_CREAT | NC_INDEF);
+    fClr(ncp->flags, NC_MODE_CREATE | NC_MODE_DEF);
 
 #ifdef ENABLE_SUBFILING
     if (ncp->num_subfiles > 1)
-        fClr(ncp_sf->flags, NC_CREAT | NC_INDEF);
+        fClr(ncp_sf->flags, NC_MODE_CREATE | NC_MODE_DEF);
 #endif
 
     /* If the user sets NC_SHARE, we enforce a stronger data consistency */

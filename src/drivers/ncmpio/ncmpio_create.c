@@ -7,8 +7,8 @@
 /*
  * This file implements the corresponding APIs defined in src/dispatchers/file.c
  *
- * ncmpi_create()           : dispatcher->create()
- * ncmpi_open()             : dispatcher->open()
+ * ncmpi_create() : dispatcher->create()
+ * ncmpi_open()   : dispatcher->open()
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,7 +28,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -136,7 +135,7 @@ ncmpio_create(MPI_Comm     comm,
                 int errorclass;
                 MPI_Error_class(mpireturn, &errorclass);
                 if (errorclass != MPI_ERR_NO_SUCH_FILE) /* ignore this error */
-                    err = ncmpio_handle_error(mpireturn, "MPI_File_delete");
+                    err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_delete");
             }
 #endif
         }
@@ -163,24 +162,24 @@ ncmpio_create(MPI_Comm     comm,
             if (errno == EEXIST) DEBUG_RETURN_ERROR(NC_EEXIST)
         }
 #endif
-        return ncmpio_handle_error(mpireturn, "MPI_File_open");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_File_open");
         /* for NC_NOCLOBBER, MPI_MODE_EXCL was added to mpiomode. If the file
          * already exists, MPI-IO should return error class MPI_ERR_FILE_EXISTS
          * which PnetCDF will return error code NC_EEXIST. This is checked
-         * inside of ncmpio_handle_error()
+         * inside of ncmpii_error_mpi2nc()
          */
     }
 
     /* duplicate communicator as user may free it later */
     mpireturn = MPI_Comm_dup(comm, &dup_comm);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_Comm_dup");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Comm_dup");
 
     /* get the file info actually used by MPI-IO (may alter user's info) */
     mpireturn = MPI_File_get_info(fh, &info_used);
     if (mpireturn != MPI_SUCCESS) {
         MPI_Comm_free(&dup_comm);
-        return ncmpio_handle_error(mpireturn, "MPI_File_get_info");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_File_get_info");
     }
 
     /* Now the file has been successfully created, allocate/set NC object */
@@ -197,9 +196,11 @@ ncmpio_create(MPI_Comm     comm,
         else if (default_format == NC_FORMAT_CDF2) ncp->format = 2;
         else                                       ncp->format = 1;
     }
-    /* PnetCDF default fill mode is no fill */
-    fSet(ncp->flags, NC_NOFILL);
-    fSet(ncp->flags, NC_CREAT);
+
+    fClr(ncp->flags, NC_MODE_RDONLY); /* create automatically enter write mode */
+    fSet(ncp->flags, NC_MODE_CREATE);
+    fSet(ncp->flags, NC_MODE_DEF);    /* create automatically enter define mode */
+    fClr(ncp->flags, NC_MODE_FILL);   /* PnetCDF default fill mode is no fill */
 
     ncp->ncid         = ncid;
     ncp->safe_mode    = 0;

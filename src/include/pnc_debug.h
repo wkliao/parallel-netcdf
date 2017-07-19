@@ -7,6 +7,8 @@
 #ifndef _PNC_DEBUG_H
 #define _PNC_DEBUG_H
 
+#include <stdio.h>
+
 /* The two defines below are to be set manually.
 #define PNETCDF_TRACE_MPI_COMM
 #define PNETCDF_TRACE_MPI_IO

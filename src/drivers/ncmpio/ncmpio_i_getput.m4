@@ -9,6 +9,16 @@ dnl
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/var_getput.m4
+ *
+ * ncmpi_iget_var<kind>()        : dispatcher->iget_var()
+ * ncmpi_iput_var<kind>()        : dispatcher->iput_var()
+ * ncmpi_iget_var<kind>_<type>() : dispatcher->iget_var()
+ * ncmpi_iput_var<kind>_<type>() : dispatcher->iput_var()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -26,10 +36,7 @@ dnl
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
-#include "ncmpidtype.h"
 #include "macro.h"
-
 
 /*----< abuf_malloc() >------------------------------------------------------*/
 /* allocate memory space from the attached buffer pool */
@@ -136,8 +143,7 @@ ncmpio_igetput_varm(NC               *ncp,
                     MPI_Offset        bufcount,
                     MPI_Datatype      buftype,
                     int              *reqid,    /* out, can be NULL */
-                    int               rw_flag,
-                    int               use_abuf,    /* if use attached buffer */
+                    int               reqMode,
                     int               isSameGroup) /* if part of a varn group */
 {
     void *xbuf=NULL, *cbuf=NULL, *lbuf=NULL;
@@ -178,7 +184,7 @@ ncmpio_igetput_varm(NC               *ncp,
     /* for bput call, check if the remaining buffer space is sufficient
      * to accommodate this request
      */
-    if (rw_flag == WRITE_REQ && use_abuf &&
+    if (fIsSet(reqMode, NC_REQ_WR) && fIsSet(reqMode, NC_REQ_NBB) &&
         ncp->abuf->size_allocated - ncp->abuf->size_used < nbytes)
         DEBUG_RETURN_ERROR(NC_EINSUFFBUF)
 
@@ -190,19 +196,19 @@ ncmpio_igetput_varm(NC               *ncp,
         /* check whether this is a true varm call, if yes, imaptype will be a
          * newly created MPI derived data type, otherwise MPI_DATATYPE_NULL
          */
-        err = ncmpio_create_imaptype(varp, count, imap, bnelems, el_size,
-                                     ptype, &imaptype);
+        err = ncmpii_create_imaptype(varp->ndims, count, imap, ptype,
+                                     &imaptype);
         if (err != NC_NOERR) return err;
     }
 
-    if (rw_flag == WRITE_REQ) { /* pack request to xbuf */
+    if (fIsSet(reqMode, NC_REQ_WR)) { /* pack request to xbuf */
         int position, abuf_allocated=0;
         MPI_Offset outsize=bnelems*el_size;
         /* assert(bnelems > 0); */
         if (outsize != (int)outsize) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
 
         /* attached buffer allocation logic
-         * if (use_abuf)
+         * if (fIsSet(reqMode, NC_REQ_NBB))
          *     if contig && no imap && no convert
          *         buf   ==   lbuf   ==   cbuf    ==     xbuf memcpy-> abuf
          *                                               abuf
@@ -236,7 +242,8 @@ ncmpio_igetput_varm(NC               *ncp,
             if (bufcount != (int)bufcount) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
 
             /* allocate lbuf */
-            if (use_abuf && imaptype == MPI_DATATYPE_NULL && !need_convert) {
+            if (fIsSet(reqMode, NC_REQ_NBB) &&
+                imaptype == MPI_DATATYPE_NULL && !need_convert) {
                 status = abuf_malloc(ncp, nbytes, &lbuf, &abuf_index);
                 if (status != NC_NOERR) return status;
                 abuf_allocated = 1;
@@ -254,7 +261,7 @@ ncmpio_igetput_varm(NC               *ncp,
         /* Step 2: pack lbuf to cbuf if imap is non-contiguous */
         if (imaptype != MPI_DATATYPE_NULL) { /* true varm */
             /* allocate cbuf */
-            if (use_abuf && !need_convert) {
+            if (fIsSet(reqMode, NC_REQ_NBB) && !need_convert) {
                 assert(abuf_allocated == 0);
                 status = abuf_malloc(ncp, nbytes, &cbuf, &abuf_index);
                 if (status != NC_NOERR) {
@@ -285,7 +292,8 @@ ncmpio_igetput_varm(NC               *ncp,
         if (need_convert) {
             void *fillp; /* fill value in internal representation */
 
-            if (use_abuf) { /* use attached buffer to allocate xbuf */
+            if (fIsSet(reqMode, NC_REQ_NBB)) {
+                /* use attached buffer to allocate xbuf */
                 assert(abuf_allocated == 0);
                 status = abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
@@ -316,7 +324,8 @@ ncmpio_igetput_varm(NC               *ncp,
             }
         }
         else {
-            if (use_abuf && buftype_is_contig && imaptype == MPI_DATATYPE_NULL){
+            if (fIsSet(reqMode, NC_REQ_NBB) && buftype_is_contig &&
+                imaptype == MPI_DATATYPE_NULL){
                 assert(abuf_allocated == 0);
                 status = abuf_malloc(ncp, nbytes, &xbuf, &abuf_index);
                 if (status != NC_NOERR) {
@@ -348,7 +357,7 @@ ncmpio_igetput_varm(NC               *ncp,
         /* cbuf is no longer needed */
         if (cbuf != buf && cbuf != xbuf) NCI_Free(cbuf);
     }
-    else { /* rw_flag == READ_REQ */
+    else { /* read request */
         /* Type conversion and byte swap for read are done at wait call, we
          * need bnelems to reverse the steps as done in write case
          */
@@ -358,7 +367,7 @@ ncmpio_igetput_varm(NC               *ncp,
             xbuf = NCI_Malloc((size_t)nbytes);
     }
 
-    if (rw_flag == WRITE_REQ) {
+    if (fIsSet(reqMode, NC_REQ_WR)) {
         /* allocate write/read request array */
         if (ncp->numPutReqs % NC_REQUEST_CHUNK == 0)
             ncp->put_list = (NC_req*) NCI_Realloc(ncp->put_list,
@@ -373,7 +382,7 @@ ncmpio_igetput_varm(NC               *ncp,
 
         ncp->numPutReqs++;
     }
-    else {  /* READ_REQ */
+    else {  /* read request */
         /* allocate write/read request array */
         if (ncp->numGetReqs % NC_REQUEST_CHUNK == 0)
             ncp->get_list = (NC_req*) NCI_Realloc(ncp->get_list,
@@ -414,7 +423,7 @@ ncmpio_igetput_varm(NC               *ncp,
     /* only when read and buftype is not contiguous, we duplicate buftype for
      * later in the wait call to unpack buffer based on buftype
      */
-    if (rw_flag == READ_REQ && !buftype_is_contig)
+    if (fIsSet(reqMode, NC_REQ_RD) && !buftype_is_contig)
         MPI_Type_dup(buftype, &req->buftype);
     else
         req->buftype = MPI_DATATYPE_NULL;
@@ -450,8 +459,8 @@ ncmpio_igetput_varm(NC               *ncp,
         add_record_requests(varp, req, stride);
         /* req->count[0] has been changed to 1 */
 
-        if (rw_flag == WRITE_REQ) ncp->numPutReqs += req->num_recs - 1;
-        else                      ncp->numGetReqs += req->num_recs - 1;
+        if (fIsSet(reqMode, NC_REQ_WR)) ncp->numPutReqs += req->num_recs - 1;
+        else                            ncp->numGetReqs += req->num_recs - 1;
     }
 
     /* return the request ID */
@@ -467,6 +476,18 @@ dnl
 define(`IGETPUT_API',dnl
 `dnl
 /*----< ncmpio_i$1_var() >---------------------------------------------------*/
+/* start  can be NULL only when api is NC_VAR
+ * count  can be NULL only when api is NC_VAR or NC_VAR1
+ * stride can be NULL only when api is NC_VAR, NC_VAR1, or NC_VARA
+ * imap   can be NULL only when api is NC_VAR, NC_VAR1, NC_VARA, or NC_VARS
+ * bufcount can be NULL only when api is NC_VAR NC_VAR1, NC_VARA
+ * buftype is an MPI primitive data type for high-level APIs. When called from
+ *         flexible APIs and if its value is MPI_DATATYPE_NULL, then it means
+ *         the data type of buffer in memory matches the variable external
+ *         data type and bufcount is thus ignored.
+ * api     NC_VAR, NC_VAR1, NC_VARA, NC_VARS, or NC_VARM
+ * reqMode indicates modes (NC_REQ_COLL/NC_REQ_INDEP/NC_REQ_WR etc.)
+ */
 int
 ncmpio_i$1_var(void             *ncdp,
                int               varid,
@@ -478,35 +499,43 @@ ncmpio_i$1_var(void             *ncdp,
                MPI_Offset        bufcount,
                MPI_Datatype      buftype,
                int              *reqid,
-               api_kind          api,
-               nc_type           itype)
+               NC_api            api,
+               int               reqMode)
 {
-    int         status;
+    int         err;
     NC         *ncp=(NC*)ncdp;
     NC_var     *varp=NULL;
     MPI_Offset *_start, *_count;
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
-    status = ncmpio_sanity_check(ncp, varid, start, count, stride,
-                                 bufcount, buftype, api,
-                                 (itype==NC_NAT), 0, ReadWrite($1),
-                                 NONBLOCKING_IO, &varp);
-    if (status != NC_NOERR) return status;
+    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
+     * NC_ECHAR, NC_EINVAL */
+    err = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
+    if (err != NC_NOERR) return err;
+
+    if (fIsSet(reqMode, NC_REQ_ZERO)) /* zero-length request */
+        return NC_NOERR;
+
+    /* check NC_EINVALCOORDS, NC_EEDGE, NC_ESTRIDE */
+    err = ncmpii_start_count_stride_check(ncp->format, api, varp->ndims,
+                              ncp->numrecs, varp->shape, start, count,
+                              stride, reqMode);
+    if (err != NC_NOERR) return err;
 
     _start = (MPI_Offset*)start;
     _count = (MPI_Offset*)count;
          if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
-    status = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
+    err = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
                                  (void*)buf, bufcount, buftype,
-                                 reqid, ReadWrite($1), 0, 0);
+                                 reqid, reqMode, 0);
 
          if (api == API_VAR)  NCI_Free(_start);
     else if (api == API_VAR1) NCI_Free(_count);
 
-    return status;
+    return err;
 }
 ')dnl
 dnl

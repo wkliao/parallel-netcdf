@@ -4,6 +4,16 @@
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/dimension.c
+ *
+ * ncmpi_def_dim()    : dispatcher->def_dim()
+ * ncmpi_inq_dimid()  : dispatcher->inq_dimid()
+ * ncmpi_inq_dim()    : dispatcher->inq_dim()
+ * ncmpi_rename_dim() : dispatcher->rename_dim()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -21,95 +31,22 @@
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "fbits.h"
 #include <utf8proc.h>
 
-/*----< ncmpio_free_NC_dim() >-----------------------------------------------*/
-inline void
-ncmpio_free_NC_dim(NC_dim *dimp)
-{
-    if (dimp == NULL) return;
-    ncmpio_free_NC_string(dimp->name);
-    NCI_Free(dimp);
-}
-
-
-/*----< ncmpio_new_x_NC_dim() >----------------------------------------------*/
-/* allocate and return a new NC_dim object */
-inline NC_dim *
-ncmpio_new_x_NC_dim(NC_string *name)
-{
-    NC_dim *dimp;
-
-    dimp = (NC_dim *) NCI_Malloc(sizeof(NC_dim));
-    if (dimp == NULL) return NULL;
-
-    dimp->name = name;
-    dimp->size = 0;
-
-    return(dimp);
-}
-
-/*----< new_NC_dim() >-------------------------------------------------------*/
-/*
- * Formerly, NC_new_dim(const char *name, long size)
- */
+/*----< dup_NC_dim() >-------------------------------------------------------*/
 static int
-new_NC_dim(NC_dimarray  *ncap,
-           const char   *name, /* normalized dim name */
-           MPI_Offset    size,
-           NC_dim      **dimp)
+dup_NC_dim(const NC_dim *rdimp, NC_dim **dimp)
 {
-    NC_string *strp;
+    *dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
+    if (*dimp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    if (strlen(name) == 0) DEBUG_RETURN_ERROR(NC_EBADNAME)
-
-    strp = ncmpio_new_NC_string(strlen(name), name);
-    if (strp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    *dimp = ncmpio_new_x_NC_dim(strp);
-    if (*dimp == NULL) {
-        ncmpio_free_NC_string(strp);
-        DEBUG_RETURN_ERROR(NC_ENOMEM)
-    }
-    (*dimp)->size = size;
-
-#ifndef SEARCH_NAME_LINEARLY
-    if (ncap != NULL) { /* insert new dim to hash table */
-        int key;
-        NC_nametable *nameT = ncap->nameT; /* dim name lookup table */
-
-        /* We use the first char as key for name lookup */
-        key = HASH_FUNC(name);
-
-        /* allocate or expand the space for nameT[key].list */
-        if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
-            nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
-
-        /* add the new variable ID to the name lookup table
-         * the new varid will be ncap->ndefined
-         */
-        nameT[key].list[nameT[key].num] = ncap->ndefined;
-        nameT[key].num++;
-    }
-    /* else case is for dimension duplication called from dup_NC_dim() */
-#endif
+    (*dimp)->size     = rdimp->size;
+    (*dimp)->name_len = strlen(rdimp->name)+1;
+    (*dimp)->name     = (char*) NCI_Malloc((*dimp)->name_len);
+    if ((*dimp)->name == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    strcpy((*dimp)->name, rdimp->name);
 
     return NC_NOERR;
-}
-
-/*----< dup_NC_dim() >-------------------------------------------------------*/
-static NC_dim*
-dup_NC_dim(const NC_dim *rdimp)
-{
-    int err;
-    NC_dim *dimp;
-
-    /* rdimp->name->cp is a normalized string */
-    err = new_NC_dim(NULL, rdimp->name->cp, rdimp->size, &dimp);
-    if (err != NC_NOERR) return NULL;
-    return dimp;
 }
 
 #ifdef SEARCH_NAME_LINEARLY
@@ -124,16 +61,15 @@ NC_finddim(const NC_dimarray *ncap,
            int               *dimidp)
 {
     int dimid;
-    size_t nchars=strlen(name);
-
-    assert(ncap != NULL);
+    size_t nchars;
 
     if (ncap->ndefined == 0) return NC_EBADDIM;
 
     /* note that the number of dimensions allowed is < 2^32 */
+    nchars = strlen(name);
     for (dimid=0; dimid<ncap->ndefined; dimid++) {
-        if (ncap->value[dimid]->name->nchars == nchars &&
-            strncmp(ncap->value[dimid]->name->cp, name, nchars) == 0) {
+        if (ncap->value[dimid]->name_len == nchars &&
+            strcmp(ncap->value[dimid]->name, name) == 0) {
             /* found the matched name */
             if (dimidp != NULL) *dimidp = dimid;
             return NC_NOERR; /* found it */
@@ -153,8 +89,7 @@ NC_finddim(const NC_dimarray *ncap,
            int               *dimidp)
 {
     int i, key, dimid;
-
-    assert(ncap != NULL);
+    size_t nchars;
 
     if (ncap->ndefined == 0) return NC_EBADDIM;
 
@@ -162,21 +97,20 @@ NC_finddim(const NC_dimarray *ncap,
     key = HASH_FUNC(name);
 
     /* check the list using linear search */
+    nchars = strlen(name);
     for (i=0; i<ncap->nameT[key].num; i++) {
         dimid = ncap->nameT[key].list[i];
-        if (strcmp(name, ncap->value[dimid]->name->cp) == 0) {
+        if (ncap->value[dimid]->name_len == nchars &&
+            strcmp(name, ncap->value[dimid]->name) == 0) {
             if (dimidp != NULL) *dimidp = dimid;
             return NC_NOERR; /* the name already exists */
         }
     }
-
     return NC_EBADDIM; /* the name has never been used */
 }
 #endif
 
-
 /* dimarray */
-
 
 /*----< ncmpio_free_NC_dimarray() >------------------------------------------*/
 inline void
@@ -188,8 +122,10 @@ ncmpio_free_NC_dimarray(NC_dimarray *ncap)
     if (ncap->nalloc == 0) return;
 
     assert(ncap->value != NULL);
-    for (i=0; i<ncap->ndefined; i++)
-        ncmpio_free_NC_dim(ncap->value[i]);
+    for (i=0; i<ncap->ndefined; i++) {
+        NCI_Free(ncap->value[i]->name);
+        NCI_Free(ncap->value[i]);
+    }
 
     NCI_Free(ncap->value);
     ncap->value    = NULL;
@@ -197,13 +133,8 @@ ncmpio_free_NC_dimarray(NC_dimarray *ncap)
     ncap->ndefined = 0;
 
     /* free space allocated for dim name lookup table */
-    for (i=0; i<HASH_TABLE_SIZE; i++) {
-        if (ncap->nameT[i].num > 0)
-            NCI_Free(ncap->nameT[i].list);
-        ncap->nameT[i].num = 0;
-    }
+    ncmpio_hash_table_free(ncap->nameT);
 }
-
 
 /*----< ncmpio_dup_NC_dimarray() >-------------------------------------------*/
 int
@@ -221,46 +152,34 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
         return NC_NOERR;
     }
 
+    /* allocate array of NC_dim objects */
     if (ref->nalloc > 0) {
-        ncap->value = (NC_dim **) NCI_Calloc((size_t)ref->nalloc, sizeof(NC_dim *));
+        ncap->value = (NC_dim**) NCI_Calloc(ref->nalloc, sizeof(NC_dim*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
         ncap->nalloc = ref->nalloc;
     }
 
+    /* duplicate each NC_dim objects */
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
-        ncap->value[i] = dup_NC_dim(ref->value[i]);
-        if (ncap->value[i] == NULL) {
-            DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
-            break;
+        status = dup_NC_dim(ref->value[i], &ncap->value[i]);
+        if (status != NC_NOERR) {
+            ncmpio_free_NC_dimarray(ncap);
+            return status;
         }
+        ncap->ndefined++;
     }
-
-    if (status != NC_NOERR) {
-        ncmpio_free_NC_dimarray(ncap);
-        return status;
-    }
-
-    ncap->ndefined = ref->ndefined;
+    assert(ncap->ndefined == ref->ndefined);
 
     /* duplicate dim name lookup table */
-    for (i=0; i<HASH_TABLE_SIZE; i++) {
-        ncap->nameT[i].num = ref->nameT[i].num;
-        ncap->nameT[i].list = NULL;
-        if (ncap->nameT[i].num > 0) {
-            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * SIZEOF_INT);
-            memcpy(ncap->nameT[i].list, ref->nameT[i].list,
-                   (size_t)ncap->nameT[i].num * SIZEOF_INT);
-        }
-    }
+    ncmpio_hash_table_copy(ncap->nameT, ref->nameT);
 
     return NC_NOERR;
 }
 
-
 /*----< incr_NC_dimarray() >-------------------------------------------------*/
 /*
- * Add a new handle to the end of an array of handles
+ * Add a new NC_dim handle to the end of an array of handles
  */
 static int
 incr_NC_dimarray(NC_dimarray *ncap,
@@ -272,7 +191,7 @@ incr_NC_dimarray(NC_dimarray *ncap,
 
     if (ncap->nalloc == 0) {
         assert(ncap->ndefined == 0);
-        vp = (NC_dim **) NCI_Malloc(NC_ARRAY_GROWBY * sizeof(NC_dim *));
+        vp = (NC_dim **) NCI_Malloc(NC_ARRAY_GROWBY * sizeof(NC_dim*));
         if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
@@ -280,7 +199,7 @@ incr_NC_dimarray(NC_dimarray *ncap,
     }
     else if (ncap->ndefined + 1 > ncap->nalloc) {
         vp = (NC_dim **) NCI_Realloc(ncap->value,
-             (size_t)(ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_dim *));
+                         (ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_dim*));
         if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
@@ -292,15 +211,12 @@ incr_NC_dimarray(NC_dimarray *ncap,
         ncap->value[ncap->ndefined] = newdimp;
         ncap->ndefined++;
     }
-
     return NC_NOERR;
 }
 
-
-/*----< ncmpio_elem_NC_dimarray() >------------------------------------------*/
-inline NC_dim *
-ncmpio_elem_NC_dimarray(const NC_dimarray *ncap,
-                        int                dimid)
+/*----< inq_NC_dim() >-------------------------------------------------------*/
+static NC_dim*
+inq_NC_dim(const NC_dimarray *ncap, int dimid)
 {
     /* returns the dimension ID defined earlier */
     assert(ncap != NULL);
@@ -312,7 +228,6 @@ ncmpio_elem_NC_dimarray(const NC_dimarray *ncap,
 
     return ncap->value[dimid];
 }
-
 
 /*----< ncmpio_def_dim() >---------------------------------------------------*/
 int
@@ -389,7 +304,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
 
     /* Note we no longer limit the number of dimensions, as CDF file formats
      * impose no such limit. Thus, the value of NC_MAX_DIMS has been changed
-     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signd int and so is
+     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signed int and so is
      * ndims argument in ncmpi_inq_varndims()
      */
     if (ncp->dims.ndefined == NC_MAX_DIMS) {
@@ -419,6 +334,17 @@ err_check:
         char *root_name=NULL;
         MPI_Offset root_size;
 
+        /* check the error so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        }
+        if (status != NC_NOERR) {
+            NCI_Free(nname);
+            return status;
+        }
+
         MPI_Comm_rank(ncp->comm, &rank);
 
         /* check if name is consistent among all processes */
@@ -426,8 +352,8 @@ err_check:
         if (rank == 0 && name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
         }
 
         if (rank == 0)
@@ -436,9 +362,9 @@ err_check:
             root_name = (char*) NCI_Malloc((size_t)root_name_len);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
+            if (nname != NULL) NCI_Free(nname);
             if (rank > 0) NCI_Free(root_name);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && rank > 0 && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
@@ -448,40 +374,50 @@ err_check:
         root_size = size;
         TRACE_COMM(MPI_Bcast)(&root_size, 1, MPI_OFFSET, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_size != size)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_SIZE)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (err == NC_NOERR) err = status;
+        if (status != NC_NOERR) {
+            NCI_Free(nname);
+            return status;
+        }
     }
 
     if (err != NC_NOERR) {
-        if (nname != NULL) free(nname);
+        if (nname != NULL) NCI_Free(nname);
         return err;
     }
 
     assert(nname != NULL);
 
-    /* create a new dimension object */
-    err = new_NC_dim(&ncp->dims, nname, size, &dimp);
-    free(nname);
-    if (err != NC_NOERR) {
-        if (dimp != NULL) ncmpio_free_NC_dim(dimp);
-        DEBUG_RETURN_ERROR(err)
+    /* create a new dimension object (dimp->name points to nname) */
+    dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
+    if (dimp == NULL) {
+        NCI_Free(nname);
+        DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
+    dimp->size     = size;
+    dimp->name     = nname;
+    dimp->name_len = strlen(nname);
+
+#ifndef SEARCH_NAME_LINEARLY
+    ncmpio_hash_insert(ncp->dims.nameT, nname, ncp->dims.ndefined);
+#endif
 
     /* Add a new dim handle to the end of handle array */
     err = incr_NC_dimarray(&ncp->dims, dimp);
     if (err != NC_NOERR) {
-        if (dimp != NULL) ncmpio_free_NC_dim(dimp);
+        NCI_Free(dimp->name);
+        NCI_Free(dimp);
         DEBUG_RETURN_ERROR(err)
     }
 
@@ -492,10 +428,8 @@ err_check:
 
     if (dimidp != NULL) *dimidp = dimid;
 
-
     return err;
 }
-
 
 /*----< ncmpio_inq_dimid() >-------------------------------------------------*/
 int
@@ -515,11 +449,10 @@ ncmpio_inq_dimid(void       *ncdp,
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     err = NC_finddim(&ncp->dims, nname, dimid);
-    free(nname);
+    NCI_Free(nname);
 
     return err;
 }
-
 
 /*----< ncmpio_inq_dim() >---------------------------------------------------*/
 int
@@ -531,12 +464,12 @@ ncmpio_inq_dim(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
 
-    dimp = ncmpio_elem_NC_dimarray(&ncp->dims, dimid);
+    dimp = inq_NC_dim(&ncp->dims, dimid);
     if (dimp == NULL) DEBUG_RETURN_ERROR(NC_EBADDIM)
 
     if (name != NULL)
-        /* in PnetCDF, name->cp is always NULL character terminated */
-        strcpy(name, dimp->name->cp);
+        /* in PnetCDF, name is always NULL character terminated */
+        strcpy(name, dimp->name);
 
     if (sizep != NULL) {
         if (dimp->size == NC_UNLIMITED)
@@ -546,7 +479,6 @@ ncmpio_inq_dim(void       *ncdp,
     }
     return NC_NOERR;
 }
-
 
 /*----< ncmpio_rename_dim() >-------------------------------------------------*/
 /* This API is collective and can be called in either define or data mode..
@@ -560,9 +492,9 @@ ncmpio_rename_dim(void       *ncdp,
 {
     int err=NC_NOERR;
     char *nnewname=NULL; /* normalized newname */
+    size_t nnewname_len=0;
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
-    NC_string *newStr=NULL;
 
     /* check file's write permission */
     if (NC_readonly(ncp)) {
@@ -593,6 +525,7 @@ ncmpio_rename_dim(void       *ncdp,
         DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
         goto err_check;
     }
+    nnewname_len = strlen(nnewname);
 
     /* check whether newname is already in use */
     err = NC_finddim(&ncp->dims, nnewname, NULL);
@@ -603,22 +536,15 @@ ncmpio_rename_dim(void       *ncdp,
     else err = NC_NOERR;  /* reset err */
 
     /* retrieve dim object */
-    dimp = ncmpio_elem_NC_dimarray(&ncp->dims, dimid);
+    dimp = inq_NC_dim(&ncp->dims, dimid);
     if (dimp == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
         goto err_check;
     }
 
-    if (! NC_indef(ncp) && /* when file is in data mode */
-        dimp->name->nchars < (MPI_Offset)strlen(nnewname)) {
-        /* must in define mode when newname is longer */
+    if (! NC_indef(ncp) && dimp->name_len < nnewname_len) {
+        /* when in data mode, newname cannot be longer than the old one */
         DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
-    newStr = ncmpio_new_NC_string(strlen(nnewname), nnewname);
-    if (newStr == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
         goto err_check;
     }
 
@@ -626,7 +552,7 @@ ncmpio_rename_dim(void       *ncdp,
     /* update dim name lookup table, by removing the old name and add
      * the new name */
     err = ncmpio_update_name_lookup_table(ncp->dims.nameT, dimid,
-          ncp->dims.value[dimid]->name->cp, nnewname);
+                             ncp->dims.value[dimid]->name, nnewname);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -634,11 +560,20 @@ ncmpio_rename_dim(void       *ncdp,
 #endif
 
 err_check:
-    if (nnewname != NULL) free(nnewname);
-
     if (ncp->safe_mode) {
         int root_name_len, root_dimid, rank, status, mpireturn;
         char *root_name=NULL;
+
+        /* check the error so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            NCI_Free(nnewname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        }
+        if (status != NC_NOERR) {
+            NCI_Free(nnewname);
+            return status;
+        }
 
         MPI_Comm_rank(ncp->comm, &rank);
 
@@ -646,10 +581,8 @@ err_check:
         root_name_len = 1;
         if (rank == 0 && newname != NULL) root_name_len += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
-        }
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         if (rank == 0)
             root_name = (char*)newname;
@@ -657,9 +590,8 @@ err_check:
             root_name = (char*) NCI_Malloc((size_t)root_name_len);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
             if (rank > 0) NCI_Free(root_name);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && rank > 0 && strcmp(root_name, newname))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
@@ -668,31 +600,33 @@ err_check:
         /* check if dimid is consistent across all processes */
         root_dimid = dimid;
         TRACE_COMM(MPI_Bcast)(&root_dimid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
-        }
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_dimid != dimid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            NCI_Free(nnewname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (err == NC_NOERR) err = status;
+        if (status != NC_NOERR) {
+            NCI_Free(nnewname);
+            return status;
+        }
     }
 
     if (err != NC_NOERR) {
-        if (newStr != NULL) ncmpio_free_NC_string(newStr);
+        NCI_Free(nnewname);
         return err;
     }
 
     /* replace the old name with new name */
     assert(dimp != NULL);
-    ncmpio_free_NC_string(dimp->name);
-    dimp->name = newStr;
+    NCI_Free(dimp->name);
+    dimp->name     = nnewname;
+    dimp->name_len = nnewname_len;
 
     if (! NC_indef(ncp)) { /* when file is in data mode */
         /* Let root write the entire header to the file. Note that we cannot

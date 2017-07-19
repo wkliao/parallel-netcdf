@@ -5,11 +5,14 @@
 /* $Id$ */
 
 /*
- * This file implements the corresponding APIs defined in src/dispatchers/file.c
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/file.c
  *
- * ncmpi_bput_var<kind>_<type>() : dispatcher->bput_var()
  * ncmpi_buffer_attach()         : dispatcher->buffer_attach()
  * ncmpi_buffer_detach()         : dispatcher->buffer_detach()
+ *
+ * and src/dispatchers/var_getput.m4
+ * ncmpi_bput_var<kind>_<type>() : dispatcher->bput_var()
  */
 
 #ifdef HAVE_CONFIG_H
@@ -17,7 +20,6 @@
 #endif
 
 #include <stdio.h>
-#include <unistd.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -27,8 +29,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
-#include "ncmpidtype.h"
 #include "macro.h"
 
 /*----< ncmpio_buffer_attach() >---------------------------------------------*/
@@ -131,8 +131,8 @@ ncmpio_bput_var(void             *ncdp,
                 MPI_Offset        bufcount,
                 MPI_Datatype      buftype,
                 int              *reqid,
-                api_kind          api,
-                nc_type           itype)
+                NC_api            api,
+                int               reqMode)
 {
     int         err;
     NC         *ncp=(NC*)ncdp;
@@ -141,21 +141,31 @@ ncmpio_bput_var(void             *ncdp,
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
-    err = ncmpio_sanity_check(ncp, varid, start, count, stride,
-                              bufcount, buftype, api, (itype==NC_NAT),
-                              0, WRITE_REQ, NONBLOCKING_IO, &varp);
+    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
+     * NC_ECHAR, NC_EINVAL */
+    err = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
     if (err != NC_NOERR) return err;
 
+    if (fIsSet(reqMode, NC_REQ_ZERO)) /* zero-length request */
+        return NC_NOERR;
+
+    /* check NC_EINVALCOORDS, NC_EEDGE, NC_ESTRIDE */
+    err = ncmpii_start_count_stride_check(ncp->format, api, varp->ndims,
+                              ncp->numrecs, varp->shape, start, count,
+                              stride, reqMode);
+    if (err != NC_NOERR) return err;
+
+    /* buffer has not been attached yet */
     if (ncp->abuf == NULL) DEBUG_RETURN_ERROR(NC_ENULLABUF)
 
+    /* for var1 and var cases */
     _start = (MPI_Offset*)start;
     _count = (MPI_Offset*)count;
          if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
     err = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
-                              (void*)buf, bufcount, buftype,
-                              reqid, WRITE_REQ, 1, 0);
+                              (void*)buf, bufcount, buftype, reqid, reqMode, 0);
 
          if (api == API_VAR)  NCI_Free(_start);
     else if (api == API_VAR1) NCI_Free(_count);

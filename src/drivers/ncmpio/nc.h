@@ -16,7 +16,6 @@
 
 #include <dispatch.h>
 #include "ncmpio_dispatch.h"
-#include "fbits.h"
 
 #define FILE_ALIGNMENT_DEFAULT 512
 #define HEADER_ALIGNMENT_LB    4
@@ -36,9 +35,6 @@
         #define MPI_OFFSET MPI_INT
     #endif
 #endif
-
-#define WRITE_REQ 0
-#define READ_REQ  1
 
 /* XXX: this seems really low.  do we end up spending a ton of time mallocing?
  * could we reduce that by increasing this to something 21st century? */
@@ -92,41 +88,6 @@ typedef enum {
 
 typedef struct NC NC; /* forward reference */
 
-/*
- * Counted string for names and such
- */
-typedef struct {
-    /* all xdr'd */
-    MPI_Offset  nchars;
-    char       *cp;     /* [nchars+1] one additional char for '\0' */
-} NC_string;
-
-/* Begin defined in string.c ------------------------------------------------*/
-extern void
-ncmpio_free_NC_string(NC_string *ncstrp);
-
-extern NC_string *
-ncmpio_new_NC_string(size_t slen, const char *str);
-
-extern int
-ncmpio_set_NC_string(NC_string *ncstrp, const char *str);
-
-extern int
-ncmpio_NC_check_name(const char *name, int file_ver);
-
-/*
- * NC dimension structure
- */
-typedef struct {
-    /* all xdr'd */
-    MPI_Offset size;
-    NC_string *name;
-#ifdef ENABLE_SUBFILING
-    MPI_Offset rcount; /* subfile range count */
-    int range[2]; /* subfile range {start, end} */
-#endif
-} NC_dim;
-
 #define NC_NAME_TABLE_CHUNK 16
 #define HASH_TABLE_SIZE 256
 /*
@@ -152,13 +113,22 @@ typedef struct NC_nametable {
     int *list; /* dimension or variable IDs */
 } NC_nametable;
 
+/*
+ * NC dimension structure
+ */
+typedef struct {
+    MPI_Offset  size;
+    size_t      name_len; /* strlen(name), for faster string compare */
+    char       *name;
+} NC_dim;
+
 /* the dimension ID returned from ncmpi_def_dim() is an integer pointer
  * which means the total number of defined dimension allowed in a file
  * is up to 2^31-1. Thus, the member ndefined below should be of type int.
  */
 typedef struct NC_dimarray {
-    int            nalloc;        /* number allocated >= ndefined */
-    int            ndefined;      /* number of defined dimensions */
+    size_t         nalloc;        /* number allocated >= ndefined */
+    size_t         ndefined;      /* number of defined dimensions */
     int            unlimited_id;  /* -1 for not defined, otherwise >= 0 */
     NC_dim       **value;
     NC_nametable   nameT[HASH_TABLE_SIZE]; /* table for quick name lookup.
@@ -171,19 +141,10 @@ typedef struct NC_dimarray {
 
 /* Begin defined in dim.c ---------------------------------------------------*/
 extern void
-ncmpio_free_NC_dim(NC_dim *dimp);
-
-extern NC_dim *
-ncmpio_new_x_NC_dim(NC_string *name);
-
-extern void
 ncmpio_free_NC_dimarray(NC_dimarray *ncap);
 
 extern int
 ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref);
-
-extern NC_dim *
-ncmpio_elem_NC_dimarray(const NC_dimarray *ncap, int elem);
 
 /*
  * NC attribute
@@ -193,25 +154,23 @@ ncmpio_elem_NC_dimarray(const NC_dimarray *ncap, int elem);
  * is a signed 4-byte integer.
  */
 typedef struct {
-    nc_type    type;     /* the discriminant */
     MPI_Offset nelems;   /* number of attribute elements */
     MPI_Offset xsz;      /* amount of space at xvalue (4-byte aligned) */
-    NC_string *name;     /* name of the attributes */
+    nc_type    type;     /* external NC data type of the attribute */
+    size_t     name_len; /* strlen(name) for faster string compare */
+    char      *name;     /* name of the attributes */
     void      *xvalue;   /* the actual data, in external representation */
 } NC_attr;
 
 typedef struct NC_attrarray {
-    int       nalloc;    /* number allocated >= ndefined */
-    int       ndefined;  /* number of defined attributes */
+    size_t    nalloc;    /* number allocated >= ndefined */
+    size_t    ndefined;  /* number of defined attributes */
     NC_attr **value;
 } NC_attrarray;
 
 /* Begin defined in attr.c --------------------------------------------------*/
-extern void
-ncmpio_free_NC_attr(NC_attr *attrp);
-
-extern NC_attr *
-ncmpio_new_x_NC_attr(NC_string *strp, nc_type type, MPI_Offset nelems);
+extern int
+ncmpio_new_NC_attr(char *name, nc_type type, MPI_Offset nelems, NC_attr **attrp);
 
 extern int
 ncmpio_NC_findattr(const NC_attrarray *ncap, const char *uname);
@@ -228,30 +187,31 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref);
 typedef struct {
     int           varid;   /* variable ID */
     int           xsz;     /* byte size of 1 array element */
-    int           ndims;   /* number of dimensions */
     nc_type       type;    /* variable's data type */
     int           no_fill; /* whether fill mode is disabled */
+    size_t        name_len;/* strlen(name) for faster string compare */
+    char         *name;    /* name of the variable */
+    int           ndims;   /* number of dimensions */
+    int          *dimids;  /* [ndims] array of dimension IDs */
+    MPI_Offset   *shape;   /* [ndims] dim->size of each dim
+                              shape[0] == NC_UNLIMITED if record variable */
+    MPI_Offset   *dsizes;  /* [ndims] the right to left product of shape */
+    MPI_Offset    begin;   /* starting file offset of this variable */
+    MPI_Offset    len;     /* this is the "vsize" defined in header format, the
+                              total size in bytes of the array variable.
+                              For record variable, this is the record size */
+    NC_attrarray  attrs;   /* attribute array */
 #ifdef ENABLE_SUBFILING
     int           num_subfiles;
     int           ndims_org;  /* ndims before subfiling */
     int          *dimids_org; /* dimids before subfiling */
 #endif
-    int          *dimids; /* array of dimension IDs */
-    MPI_Offset   *shape;  /* dim->size of each dim
-                             shape[0] == NC_UNLIMITED if record variable */
-    MPI_Offset   *dsizes; /* the right to left product of shape */
-    NC_string    *name;   /* name of the variable */
-    MPI_Offset    len;    /* this is the "vsize" defined in header format, the
-                             total size in bytes of the array variable.
-                             For record variable, this is the record size */
-    MPI_Offset    begin;  /* starting file offset of this variable */
-    NC_attrarray  attrs;  /* attribute array */
 } NC_var;
 
 /* note: we only allow less than 2^31-1 variables defined in a file */
 typedef struct NC_vararray {
-    int            nalloc;      /* number allocated >= ndefined */
-    int            ndefined;    /* number of defined variables */
+    size_t         nalloc;      /* number allocated >= ndefined */
+    size_t         ndefined;    /* number of defined variables */
     int            num_rec_vars;/* number of defined record variables */
     NC_var       **value;
     NC_nametable   nameT[HASH_TABLE_SIZE]; /* table for quick name lookup.
@@ -267,7 +227,7 @@ extern void
 ncmpio_free_NC_var(NC_var *varp);
 
 extern NC_var *
-ncmpio_new_x_NC_var(NC_string *strp, int ndims);
+ncmpio_new_NC_var(char *name, int ndims);
 
 extern void
 ncmpio_free_NC_vararray(NC_vararray *ncap);
@@ -338,9 +298,6 @@ typedef struct NC_buf {
 #define NC_REQUEST_CHUNK 1024
 
 /* various file modes stored in flags */
-#define NC_INDEP  0x10000   /* in independent data mode, cleared by endindep */
-#define NC_CREAT  0x20000   /* in create phase, cleared by enddef */
-#define NC_INDEF  0x80000   /* in define mode, cleared by enddef */
 #define NC_NSYNC  0x100000  /* synchronise numrecs on change */
 #define NC_HSYNC  0x200000  /* synchronise whole header on change */
 #define NC_NDIRTY 0x400000  /* numrecs has changed */
@@ -395,41 +352,19 @@ struct NC {
     struct NC    *old;      /* contains the previous NC during redef. */
 };
 
-#define NC_readonly(ncp) \
-        (!fIsSet((ncp)->iomode, NC_WRITE))
+#define NC_readonly(ncp)   fIsSet((ncp)->flags, NC_MODE_RDONLY)
+#define NC_IsNew(ncp)      fIsSet((ncp)->flags, NC_MODE_CREATE)
+#define NC_indef(ncp)      fIsSet((ncp)->flags, NC_MODE_DEF)
+#define NC_indep(ncp)      fIsSet((ncp)->flags, NC_MODE_INDEP)
+#define NC_dofill(ncp)     fIsSet((ncp)->flags, NC_MODE_FILL)
 
-#define NC_IsNew(ncp) \
-        fIsSet((ncp)->flags, NC_CREAT)
-
-#define NC_indep(ncp) \
-        fIsSet((ncp)->flags, NC_INDEP)
-
-#define NC_indef(ncp) \
-        (NC_IsNew(ncp) || fIsSet((ncp)->flags, NC_INDEF))
-
-#define set_NC_ndirty(ncp) \
-        fSet((ncp)->flags, NC_NDIRTY)
-
-#define NC_ndirty(ncp) \
-        fIsSet((ncp)->flags, NC_NDIRTY)
-
-#define set_NC_hdirty(ncp) \
-        fSet((ncp)->flags, NC_HDIRTY)
-
-#define NC_hdirty(ncp) \
-        fIsSet((ncp)->flags, NC_HDIRTY)
-
-#define NC_dofill(ncp) \
-        (!fIsSet((ncp)->flags, NC_NOFILL))
-
-#define NC_doFsync(ncp) \
-        fIsSet((ncp)->iomode, NC_SHARE)
-
-#define NC_doHsync(ncp) \
-        fIsSet((ncp)->flags, NC_HSYNC)
-
-#define NC_doNsync(ncp) \
-        fIsSet((ncp)->flags, NC_NSYNC)
+#define set_NC_ndirty(ncp)   fSet((ncp)->flags, NC_NDIRTY)
+#define NC_ndirty(ncp)     fIsSet((ncp)->flags, NC_NDIRTY)
+#define set_NC_hdirty(ncp)   fSet((ncp)->flags, NC_HDIRTY)
+#define NC_hdirty(ncp)     fIsSet((ncp)->flags, NC_HDIRTY)
+#define NC_doFsync(ncp)    fIsSet((ncp)->iomode, NC_SHARE)
+#define NC_doHsync(ncp)    fIsSet((ncp)->flags, NC_HSYNC)
+#define NC_doNsync(ncp)    fIsSet((ncp)->flags, NC_NSYNC)
 
 #define ErrIsHeaderDiff(err) \
         (NC_EMULTIDEFINE_FIRST >= (err) && (err) >= NC_EMULTIDEFINE_LAST)
@@ -480,21 +415,7 @@ ncmpio_file_sync(NC *ncp);
 extern int
 ncmpio_write_numrecs(NC *ncp, MPI_Offset new_numrecs);
 
-/* Begin defined in error.c -------------------------------------------------*/
-extern int
-ncmpio_handle_error(int mpi_errorcode, char *msg);
-
 /* Begin defined in ncmpio_filetype.c ---------------------------------------*/
-extern int
-ncmpio_start_count_stride_check(const NC *ncp, const NC_var *varp,
-                const MPI_Offset *start, const MPI_Offset *count,
-                const MPI_Offset *stride, const int rw_flag);
-
-extern int
-ncmpio_get_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
-                const MPI_Offset counts[], const MPI_Offset strides[],
-                const int rw_flag, MPI_Offset *offset_ptr);
-
 extern int
 ncmpio_filetype_create_vars(NC* ncp, NC_var* varp,
                 const MPI_Offset start[], const MPI_Offset count[],
@@ -505,6 +426,13 @@ ncmpio_filetype_create_vars(NC* ncp, NC_var* varp,
 extern int                
 ncmpio_file_set_view(NC *ncp, MPI_File fh, MPI_Offset *offset,
                 MPI_Datatype filetype);
+
+extern int
+ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
+                           MPI_Datatype buftype,
+                           MPI_Datatype *ptype, MPI_Offset *bufcount,
+                           MPI_Offset *bnelems, MPI_Offset *nbytes,
+                           int *el_size, int *buftype_is_contig);
 
 /* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
 extern MPI_Datatype
@@ -594,23 +522,10 @@ extern int
 ncmpio_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
                 const MPI_Offset *stride, const MPI_Offset *imap,
                 const MPI_Offset *count, void *buf, MPI_Offset bufcount,
-                MPI_Datatype datatype, int *reqid, int rw_flag, int use_abuf,
+                MPI_Datatype datatype, int *reqid, int reqMode,
                 int isSameGroup);
 
 /* Begin defined in ncmpio_getput.m4 ----------------------------------------*/
-extern int
-ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
-                           MPI_Datatype buftype,
-                           MPI_Datatype *ptype, MPI_Offset *bufcount,
-                           MPI_Offset *bnelems, MPI_Offset *nbytes,
-                           int *el_size, int *buftype_is_contig);
-
-extern int
-ncmpio_create_imaptype(NC_var *varp, const MPI_Offset *count,
-                       const MPI_Offset *imap, const MPI_Offset  bnelems,
-                       const int el_size, MPI_Datatype ptype,
-                       MPI_Datatype *imaptype);
-
 /* Begin defined in ncmpio_hash_func.c --------------------------------------*/
 extern int
 ncmpio_jenkins_one_at_a_time_hash(const char *str_name);
@@ -630,6 +545,21 @@ ncmpio_Pearson_hash(const char *str_name);
 extern int
 ncmpio_update_name_lookup_table(NC_nametable *nameT, const int id,
                                 const char *oldname, const char *newname);
+
+extern void
+ncmpio_hash_insert(NC_nametable *nameT, const char *name, int id);
+
+extern void
+ncmpio_hash_table_copy(NC_nametable *dest, const NC_nametable *src);
+
+extern void
+ncmpio_hash_table_free(NC_nametable *nameT);
+
+void
+ncmpio_hash_table_populate_NC_var(NC_vararray *varsp);
+
+void
+ncmpio_hash_table_populate_NC_dim(NC_dimarray *dimsp);
 
 /* Begin defined in ncmpio_fill.c -------------------------------------------*/
 extern int
@@ -651,16 +581,21 @@ ncmpio_close_files(NC *ncp, int doUnlink);
 
 /* Begin defined in ncmpio_utils.c ------------------------------------------*/
 extern int
-ncmpio_sanity_check(NC *ncp, int varid, const MPI_Offset *start,
-                    const MPI_Offset *count, const MPI_Offset *stride,
-                    MPI_Offset bufcount, MPI_Datatype buftype,
-                    api_kind api, int isFlexibleAPI, int mustInDataMode,
-                    int rw_flag, int io_method, NC_var **varp);
+ncmpio_sanity_check(NC *ncp, int varid, MPI_Offset bufcount,
+                    MPI_Datatype buftype, int reqMode, NC_var **varp);
 
 extern void
 ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
 
 extern int
 ncmpio_xlen_nc_type(nc_type type);
+
+extern int
+ncmpio_NC_check_name(const char *name, int file_ver);
+
+extern int
+ncmpio_last_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
+                const MPI_Offset counts[], const MPI_Offset strides[],
+                const int rw_flag, MPI_Offset *offset_ptr);
 
 #endif /* _NC_H */

@@ -9,7 +9,6 @@
 #endif
 
 #include <stdio.h>
-
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -17,11 +16,11 @@
 #include <mpi.h>
 
 #include <pnetcdf.h>
-#include <nc.h>
+#include <common.h>
 
-/*----< ncmpio_handle_error() ------------------------------------------------*/
+/*----< ncmpii_error_mpi2nc() -----------------------------------------------*/
 /* translate MPI error codes to PnetCDF/netCDF error codes */
-int ncmpio_handle_error(int   mpi_errorcode, /* returned value from MPI call */
+int ncmpii_error_mpi2nc(int   mpi_errorcode, /* returned value from MPI call */
                         char *err_msg)       /* extra error message */
 {
     int errorclass, errorStringLen;

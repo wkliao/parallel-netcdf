@@ -307,25 +307,3 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
     return pncp->dispatch->rename_var(pncp->ncp, varid, newname);
 }
 
-/*----< ncmpi_cancel() >-----------------------------------------------------*/
-/* This is an independent subroutine */
-int
-ncmpi_cancel(int  ncid,
-             int  num_reqs, /* number of requests */
-             int *req_ids,  /* [num_reqs]: IN/OUT */
-             int *statuses) /* [num_reqs], can be NULL */
-{
-    int err;
-    PNC *pncp;
-
-    /* check if ncid is valid.
-     * For invalid ncid, we must return error now, as there is no way to
-     * continue with invalid ncp. However, collective APIs might hang if this
-     * error occurs only on a subset of processes
-     */
-    err = PNC_check_id(ncid, &pncp);
-    if (err != NC_NOERR) return err;
-
-    /* calling the subroutine that implements ncmpi_cancel() */
-    return pncp->dispatch->cancel(pncp->ncp, num_reqs, req_ids, statuses);
-}

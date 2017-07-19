@@ -31,8 +31,8 @@ static const char ncmagic5[] = {'C', 'D', 'F', 0x05};
 
 /*----< hdr_put_NC_name() >--------------------------------------------------*/
 inline static int
-hdr_put_NC_name(bufferinfo      *pbp,
-                const NC_string *ncstrp)
+hdr_put_NC_name(bufferinfo *pbp,
+                const char *name)
 {
     /* netCDF file format:
      *  ...
@@ -46,21 +46,17 @@ hdr_put_NC_name(bufferinfo      *pbp,
      *              <non-negative INT64>  // CDF-5
      */
     int err;
+    size_t nchars = strlen(name);
 
     /* copy nelems */
-    if (pbp->version < 5) {
-        if (ncstrp->nchars != (uint)ncstrp->nchars)
-            DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-        err = ncmpix_put_uint32((void**)(&pbp->pos), (uint)ncstrp->nchars);
-    }
+    if (pbp->version < 5)
+        err = ncmpix_put_uint32((void**)(&pbp->pos), (uint)nchars);
     else
-        err = ncmpix_put_uint64((void**)(&pbp->pos), (uint64)ncstrp->nchars);
+        err = ncmpix_put_uint64((void**)(&pbp->pos), (uint64)nchars);
     if (err != NC_NOERR) return err;
 
     /* copy namestring */
-    err = ncmpix_pad_putn_text(&pbp->pos, ncstrp->nchars, ncstrp->cp);
-
-    return err;
+    return ncmpix_pad_putn_text(&pbp->pos, (MPI_Offset)nchars, name);
 }
 
 /*----< hdr_put_NC_dim() >---------------------------------------------------*/
@@ -540,7 +536,7 @@ int ncmpio_write_header(NC *ncp)
         }
         TRACE_IO(MPI_File_write_at)(fh, 0, buf, (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
             if (status == NC_NOERR) {
                 err = (err == NC_EFILE) ? NC_EWRITE : err;
                 DEBUG_ASSIGN_ERROR(status, err)
@@ -559,7 +555,7 @@ int ncmpio_write_header(NC *ncp)
         /* root's write has failed, which is serious */
         if (root_status == NC_EWRITE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Bcast");
+            ncmpii_error_mpi2nc(mpireturn,"MPI_Bcast");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
     }
@@ -567,12 +563,12 @@ int ncmpio_write_header(NC *ncp)
     if (NC_doFsync(ncp)) { /* NC_SHARE is set */
         TRACE_IO(MPI_File_sync)(fh);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_File_sync");
+            ncmpii_error_mpi2nc(mpireturn,"MPI_File_sync");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
         TRACE_COMM(MPI_Barrier)(ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Barrier");
+            ncmpii_error_mpi2nc(mpireturn,"MPI_Barrier");
             DEBUG_RETURN_ERROR(NC_EMPI)
         }
     }

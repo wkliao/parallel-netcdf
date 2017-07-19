@@ -2451,7 +2451,7 @@ APIFunc(get_file_version)(char *path, int *version)
 
    if (read_len != MAGIC_NUM_LEN) {
        printf("Error: reading NC magic string unexpected short read\n");
-       return 0;
+       return NC_ENOTNC;
    }
 
    if (strncmp(magic, "CDF", MAGIC_NUM_LEN-1)==0) {

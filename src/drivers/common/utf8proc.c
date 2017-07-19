@@ -51,6 +51,8 @@
 # include <config.h>
 #endif
 
+#include "common.h"
+
 #include "utf8proc.h"
 #include "utf8proc_data.h"
 
@@ -560,21 +562,21 @@ ssize_t utf8proc_map(
   *dstptr = NULL;
   result = utf8proc_decompose(str, slen, NULL, 0, options);
   if (result < 0) return result;
-  buffer = (int32_t*)malloc(((size_t)result) * sizeof(int32_t) + 1);
+  buffer = (int32_t*)NCI_Malloc(((size_t)result) * sizeof(int32_t) + 1);
   if (!buffer) return UTF8PROC_ERROR_NOMEM;
   result = utf8proc_decompose(str, slen, buffer, result, options);
   if (result < 0) {
-    free(buffer);
+    NCI_Free(buffer);
     return result;
   }
   result = utf8proc_reencode(buffer, result, options);
   if (result < 0) {
-    free(buffer);
+    NCI_Free(buffer);
     return result;
   }
   {
     int32_t *newptr;
-    newptr = (int32_t*) realloc(buffer, (size_t)result+1);
+    newptr = (int32_t*) NCI_Realloc(buffer, (size_t)result+1);
     if (newptr) buffer = newptr;
   }
   *dstptr = (uint8_t *)buffer;

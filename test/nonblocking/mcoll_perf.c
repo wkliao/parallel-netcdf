@@ -332,7 +332,7 @@ int main(int argc, char **argv)
     if (argc > 2) {
         if (!rank) printf("Usage: %s [file base name]\n",argv[0]);
         MPI_Finalize();
-        return 1;
+        nerrs++; goto fn_exit;
     }
     if (argc == 2) snprintf(fbasename, 256, "%s", argv[1]);
     else           strcpy(fbasename, "testfile");
@@ -353,27 +353,27 @@ int main(int argc, char **argv)
     buf = (int **)malloc(nvars*sizeof(int*));
     if (buf == NULL){
         printf("buf malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     bufcounts = (MPI_Offset *)malloc(nvars*sizeof(MPI_Offset));
     if (bufcounts == NULL){
         printf("bufcounts malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     starts = (MPI_Offset **)malloc(nvars*sizeof(MPI_Offset *));
     if (starts== NULL){
         printf("starts malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     counts = (MPI_Offset **)malloc(nvars*sizeof(MPI_Offset *));
     if (counts == NULL){
         printf("counts malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     datatype_list = (MPI_Datatype*)malloc(nvars*sizeof(MPI_Datatype));
     if (datatype_list == NULL){
         printf("counts malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     
     reqs = (int *)malloc(nvars*sizeof(int));
@@ -383,12 +383,12 @@ int main(int argc, char **argv)
         starts[i] = (MPI_Offset *)malloc(ndims*sizeof(MPI_Offset));
         if (starts[i] == NULL){
             printf("starts[%d] malloc error\n", i);
-            return 0;
+            nerrs++; goto fn_exit;
         }
         counts[i] = (MPI_Offset *)malloc(ndims*sizeof(MPI_Offset));
         if (counts[i] == NULL){
             printf("counts[%d] malloc error\n", i);
-            return 0;
+            nerrs++; goto fn_exit;
         }
     }
   
@@ -424,7 +424,7 @@ int main(int argc, char **argv)
     buf[0] = (int *) malloc(bufcount * nvars * sizeof(int));
     if (buf[0] == NULL) {
         printf("buf[i]malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     for (i=1; i<nvars; i++) buf[i] = buf[i-1] + bufcount;
 
@@ -440,7 +440,7 @@ int main(int argc, char **argv)
     varid = (int *)malloc(nvars2*sizeof(int));
     if (varid == NULL){
         printf("varid malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     MPI_Info_create(&info);
 /*
@@ -690,6 +690,7 @@ printf("filename2=%s filename3=%s\n",filename2, filename3);
         else       printf(PASS_STR);
     }
 
+fn_exit:
     MPI_Finalize();
     return (nerrs > 0);
 }

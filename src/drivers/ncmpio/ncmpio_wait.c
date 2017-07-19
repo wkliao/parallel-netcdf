@@ -4,6 +4,14 @@
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in src/dispatchers/file.c
+ *
+ * ncmpi_wait()     : dispatcher->wait()
+ * ncmpi_wait_all() : dispatcher->wait_all()
+ * ncmpi_cancel()   : dispatcher->cancel()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -20,8 +28,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
-#include "ncmpidtype.h"
 #include "macro.h"
 
 
@@ -34,10 +40,10 @@
 
 /* Prototypes for functions used only in this file */
 static int wait_getput(NC *ncp, int num_reqs, NC_req *reqs, int rw_flag,
-                       int io_method, MPI_Offset newnumrecs);
+                       int coll_indep, MPI_Offset newnumrecs);
 
 static int mgetput(NC *ncp, int num_reqs, NC_req *reqs, int rw_flag,
-                   int io_method);
+                   int coll_indep);
 
 /*----< ncmpio_getput_zero_req() >--------------------------------------------*/
 /* This function is called when this process has zero-length I/O request and
@@ -48,29 +54,31 @@ static int mgetput(NC *ncp, int num_reqs, NC_req *reqs, int rw_flag,
  * This function is collective.
  */
 int
-ncmpio_getput_zero_req(NC  *ncp,
-                       int  rw_flag)      /* WRITE_REQ or READ_REQ */
+ncmpio_getput_zero_req(NC *ncp, int reqMode)
 {
     int err, mpireturn, status=NC_NOERR;
     MPI_Status mpistatus;
     MPI_File fh;
+
+    /* do nothing if this came from an independent API */
+    if (fIsSet(reqMode, NC_REQ_INDEP)) return NC_NOERR;
 
     fh = ncp->collective_fh;
 
     TRACE_IO(MPI_File_set_view)(fh, 0, MPI_BYTE, MPI_BYTE, "native",
                                 MPI_INFO_NULL);
 
-    if (rw_flag == READ_REQ) {
+    if (fIsSet(reqMode, NC_REQ_RD)) {
         TRACE_IO(MPI_File_read_all)(fh, NULL, 0, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_read_all");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_all");
             err = (err == NC_EFILE) ? NC_EREAD : err;
             DEBUG_ASSIGN_ERROR(status, err)
         }
-    } else { /* WRITE_REQ */
+    } else { /* write request */
         TRACE_IO(MPI_File_write_all)(fh, NULL, 0, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_write_all");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_all");
             err = (err == NC_EFILE) ? NC_EWRITE : err;
             DEBUG_ASSIGN_ERROR(status, err)
         }
@@ -413,7 +421,7 @@ concatenate_datatypes(int           num,
     mpireturn = MPI_Type_struct(num, blocklens, addrs, dtypes, datatype);
 #endif
     if (mpireturn != MPI_SUCCESS)
-        status = ncmpio_handle_error(mpireturn, "MPI_Type_create_struct");
+        status = ncmpii_error_mpi2nc(mpireturn, "MPI_Type_create_struct");
     else
         MPI_Type_commit(datatype);
 
@@ -560,7 +568,7 @@ construct_buffertypes(int           num_reqs,
                                       buffer_type);
 #endif
         if (mpireturn != MPI_SUCCESS) {
-            int err = ncmpio_handle_error(mpireturn, "MPI_Type_hindexed");
+            int err = ncmpii_error_mpi2nc(mpireturn,"MPI_Type_create_hindexed");
             /* return the first encountered error if there is any */
             if (status == NC_NOERR) status = err;
         }
@@ -599,10 +607,10 @@ construct_buffertypes(int           num_reqs,
  */
 static int
 req_commit(NC  *ncp,
-           int  num_reqs,  /* number of requests */
-           int *req_ids,   /* [num_reqs] */
-           int *statuses,  /* [num_reqs] */
-           int  io_method) /* COLL_IO or INDEP_IO */
+           int  num_reqs,   /* number of requests */
+           int *req_ids,    /* [num_reqs] */
+           int *statuses,   /* [num_reqs] */
+           int  coll_indep) /* NC_REQ_COLL or NC_REQ_INDEP */
 {
     int i, j, err=NC_NOERR, status=NC_NOERR;
     int do_read, do_write, num_w_reqs=0, num_r_reqs=0;
@@ -758,7 +766,7 @@ req_commit(NC  *ncp,
                                      put_list[i].count[0]);
     }
 
-    if (io_method == COLL_IO) {
+    if (coll_indep == NC_REQ_COLL) {
         int mpireturn;
         MPI_Offset io_req[4], do_io[4];  /* [0]: read [1]: write [2]: error */
         io_req[0] = num_r_reqs;
@@ -768,7 +776,7 @@ req_commit(NC  *ncp,
         TRACE_COMM(MPI_Allreduce)(io_req, do_io, 4, MPI_OFFSET, MPI_MAX,
                                   ncp->comm);
         if (mpireturn != MPI_SUCCESS)
- 	    return ncmpio_handle_error(mpireturn, "MPI_Allreduce"); 
+ 	    return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce"); 
 
         /* if error occurs, return the API collectively */
         if (do_io[2] != -NC_NOERR) return err;
@@ -787,11 +795,11 @@ req_commit(NC  *ncp,
 
     /* carry out writes and reads separately (writes first) */
     if (do_write > 0)
-        err = wait_getput(ncp, num_w_reqs, put_list, WRITE_REQ, io_method,
+        err = wait_getput(ncp, num_w_reqs, put_list, NC_REQ_WR, coll_indep,
                           newnumrecs);
 
     if (do_read > 0)
-        err = wait_getput(ncp, num_r_reqs, get_list, READ_REQ, io_method,
+        err = wait_getput(ncp, num_r_reqs, get_list, NC_REQ_RD, coll_indep,
                           newnumrecs);
 
     /* retain the first error status */
@@ -963,28 +971,31 @@ ncmpio_wait(void *ncdp,
             int   num_reqs,
             int  *req_ids,   /* [num_reqs]: IN/OUT */
             int  *statuses,  /* [num_reqs] */
-            int   io_method) /* COLL_IO or INDEP_IO */
+            int   reqMode)   /* only check if NC_REQ_COLL or NC_REQ_INDEP */
 {
     NC *ncp = (NC*)ncdp;
+    int coll_indep;
 
     if (NC_indef(ncp)) /* wait must be called in data mode */
         DEBUG_RETURN_ERROR(NC_EINDEFINE)
 
+    coll_indep = (fIsSet(reqMode, NC_REQ_INDEP)) ? NC_REQ_INDEP : NC_REQ_COLL;
+
 #ifdef ENABLE_REQ_AGGREGATION
     /* check collective or independent mode */
-    if (io_method == INDEP_IO && !NC_indep(ncp))
+    if (coll_indep == NC_REQ_INDEP && !NC_indep(ncp))
         DEBUG_RETURN_ERROR(NC_ENOTINDEP)
-    else if (io_method == COLL_IO && NC_indep(ncp))
+    else if (coll_indep == NC_REQ_COLL && NC_indep(ncp))
         DEBUG_RETURN_ERROR(NC_EINDEP)
 
-    return req_commit(ncp, num_reqs, req_ids, statuses, io_method);
+    return req_commit(ncp, num_reqs, req_ids, statuses, coll_indep);
 #else
     /* If request aggregation is disabled, we call an independent wait() for
      * each request
      */
     int i, status=NC_NOERR, err, *reqids=NULL;
 
-    if (io_method == INDEP_IO) {
+    if (coll_indep == NC_REQ_INDEP) {
         /* This is called from ncmpi_wait(), which is an independent call
 	 * Argument num_reqs can be NC_REQ_ALL which means to flush all pending
 	 * nonblocking requests. In this case, arguments req_ids and statuses
@@ -1040,14 +1051,14 @@ ncmpio_wait(void *ncdp,
     for (i=0; i<num_reqs; i++) { /* serve one request at a time */
         if (reqids == NULL)
             err = req_commit(ncp, 1, &req_ids[i],
-                  (statuses == NULL) ? NULL : &statuses[i], INDEP_IO);
+                  (statuses == NULL) ? NULL : &statuses[i], NC_REQ_INDEP);
         else
-            err = req_commit(ncp, 1, &reqids[i], NULL, INDEP_IO);
+            err = req_commit(ncp, 1, &reqids[i], NULL, NC_REQ_INDEP);
         if (status == NC_NOERR) status = err;
     }
     if (reqids != NULL) NCI_Free(reqids);
 
-    if (io_method == COLL_IO) {
+    if (coll_indep == NC_REQ_COLL) {
         /* return to collective data mode */
         err = ncmpio_end_indep_data(ncp);
         if (status == NC_NOERR) status = err;
@@ -1379,7 +1390,7 @@ type_create_off_len(MPI_Offset    nsegs,    /* no. off-len pairs */
         *buf_type = MPI_BYTE;
         NCI_Free(displacements);
         NCI_Free(blocklengths);
-        return ncmpio_handle_error(mpireturn, "MPI_Type_create_hindexed");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Type_create_hindexed");
     }
     MPI_Type_commit(filetype);
     NCI_Free(displacements);
@@ -1442,7 +1453,7 @@ type_create_off_len(MPI_Offset    nsegs,    /* no. off-len pairs */
         *buf_type = MPI_BYTE;
         NCI_Free(displacements);
         NCI_Free(blocklengths);
-        return ncmpio_handle_error(mpireturn, "MPI_Type_create_hindexed");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Type_create_hindexed");
     }
     MPI_Type_commit(buf_type);
     NCI_Free(displacements);
@@ -1468,8 +1479,8 @@ static int
 req_aggregation(NC     *ncp,
                 int     num_reqs,    /* # requests */
                 NC_req *reqs,        /* sorted requests */
-                int     rw_flag,     /* WRITE_REQ or READ_REQ */
-                int     io_method,   /* COLL_IO or INDEP_IO */
+                int     rw_flag,     /* NC_REQ_WR or NC_REQ_RD */
+                int     coll_indep,  /* NC_REQ_COLL or NC_REQ_INDEP */
                 int     interleaved) /* interleaved in reqs[] */
 {
     int i, type, err, status=NC_NOERR, ngroups, mpireturn, buf_len;
@@ -1481,14 +1492,14 @@ req_aggregation(NC     *ncp,
     MPI_File fh;
     MPI_Status mpistatus;
 
-    if (num_reqs == 0) { /* only COLL_IO can reach here for 0 request */
-        assert(io_method == COLL_IO);
+    if (num_reqs == 0) { /* only NC_REQ_COLL can reach here for 0 request */
+        assert(coll_indep == NC_REQ_COLL);
         /* simply participate the collective call */
         return ncmpio_getput_zero_req(ncp, rw_flag);
     }
     if (! interleaved) {
         /* concatenate all filetypes into a single one and do I/O */
-        return mgetput(ncp, num_reqs, reqs, rw_flag, io_method);
+        return mgetput(ncp, num_reqs, reqs, rw_flag, coll_indep);
     }
     /* now some request's aggregate access region is interleaved with other's */
 
@@ -1689,7 +1700,7 @@ req_aggregation(NC     *ncp,
                                     &filetype);
 #endif
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Type_create_struct");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Type_create_struct");
             /* return the first encountered error if there is any */
             if (status == NC_NOERR) status = err;
 
@@ -1712,7 +1723,7 @@ req_aggregation(NC     *ncp,
                                     &buf_type);
 #endif
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_Type_create_struct");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Type_create_struct");
             /* return the first encountered error if there is any */
             if (status == NC_NOERR) status = err;
 
@@ -1729,7 +1740,7 @@ req_aggregation(NC     *ncp,
 
     MPI_Type_size(buf_type, &buf_type_size);
 
-    if (io_method == COLL_IO)
+    if (coll_indep == NC_REQ_COLL)
         fh = ncp->collective_fh;
     else
         fh = ncp->independent_fh;
@@ -1742,12 +1753,12 @@ req_aggregation(NC     *ncp,
         if (status == NC_NOERR) status = err;
     }
 
-    if (rw_flag == READ_REQ) {
-        if (io_method == COLL_IO) {
+    if (rw_flag == NC_REQ_RD) {
+        if (coll_indep == NC_REQ_COLL) {
             TRACE_IO(MPI_File_read_at_all)(fh, offset, buf, buf_len, buf_type,
                                            &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -1761,7 +1772,7 @@ req_aggregation(NC     *ncp,
             TRACE_IO(MPI_File_read_at)(fh, offset, buf, buf_len, buf_type,
                                        &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -1772,12 +1783,12 @@ req_aggregation(NC     *ncp,
                 ncp->get_size += buf_len * buf_type_size;
             }
         }
-    } else { /* WRITE_REQ */
-        if (io_method == COLL_IO) {
+    } else { /* NC_REQ_WR */
+        if (coll_indep == NC_REQ_COLL) {
             TRACE_IO(MPI_File_write_at_all)(fh, offset, buf, buf_len, buf_type,
                                             &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
@@ -1791,7 +1802,7 @@ req_aggregation(NC     *ncp,
             TRACE_IO(MPI_File_write_at)(fh, offset, buf, buf_len, buf_type,
                                         &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
@@ -1825,8 +1836,8 @@ static int
 wait_getput(NC         *ncp,
             int         num_reqs,   /* # requests */
             NC_req     *reqs,       /* array of requests */
-            int         rw_flag,    /* WRITE_REQ or READ_REQ */
-            int         io_method,  /* COLL_IO or INDEP_IO */
+            int         rw_flag,    /* NC_REQ_WR or NC_REQ_RD */
+            int         coll_indep, /* NC_REQ_COLL or NC_REQ_INDEP */
             MPI_Offset  newnumrecs) /* new number of records */
 {
     int i, err, status=NC_NOERR, access_interleaved=0;
@@ -1837,12 +1848,12 @@ wait_getput(NC         *ncp,
      */  
     for (i=0; i<num_reqs; i++) {
         /* get the starting file offset for this request */
-        ncmpio_get_offset(ncp, reqs[i].varp, reqs[i].start, NULL, NULL,
-                          rw_flag, &reqs[i].offset_start);
+        ncmpio_last_offset(ncp, reqs[i].varp, reqs[i].start, NULL, NULL,
+                           rw_flag, &reqs[i].offset_start);
 
         /* get the ending file offset for this request */
-        ncmpio_get_offset(ncp, reqs[i].varp, reqs[i].start, reqs[i].count,
-                          reqs[i].stride, rw_flag, &reqs[i].offset_end);
+        ncmpio_last_offset(ncp, reqs[i].varp, reqs[i].start, reqs[i].count,
+                           reqs[i].stride, rw_flag, &reqs[i].offset_end);
         reqs[i].offset_end += reqs[i].varp->xsz - 1;
     }
 
@@ -1865,7 +1876,7 @@ wait_getput(NC         *ncp,
     }
 
     /* aggregate requests and carry out the I/O */
-    err = req_aggregation(ncp, num_reqs, reqs, rw_flag, io_method,
+    err = req_aggregation(ncp, num_reqs, reqs, rw_flag, coll_indep,
                           access_interleaved);
     if (status == NC_NOERR) status = err;
 
@@ -1874,8 +1885,8 @@ wait_getput(NC         *ncp,
      * others write to a record variable or not. Note newnumrecs has been
      * sync-ed and always >= ncp->numrecs.
      */
-    if (rw_flag == WRITE_REQ) {
-        if (io_method == COLL_IO) {
+    if (rw_flag == NC_REQ_WR) {
+        if (coll_indep == NC_REQ_COLL) {
             if (newnumrecs > ncp->numrecs) {
                 /* update new record number in file. Note newnumrecs is already
 		 * sync-ed among all processes and in collective mode
@@ -1887,7 +1898,7 @@ wait_getput(NC         *ncp,
                 if (ncp->numrecs < newnumrecs) ncp->numrecs = newnumrecs;
             }
         }
-        else { /* INDEP_IO */
+        else { /* NC_REQ_INDEP */
             if (ncp->numrecs < newnumrecs) {
                 ncp->numrecs = newnumrecs;
                 set_NC_ndirty(ncp);
@@ -1897,17 +1908,17 @@ wait_getput(NC         *ncp,
 
         if (NC_doFsync(ncp)) { /* NC_SHARE is set */
             int mpireturn;
-            if (io_method == INDEP_IO) {
+            if (coll_indep == NC_REQ_INDEP) {
                 TRACE_IO(MPI_File_sync)(ncp->independent_fh);
                 if (mpireturn != MPI_SUCCESS) {
-                    err = ncmpio_handle_error(mpireturn, "MPI_File_sync"); 
+                    err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync"); 
                     if (status == NC_NOERR) status = err;
                 }
             }
             else {
                 TRACE_IO(MPI_File_sync)(ncp->collective_fh);
                 if (mpireturn != MPI_SUCCESS) {
-                    err = ncmpio_handle_error(mpireturn, "MPI_File_sync"); 
+                    err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync"); 
                     if (status == NC_NOERR) status = err;
                 }
                 TRACE_COMM(MPI_Barrier)(ncp->comm);
@@ -1929,8 +1940,8 @@ static int
 mgetput(NC     *ncp,
         int     num_reqs,
         NC_req *reqs,        /* [num_reqs] */
-        int     rw_flag,     /* WRITE_REQ or READ_REQ */
-        int     io_method)   /* COLL_IO or INDEP_IO */
+        int     rw_flag,     /* NC_REQ_WR or NC_REQ_RD */
+        int     coll_indep)  /* NC_REQ_COLL or NC_REQ_INDEP */
 {
     int i, j, len=0, status=NC_NOERR, mpireturn, err, buf_type_size=0;
     void *buf=NULL;
@@ -1939,7 +1950,7 @@ mgetput(NC     *ncp,
     MPI_File fh;
     MPI_Offset offset=0;
 
-    if (io_method == COLL_IO)
+    if (coll_indep == NC_REQ_COLL)
         fh = ncp->collective_fh;
     else
         fh = ncp->independent_fh;
@@ -1947,7 +1958,7 @@ mgetput(NC     *ncp,
     /* construct a MPI file type by concatenating fileviews of all requests */
     status = construct_filetypes(ncp,num_reqs, reqs, rw_flag, &filetype);
     if (status != NC_NOERR) { /* if failed, skip this request */
-        if (io_method == INDEP_IO) return status;
+        if (coll_indep == NC_REQ_INDEP) return status;
 
         /* For collective I/O, we still need to participate the successive
            collective calls: setview/read/write */
@@ -1959,7 +1970,7 @@ mgetput(NC     *ncp,
     offset=0;
     err = ncmpio_file_set_view(ncp, fh, &offset, filetype);
     if (err != NC_NOERR) {
-        if (io_method == INDEP_IO) return status;
+        if (coll_indep == NC_REQ_INDEP) return status;
         num_reqs = 0; /* skip this request */
         if (status == NC_NOERR) status = err;
     }
@@ -1996,7 +2007,8 @@ mgetput(NC     *ncp,
             MPI_Offset int8 = reqs[i].bnelems * reqs[i].varp->xsz;
             blocklengths[j] = (int)int8;
             if (int8 != blocklengths[j]) { /* int overflow */
-                if (status == NC_NOERR) DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
+                if (status == NC_NOERR) /* keep the 1st encountered error */
+                    DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
                 blocklengths[j] = 0;
                 continue; /* skip this request */
             }
@@ -2045,14 +2057,14 @@ mgetput(NC     *ncp,
                                           MPI_BYTE, &buf_type);
 #endif
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn,"MPI_Type_create_hindexed");
+                err = ncmpii_error_mpi2nc(mpireturn,"MPI_Type_create_hindexed");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) status = err;
             }
             else {
                 mpireturn = MPI_Type_commit(&buf_type);
                 if (mpireturn != MPI_SUCCESS) {
-                    err = ncmpio_handle_error(mpireturn,"MPI_Type_commit");
+                    err = ncmpii_error_mpi2nc(mpireturn,"MPI_Type_commit");
                     /* return the first encountered error if there is any */
                     if (status == NC_NOERR) status = err;
                 }
@@ -2067,12 +2079,12 @@ mgetput(NC     *ncp,
 
     MPI_Type_size(buf_type, &buf_type_size);
 
-    if (rw_flag == READ_REQ) {
-        if (io_method == COLL_IO) {
+    if (rw_flag == NC_REQ_RD) {
+        if (coll_indep == NC_REQ_COLL) {
             TRACE_IO(MPI_File_read_at_all)(fh, offset, buf, len, buf_type,
                                            &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -2087,7 +2099,7 @@ mgetput(NC     *ncp,
             TRACE_IO(MPI_File_read_at)(fh, offset, buf, len, buf_type,
                                        &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -2099,12 +2111,12 @@ mgetput(NC     *ncp,
                 ncp->get_size += len * buf_type_size;
             }
         }
-    } else { /* WRITE_REQ */
-        if (io_method == COLL_IO) {
+    } else { /* NC_REQ_WR */
+        if (coll_indep == NC_REQ_COLL) {
             TRACE_IO(MPI_File_write_at_all)(fh, offset, buf, len, buf_type,
                                             &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
@@ -2119,7 +2131,7 @@ mgetput(NC     *ncp,
             TRACE_IO(MPI_File_write_at)(fh, offset, buf, len, buf_type,
                                         &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;

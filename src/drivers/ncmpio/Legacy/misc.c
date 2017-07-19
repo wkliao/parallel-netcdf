@@ -919,3 +919,129 @@ ncmpi_print_all_var_offsets(int ncid) {
     return NC_NOERR;
 }
 
+/*----< ncmpio_free_NC_string() >--------------------------------------------*/
+/*
+ * Free string, and, if needed, its values.
+ * Formerly
+NC_free_string()
+ */
+inline void
+ncmpio_free_NC_string(NC_string *ncstrp)
+{
+    if (ncstrp == NULL) return;
+    /* ncstrp->cp is allocated as part of ncstrp object */
+    NCI_Free(ncstrp);
+}
+
+/*----< ncmpio_new_NC_string() >---------------------------------------------*/
+/*
+ * Allocate a NC_string structure large enough
+ * to hold slen characters.
+ */
+NC_string *
+ncmpio_new_NC_string(size_t      slen,
+                     const char *str)  /* must be already normalized */
+{
+    /* str may not be NULL terminated */
+    NC_string *ncstrp;
+    size_t sizeof_NC_string = M_RNDUP(sizeof(NC_string));
+    size_t sz = slen + sizeof_NC_string + 1;
+    /* one char more space for NULL terminate char */
+
+    ncstrp = (NC_string *) NCI_Calloc(sz, sizeof(char));
+    if (ncstrp == NULL) return NULL;
+
+    /* make space occupied by ncstrp->cp part of ncstrp */
+    ncstrp->nchars = (MPI_Offset)slen;
+    ncstrp->cp = (char *)ncstrp + sizeof_NC_string;
+
+    /* in PnetCDF, we want to make name->cp always NULL character terminated */
+    if (str != NULL && *str != '\0') {
+        strncpy(ncstrp->cp, str, slen);
+        ncstrp->cp[slen] = '\0';  /* NULL terminated */
+    }
+
+    return(ncstrp);
+}
+
+
+/*----< ncmpio_set_NC_string() >---------------------------------------------*/
+/*
+ * If possible, change the value of an NC_string to 'str'.
+ */
+int
+ncmpio_set_NC_string(NC_string  *ncstrp,
+                     const char *str)
+{
+    size_t slen;
+
+    assert(str != NULL && *str != '\0');
+
+    slen = strlen(str);
+
+    if (ncstrp->nchars < (MPI_Offset)slen) DEBUG_RETURN_ERROR(NC_ENOTINDEFINE)
+
+    memcpy(ncstrp->cp, str, slen);
+
+    /* in PnetCDF, we want to make name->cp always NULL character terminated */
+    if (ncstrp->nchars > (MPI_Offset)slen)
+        memset(ncstrp->cp + slen, 0, (size_t)ncstrp->nchars - slen);
+
+    ncstrp->nchars = (MPI_Offset)slen;
+
+    return NC_NOERR;
+}
+
+/*@
+  ncmpio_data_repack - copy data between two buffers with different datatypes.
+
+  Input:
+. inbuf - input buffer where data is copied from
+. incount - number of input elements
+. intype - datatype of each element in input buffer
+. outbuf - output buffer where data is copied to
+. outcount - number of output elements
+. outtype - datatype of each element in output buffer
+@*/
+
+int ncmpio_data_repack(void *inbuf,
+                       MPI_Offset incount,
+                       MPI_Datatype intype,
+                       void *outbuf,
+                       MPI_Offset outcount,
+                       MPI_Datatype outtype)
+{
+  int intypesz, outtypesz;
+  int packsz;
+  void *packbuf;
+  int packpos;
+
+  MPI_Type_size(intype, &intypesz);
+  MPI_Type_size(outtype, &outtypesz);
+
+  if (incount*intypesz != outcount*outtypesz) {
+    /* input data amount does not match output data amount */
+    /* NOTE: we ignore it for user responsibility or add error handling ? */
+
+    /* for rescue, guarantee output data amount <= input data amount */
+    if (incount*intypesz < outcount*outtypesz)
+      outcount = incount*intypesz/outtypesz;
+  }
+
+  if (incount == 0)
+    return NC_NOERR;
+
+  /* local pack-n-unpack, using MPI_COMM_SELF */
+  if (incount  != (int)incount)  DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+  if (outcount != (int)outcount) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+
+  MPI_Pack_size((int)incount, intype, MPI_COMM_SELF, &packsz);
+  packbuf = (void *)NCI_Malloc((size_t)packsz);
+  packpos = 0;
+  MPI_Pack(inbuf, (int)incount, intype, packbuf, packsz, &packpos, MPI_COMM_SELF);
+  packpos = 0;
+  MPI_Unpack(packbuf, packsz, &packpos, outbuf, (int)outcount, outtype, MPI_COMM_SELF);
+  NCI_Free(packbuf);
+
+  return NC_NOERR;
+}

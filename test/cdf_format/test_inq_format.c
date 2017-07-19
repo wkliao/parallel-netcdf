@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     if (argc > 2) {
         if (!rank) printf("Usage: %s dir_name\n",argv[0]);
         MPI_Finalize();
-        return 0;
+        return 1;
     }
     if (argc == 2) snprintf(dir_name, 256, "%s", argv[1]);
     else           strcpy(dir_name, ".");

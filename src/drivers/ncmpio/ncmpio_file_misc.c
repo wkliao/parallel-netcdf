@@ -31,7 +31,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "fbits.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -72,7 +71,7 @@ ncmpio_redef(void *ncdp)
     if (ncp->old == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* we are now entering define mode */
-    fSet(ncp->flags, NC_INDEF);
+    fSet(ncp->flags, NC_MODE_DEF);
 
     return NC_NOERR;
 }
@@ -100,7 +99,7 @@ ncmpio_begin_indep_data(void *ncdp)
         /* MPI_File_sync() is collective */
         TRACE_IO(MPI_File_sync)(ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_sync");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync");
             if (err == NC_NOERR) return err;
         }
         TRACE_COMM(MPI_Barrier)(ncp->comm);
@@ -108,7 +107,7 @@ ncmpio_begin_indep_data(void *ncdp)
 #endif
 
     /* raise independent flag */
-    fSet(ncp->flags, NC_INDEP);
+    fSet(ncp->flags, NC_MODE_INDEP);
 
     /* PnetCDF's default mode is collective. MPI file handle, collective_fh,
      * will never be MPI_FILE_NULL. We must use a separate MPI file handle
@@ -123,7 +122,7 @@ ncmpio_begin_indep_data(void *ncdp)
                                 ncp->mpiomode, ncp->mpiinfo,
                                 &ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_open");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_File_open");
     }
     return NC_NOERR;
 }
@@ -161,17 +160,17 @@ ncmpio_end_indep_data(void *ncdp)
             /* MPI_File_sync() is collective */
             TRACE_IO(MPI_File_sync)(ncp->independent_fh);
             if (mpireturn != MPI_SUCCESS) {
-                int err = ncmpio_handle_error(mpireturn, "MPI_File_sync");
+                int err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync");
                 if (status == NC_NOERR) status = err;
             }
             TRACE_COMM(MPI_Barrier)(ncp->comm);
             if (mpireturn != MPI_SUCCESS)
-                return ncmpio_handle_error(mpireturn, "MPI_Barrier");
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Barrier");
         }
 #endif
     }
 
-    fClr(ncp->flags, NC_INDEP);
+    fClr(ncp->flags, NC_MODE_INDEP);
 
     return status;
 }
@@ -195,10 +194,10 @@ ncmpio_abort(void *ncdp)
     if (ncp->old != NULL) {
         /* a plain redef, not a create */
         assert(!NC_IsNew(ncp));
-        assert(fIsSet(ncp->flags, NC_INDEF));
+        assert(fIsSet(ncp->flags, NC_MODE_DEF));
         ncmpio_free_NC(ncp->old);
         ncp->old = NULL;
-        fClr(ncp->flags, NC_INDEF);
+        fClr(ncp->flags, NC_MODE_DEF);
     }
 
     if (!doUnlink) {
@@ -343,7 +342,7 @@ ncmpio_inq_misc(void       *ncdp,
     if (info_used != NULL) {
         mpireturn = MPI_Info_dup(ncp->mpiinfo, info_used);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_Info_dup");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Info_dup");
 
         sprintf(value, "%lld", ncp->h_align);
         MPI_Info_set(*info_used, "nc_header_align_size", value);
@@ -415,7 +414,7 @@ ncmpi_delete(const char *filename,
 
     TRACE_IO(MPI_File_delete)((char*)filename, info);
     if (mpireturn != MPI_SUCCESS)
-        err = ncmpio_handle_error(mpireturn, "MPI_File_delete");
+        err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_delete");
     return err;
 }
 

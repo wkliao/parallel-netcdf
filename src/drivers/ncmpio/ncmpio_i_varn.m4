@@ -9,6 +9,14 @@ dnl
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/var_getput.m4
+ *
+ * ncmpi_iget_varn_<type>() : dispatcher->iget_varn()
+ * ncmpi_iput_varn_<type>() : dispatcher->iput_varn()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -25,10 +33,14 @@ dnl
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
-#include "ncmpidtype.h"
 
 /*----< igetput_varn() >-----------------------------------------------------*/
+/* The current implementation for nonlocking varn APIs is to make num calls
+ * to iget/iput APIs, although an alternative is to flatten each start-count
+ * request into a list of offset-length pairs and concatenate all lists into
+ * a hindexed data type. All nonblocking requests posted by igetput_varn()
+ * share the same request ID.
+ */
 static int
 igetput_varn(NC                *ncp,
              NC_var            *varp,
@@ -39,8 +51,7 @@ igetput_varn(NC                *ncp,
              MPI_Offset         bufcount,
              MPI_Datatype       buftype,   /* data type of the bufer */
              int               *reqidp,    /* OUT: request ID */
-             int                rw_flag,   /* WRITE_REQ or READ_REQ */
-             int                use_abuf)  /* if use attached buffer */
+             int                reqMode)
 {
     int i, j, el_size, status=NC_NOERR, free_cbuf=0, isSameGroup, reqid;
     void *cbuf=NULL;
@@ -48,7 +59,8 @@ igetput_varn(NC                *ncp,
     MPI_Offset **_counts=NULL;
     MPI_Datatype ptype;
 
-    if (use_abuf && ncp->abuf == NULL) DEBUG_RETURN_ERROR(NC_ENULLABUF)
+    if (fIsSet(reqMode, NC_REQ_NBB) && ncp->abuf == NULL)
+        DEBUG_RETURN_ERROR(NC_ENULLABUF)
 
     /* it is illegal for starts to be NULL */
     if (starts == NULL)
@@ -97,7 +109,7 @@ igetput_varn(NC                *ncp,
          * el_size is the element size of ptype
          * bnelems is the total number of ptype elements in buftype
          */
-        status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+        status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                      &isderived, &iscontig_of_ptypes);
 
         if (status != NC_NOERR) return status;
@@ -112,9 +124,9 @@ igetput_varn(NC                *ncp,
 
             cbuf = NCI_Malloc((size_t)packsize);
             free_cbuf = 1;
-            /* if not use_abuf, need a callback to free cbuf */
+            /* if not called from a bput API, need a callback to free cbuf */
 
-            if (rw_flag == WRITE_REQ)
+            if (fIsSet(reqMode, NC_REQ_WR))
                 MPI_Pack(buf, (int)bufcount, buftype, cbuf, (int)packsize,
                          &position, MPI_COMM_SELF);
         }
@@ -144,18 +156,13 @@ igetput_varn(NC                *ncp,
     for (i=0; i<num; i++) {
         MPI_Offset buflen;
 
-        /* check whether start, count, and stride are valid */
-        status = ncmpio_start_count_stride_check(ncp, varp, starts[i],
-                                                 _counts[i], NULL, rw_flag);
-        if (status != NC_NOERR) goto err_check;
-
         for (buflen=1, j=0; j<varp->ndims; j++)
             buflen *= _counts[i][j];
 
         if (buflen == 0) continue;
         status = ncmpio_igetput_varm(ncp, varp, starts[i], _counts[i], NULL,
                                      NULL, bufp, buflen, ptype, &reqid,
-                                     rw_flag, use_abuf, isSameGroup);
+                                     reqMode, isSameGroup);
         if (status != NC_NOERR) goto err_check;
 
         /* use isSamegroup so we end up with one nonblocking request (only the
@@ -166,7 +173,7 @@ igetput_varn(NC                *ncp,
     }
 
     if (free_cbuf) { /* cbuf != buf, cbuf is temp allocated */
-        if (rw_flag == READ_REQ) {
+        if (fIsSet(reqMode, NC_REQ_RD)) {
             /* Set the last lead request object to let wait() unpack cbuf to
              * buf and free cbuf */
             for (i=ncp->numGetReqs-1; i>=0; i--)
@@ -177,8 +184,8 @@ igetput_varn(NC                *ncp,
             ncp->get_list[i].bufcount = (int)bufcount;
             MPI_Type_dup(buftype, &ncp->get_list[i].buftype);
         }
-        else { /* WRITE_REQ */
-            if (use_abuf)
+        else { /* write request */
+            if (fIsSet(reqMode, NC_REQ_NBB))
                 /* cbuf has been copied to the attached buffer, so it is safe
                  * to free cbuf now */
                 NCI_Free(cbuf);
@@ -231,24 +238,29 @@ ncmpio_$1_varn(void               *ncdp,
                MPI_Offset          bufcount,
                MPI_Datatype        buftype,
                int                *reqid,
-               nc_type             itype)
+               int                 reqMode)
 {
-    int     status;
+    int     err;
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
     /* check for zero-size request */
-    if (num == 0 || bufcount == 0) return NC_NOERR;
+    if (num == 0 || bufcount == 0 || fIsSet(reqMode, NC_REQ_ZERO))
+        return NC_NOERR;
 
-    status = ncmpio_sanity_check(ncp, varid, NULL, NULL, NULL, bufcount,
-                                 buftype, API_VARN, (itype==NC_NAT), 0,
-                                 ReadWrite($1), NONBLOCKING_IO, &varp);
-    if (status != NC_NOERR) return status;
+    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
+     * NC_ECHAR, NC_EINVAL */
+    err = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
+    if (err != NC_NOERR) return err;
+
+    /* checking for NC_EINVALCOORDS, NC_EEDGE, and NC_ESTRIDE will be done
+     * later at calling ncmpio_igetput_varm()
+     */
 
     return igetput_varn(ncp, varp, num, starts, counts, (void*)buf, bufcount,
-                        buftype, reqid, ReadWrite($1), IsBput($1));
+                        buftype, reqid, reqMode);
 }
 ')dnl
 dnl

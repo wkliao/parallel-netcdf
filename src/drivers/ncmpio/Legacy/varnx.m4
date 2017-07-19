@@ -879,7 +879,7 @@ ncmpio_getput_varnm(int                ncid,
              * el_size is the element size of ptype
              * bnelems is the total number of ptype elements in buftype
              */
-            status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+            status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                          &isderived, &iscontig_of_ptypes);
         else if (bufcount == 0)
             num = 0;

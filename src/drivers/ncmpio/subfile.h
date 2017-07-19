@@ -6,15 +6,13 @@
 #ifndef _SUBFILE_H
 #define _SUBFILE_H
 
-#include "pnetcdf.h"
-#include "nc.h"
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
-#include "macro.h"
+
+#include "nc.h"
 
 /* structure for storing access info of this process's request
    to the subfiles on all other processes, and vice-versa. used
@@ -43,9 +41,9 @@ extern int ncmpio_subfile_close(NC *ncp);
 
 extern int ncmpio_subfile_partition(NC *ncp, int *ncidp);
 
-extern int ncmpio_subfile_getput_vars(NC *ncp, NC_var *varp, const MPI_Offset start[],
-                               const MPI_Offset count[], const MPI_Offset  stride[],
-                               void *buf, MPI_Offset bufcount,
-                               MPI_Datatype buftype, int rw_flag, int io_method);
+extern int ncmpio_subfile_getput_vars(NC *ncp, NC_var *varp,
+           const MPI_Offset start[], const MPI_Offset count[],
+           const MPI_Offset  stride[], void *buf, MPI_Offset bufcount,
+           MPI_Datatype buftype, int reqMode);
 
 #endif /* _SUBFILE_H */

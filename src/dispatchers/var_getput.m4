@@ -36,16 +36,8 @@ APINAME($1,$2,$3,$4)(int ncid,
                      ArgKind($2)
                      BufArgs($1,$3))
 {
-    int err;
+    int err, reqMode;
     PNC *pncp;
-
-ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
-    nc_type itype=NC_NAT;',
-`$3',`long',`#if SIZEOF_LONG == SIZEOF_INT
-    nc_type itype=NC_INT;
-#elif SIZEOF_LONG == SIZEOF_LONG_LONG
-    nc_type itype=NC_INT64;
-#endif',`    nc_type itype=NC_TYPE($3);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -55,6 +47,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    reqMode = NC_REQ_BLK |
+              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
+              ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+
     /* calling the subroutine that implements APINAME($1,$2,$3,$4)() */
     return pncp->dispatch->`$1'_var(pncp->ncp,
                                     varid,
@@ -63,8 +60,7 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
                                     ifelse(`$3',`',`bufcount, buftype',
                                                    `-1, ITYPE2MPI($3)'),
                                     API_KIND($2),
-                                    itype,
-                                    CollIndep($4));
+                                    reqMode);
 }
 ')dnl
 dnl
@@ -94,7 +90,7 @@ foreach(`kind', (, 1, a, s, m),
  *            is considered matched the variable data type defined in the file.
  */
 dnl
-define(`NAPINAME',`ifelse(`$3',`',`ncmpi_$1_varn$2',`ncmpi_$1_varn_$3$2')')dnl
+define(`NAPINAME',`ifelse(`$2',`',`ncmpi_$1_varn$3',`ncmpi_$1_varn_$2$3')')dnl
 dnl
 dnl VARN(get/put, `'/iType, `'/_all)
 dnl
@@ -108,18 +104,10 @@ NAPINAME($1,$2,$3)(int                ncid,
                    int                num,
                    MPI_Offset* const *starts,
                    MPI_Offset* const *counts,
-                   BufArgs($1,$3))
+                   BufArgs($1,$2))
 {
-    int err;
+    int err, reqMode;
     PNC *pncp;
-
-ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
-    nc_type itype=NC_NAT;',
-`$3',`long',`#if SIZEOF_LONG == SIZEOF_INT
-    nc_type itype=NC_INT;
-#elif SIZEOF_LONG == SIZEOF_LONG_LONG
-    nc_type itype=NC_INT64;
-#endif',`    nc_type itype=NC_TYPE($3);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -129,6 +117,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    reqMode = NC_REQ_BLK |
+              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+              ifelse(`$2',`',`NC_REQ_FLEX',`NC_REQ_HL') |
+              ifelse(`$3',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+
     /* calling the subroutine that implements NAPINAME($1,$2,$3)() */
     return pncp->dispatch->`$1'_varn(pncp->ncp,
                                      varid,
@@ -136,18 +129,17 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
                                      starts,
                                      counts,
                                      buf,
-                                     ifelse(`$3',`',`bufcount, buftype',
-                                                    `-1, ITYPE2MPI($3)'),
-                                     itype,
-                                     CollIndep($2));
+                                     ifelse(`$2',`',`bufcount, buftype',
+                                                    `-1, ITYPE2MPI($2)'),
+                                     reqMode);
 }
 ')dnl
 dnl
 
 foreach(`putget', (put, get),
-        `foreach(`collindep', (, _all),
-                 `foreach(`iType', (`',ITYPE_LIST),
-                          `VARN(putget,collindep,iType)'
+        `foreach(`iType', (`',ITYPE_LIST),
+                 `foreach(`collindep', (, _all),
+                          `VARN(putget,iType,collindep)'
 )')')
 
 dnl
@@ -187,16 +179,8 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
                          `ifelse($1,`get',`FUNC2ITYPE($3) **bufs',
                                           `FUNC2ITYPE($3)* const *bufs')'))
 {
-    int i, status=NC_NOERR, err, *reqs;
+    int i, reqMode, status=NC_NOERR, err, *reqs;
     PNC *pncp;
-
-ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
-    nc_type itype=NC_NAT;',
-`$3',`long',`#if SIZEOF_LONG == SIZEOF_INT
-    nc_type itype=NC_INT;
-#elif SIZEOF_LONG == SIZEOF_LONG_LONG
-    nc_type itype=NC_INT64;
-#endif',`    nc_type itype=NC_TYPE($3);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -205,6 +189,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    reqMode = NC_REQ_NBI |
+              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
+              ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     reqs = (int*) malloc((size_t)nvars * SIZEOF_INT);
     for (i=0; i<nvars; i++) {
@@ -217,11 +206,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
                                                        `-1, ITYPE2MPI($3)'),
                                         &reqs[i],
                                         API_KIND($2),
-                                        itype);
+                                        reqMode);
         if (status == NC_NOERR) status = err;
     }
 
-    err = pncp->dispatch->wait(pncp->ncp, nvars, reqs, NULL, CollIndep($4));
+    err = pncp->dispatch->wait(pncp->ncp, nvars, reqs, NULL, reqMode);
     if (status == NC_NOERR) status = err;
     free(reqs);
 
@@ -255,16 +244,8 @@ IAPINAME($1,$2,$3)(int ncid,
                    BufArgs(substr($1,1),$3),
                    int *reqid)
 {   
-    int err;
+    int err, reqMode;
     PNC *pncp;
-
-ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
-    nc_type itype=NC_NAT;',
-`$3',`long',`#if SIZEOF_LONG == SIZEOF_INT
-    nc_type itype=NC_INT;
-#elif SIZEOF_LONG == SIZEOF_LONG_LONG
-    nc_type itype=NC_INT64;
-#endif',`    nc_type itype=NC_TYPE($3);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -273,6 +254,11 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
+                     `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
+                     `$1',`bput',`NC_REQ_WR | NC_REQ_NBB') |
+              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL');
 
     /* calling the subroutine that implements IAPINAME($1,$2,$3)() */
     return pncp->dispatch->`$1'_var(pncp->ncp,
@@ -283,7 +269,7 @@ ifelse(`$3',`',`    /* use NC_NAT to represent this is a flexible API */
                                                    `-1, ITYPE2MPI($3)'),
                                     reqid,
                                     API_KIND($2),
-                                    itype);
+                                    reqMode);
 }
 ')dnl
 dnl
@@ -320,7 +306,7 @@ dnl IVARN(iget/iput/bput, `'/iType)
 dnl
 define(`IVARN',dnl
 `dnl
-/*----< ncmpi_$1_var$2() >---------------------------------------------------*/
+/*----< INAPINAME($1,$2)() >--------------------------------------------------*/
 /* This API is an independent subroutine, which can be called in either
  * collective or independent data mode or even in define mode.
  */
@@ -333,16 +319,8 @@ INAPINAME($1,$2)(int                ncid,
                  BufArgs(substr($1,1),$2),
                  int               *reqid)
 {
-    int err;
+    int err, reqMode;
     PNC *pncp;
-
-ifelse(`$2',`',`    /* use NC_NAT to represent this is a flexible API */
-    nc_type itype=NC_NAT;',
-`$2',`long',`#if SIZEOF_LONG == SIZEOF_INT
-    nc_type itype=NC_INT;
-#elif SIZEOF_LONG == SIZEOF_LONG_LONG
-    nc_type itype=NC_INT64;
-#endif',`    nc_type itype=NC_TYPE($2);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -351,6 +329,11 @@ ifelse(`$2',`',`    /* use NC_NAT to represent this is a flexible API */
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
+                     `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
+                     `$1',`bput',`NC_REQ_WR | NC_REQ_NBB') |
+              ifelse(`$2',`',`NC_REQ_FLEX',`NC_REQ_HL');
 
     /* calling the subroutine that implements INAPINAME($1,$2)() */
     return pncp->dispatch->`$1'_varn(pncp->ncp,
@@ -362,7 +345,7 @@ ifelse(`$2',`',`    /* use NC_NAT to represent this is a flexible API */
                                      ifelse(`$2',`',`bufcount, buftype',
                                                     `-1, ITYPE2MPI($2)'),
                                      reqid,
-                                     itype);
+                                     reqMode);
 }
 ')dnl
 dnl
@@ -387,7 +370,7 @@ ncmpi_$1_vard$2(int           ncid,
                 MPI_Offset    bufcount,
                 MPI_Datatype  buftype)   /* data type of the buffer */
 {
-    int err;
+    int err, reqMode;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -397,6 +380,10 @@ ncmpi_$1_vard$2(int           ncid,
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    reqMode = NC_REQ_BLK | NC_REQ_FLEX |
+              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+              ifelse(`$2',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements ncmpi_$1_vard$2() */
     return pncp->dispatch->$1_vard(pncp->ncp,
@@ -405,7 +392,7 @@ ncmpi_$1_vard$2(int           ncid,
                                    buf,
                                    bufcount,
                                    buftype,
-                                   CollIndep($2));
+                                   reqMode);
 }
 ')
 dnl
@@ -413,39 +400,4 @@ foreach(`putget', (put, get),
         `foreach(`collindep', (, _all),
                  `VARD(putget,collindep)'
 )')
-
-dnl
-dnl WAIT(collindep)
-dnl
-define(`WAIT',dnl
-`dnl
-/*----< ncmpi_wait$1() >-----------------------------------------------------*/
-/* This API is ifelse(`$1',`',`an independent',`a collective') subroutine. */
-int
-ncmpi_wait$1(int  ncid,
-             int  num_reqs, /* number of requests */
-             int *req_ids,  /* [num_reqs]: IN/OUT */
-             int *statuses) /* [num_reqs], can be NULL */
-{
-    int err;
-    PNC *pncp;
-
-    /* check if ncid is valid.
-     * For invalid ncid, we must return error now, as there is no way to
-     * continue with invalid ncp. However, collective APIs might hang if this
-     * error occurs only on a subset of processes
-     */
-    err = PNC_check_id(ncid, &pncp);
-    if (err != NC_NOERR) return err;
-
-    /* calling the subroutine that implements ncmpi_wait$1() */
-    return pncp->dispatch->wait(pncp->ncp,
-                                num_reqs,
-                                req_ids,
-                                statuses,
-                                CollIndep($1));
-}
-')
-WAIT()
-WAIT(_all)
 

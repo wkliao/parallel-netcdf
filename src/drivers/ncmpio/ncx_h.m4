@@ -44,6 +44,7 @@ dnl
 /*
  * External sizes of the primitive elements.
  */
+#define X_SIZEOF_BYTE		1
 #define X_SIZEOF_CHAR		1
 #define X_SIZEOF_SHORT		2
 #define X_SIZEOF_INT		4	/* xdr_int */

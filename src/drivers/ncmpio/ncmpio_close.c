@@ -7,7 +7,7 @@
 /*
  * This file implements the corresponding APIs defined in src/dispatchers/file.c
  *
- * ncmpi_close()            : dispatcher->close()
+ * ncmpi_close() : dispatcher->close()
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,13 +38,13 @@ ncmpio_close_files(NC *ncp, int doUnlink) {
     if (ncp->independent_fh != MPI_FILE_NULL) {
         TRACE_IO(MPI_File_close)(&ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_close");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_File_close");
     }
 
     if (ncp->collective_fh != MPI_FILE_NULL) {
         TRACE_IO(MPI_File_close)(&ncp->collective_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_close");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_File_close");
     }
 
     if (doUnlink) {
@@ -52,7 +52,7 @@ ncmpio_close_files(NC *ncp, int doUnlink) {
          * in define mode, the file is deleted */
         TRACE_IO(MPI_File_delete)((char *)ncp->path, ncp->mpiinfo);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_delete");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_File_delete");
     }
     return NC_NOERR;
 }
@@ -73,7 +73,7 @@ ncmpio_close(void *ncdp)
             if (ncp->old != NULL) {
                 ncmpio_free_NC(ncp->old);
                 ncp->old = NULL;
-                fClr(ncp->flags, NC_INDEF);
+                fClr(ncp->flags, NC_MODE_DEF);
             }
         }
     }
@@ -99,11 +99,11 @@ ncmpio_close(void *ncdp)
      * For now, cancelling makes more sense. */
 #ifdef COMPLETE_NONBLOCKING_IO
     if (ncp->numGetReqs > 0) {
-        ncmpio_wait(ncp, NC_GET_REQ_ALL, NULL, NULL, INDEP_IO);
+        ncmpio_wait(ncp, NC_GET_REQ_ALL, NULL, NULL, NC_REQ_INDEP);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
     if (ncp->numPutReqs > 0) {
-        ncmpio_wait(ncp, NC_PUT_REQ_ALL, NULL, NULL, INDEP_IO);
+        ncmpio_wait(ncp, NC_PUT_REQ_ALL, NULL, NULL, NC_REQ_INDEP);
         if (status == NC_NOERR ) status = NC_EPENDING;
     }
 #else

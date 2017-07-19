@@ -160,7 +160,7 @@ ncmpio_update_name_lookup_table(NC_nametable *nameT,
 
     /* hash the var name into a key for name lookup */
     key = HASH_FUNC(name);
-    free(name);
+    NCI_Free(name);
 
     /* add the new name to the lookup table
      * Note unewname must have already been checked for existence
@@ -174,3 +174,100 @@ ncmpio_update_name_lookup_table(NC_nametable *nameT,
     return NC_NOERR;
 }
 
+/*----< ncmpio_hash_insert() >-----------------------------------------------*/
+void
+ncmpio_hash_insert(NC_nametable *nameT, /* var name lookup table */
+                   const char   *name,
+                   int           id)
+{
+    int key;
+
+    /* hash the name into a key for name lookup */
+    key = HASH_FUNC(name);
+
+    /* allocate or expand the space for nameT[key].list */
+    if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
+        nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
+                          (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) *
+                          SIZEOF_INT);
+
+    /* add the ID to the name lookup table */
+    nameT[key].list[nameT[key].num] = id;
+    nameT[key].num++;
+}
+
+/*----< ncmpio_hash_insert() >-----------------------------------------------*/
+void
+ncmpio_hash_table_copy(NC_nametable       *dest,
+                       const NC_nametable *src)
+{
+    int i;
+
+    for (i=0; i<HASH_TABLE_SIZE; i++) {
+        dest[i].num = src[i].num;
+        dest[i].list = NULL;
+        if (dest[i].num > 0) {
+            dest[i].list = NCI_Malloc((size_t)dest[i].num * SIZEOF_INT);
+            memcpy(dest[i].list, src[i].list, (size_t)dest[i].num * SIZEOF_INT);
+        }
+    }
+}
+
+/*----< ncmpio_hash_table_free() >-------------------------------------------*/
+/* free space allocated for name lookup table */
+void
+ncmpio_hash_table_free(NC_nametable *nameT)
+{
+    int i;
+    for (i=0; i<HASH_TABLE_SIZE; i++) {
+        if (nameT[i].num > 0)
+            NCI_Free(nameT[i].list);
+        nameT[i].num = 0;
+    }
+}
+
+/*----< ncmpio_hash_table_populate_NC_dim() >--------------------------------*/
+void
+ncmpio_hash_table_populate_NC_dim(NC_dimarray *dimsp)
+{
+    int i;
+    NC_nametable *nameT = dimsp->nameT;
+
+    /* initialize dim name lookup table -------------------------------------*/
+    memset(nameT, 0, sizeof(NC_nametable) * HASH_TABLE_SIZE);
+
+    /* populate name lookup table */
+    for (i=0; i<dimsp->ndefined; i++) {
+        /* hash the dim name into a key for name lookup */
+        int key = HASH_FUNC(dimsp->value[i]->name);
+        nameT = &dimsp->nameT[key];
+        if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
+            nameT->list = (int*) NCI_Realloc(nameT->list,
+                          (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) *SIZEOF_INT);
+        nameT->list[nameT->num] = i;
+        nameT->num++;
+    }
+}
+
+/*----< ncmpio_hash_table_populate_NC_var() >--------------------------------*/
+void
+ncmpio_hash_table_populate_NC_var(NC_vararray *varsp)
+{
+    int i;
+    NC_nametable *nameT = varsp->nameT;
+
+    /* initialize var name lookup table -------------------------------------*/
+    memset(nameT, 0, sizeof(NC_nametable) * HASH_TABLE_SIZE);
+
+    /* populate name lookup table */
+    for (i=0; i<varsp->ndefined; i++) {
+        /* hash the var name into a key for name lookup */
+        int key = HASH_FUNC(varsp->value[i]->name);
+        nameT = &varsp->nameT[key];
+        if (nameT->num % NC_NAME_TABLE_CHUNK == 0)
+            nameT->list = (int*) NCI_Realloc(nameT->list,
+                          (size_t)(nameT->num+NC_NAME_TABLE_CHUNK) *SIZEOF_INT);
+        nameT->list[nameT->num] = i;
+        nameT->num++;
+    }
+}

@@ -94,7 +94,12 @@ ncmpi_inq_attname(int   ncid,
 }
 
 /*----< ncmpi_copy_att() >---------------------------------------------------*/
-/* This is a collective subroutine. */
+/* This is a collective subroutine.
+ * ncid_out must be in define mode. If varid_in's attribute name has alreay
+ * existed in varid_out, it means to overwrite the attribute in varid_out.
+ * In this case, if the space used by varid_in's attribute is larger than
+ * varid_out's, then this API must be called when the file is in define mode.
+ */
 int
 ncmpi_copy_att(int         ncid_in,
                int         varid_in,
@@ -119,7 +124,9 @@ ncmpi_copy_att(int         ncid_in,
 }
 
 /*----< ncmpi_rename_att() >-------------------------------------------------*/
-/* This is a collective subroutine. */
+/* This is a collective subroutine. If the new name is longer than the old
+ * name, this API must be called in define mode.
+ */
 int
 ncmpi_rename_att(int         ncid,
                  int         varid,
@@ -138,7 +145,9 @@ ncmpi_rename_att(int         ncid,
 }
 
 /*----< ncmpi_del_att() >----------------------------------------------------*/
-/* This is a collective subroutine. */
+/* This is a collective subroutine.
+ * This API must be called in define mode.
+ */
 int
 ncmpi_del_att(int         ncid,
               int         varid,

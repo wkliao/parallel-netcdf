@@ -35,6 +35,10 @@ define(`GETPUT_ATT',dnl
  * This is a collective subroutine, all arguments should be consistent among
  * all processes.
  *
+ * If attribute name has already existed, it means to overwrite the attribute.
+ * In this case, if the new attribute is larger than the old one, this API
+ * must be called when the file is in define mode.
+ *
  * Note from netCDF user guide:
  * Attributes are always single values or one-dimensional arrays. This works
  * out well for a string, which is a one-dimensional array of ASCII characters.

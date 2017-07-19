@@ -7,8 +7,8 @@
 /*
  * This file implements the corresponding APIs defined in src/dispatchers/file.c
  *
- * ncmpi_sync()             : dispatcher->sync()
- * ncmpi_sync_numrecs()     : dispatcher->sync_numrecs()
+ * ncmpi_sync()         : dispatcher->sync()
+ * ncmpi_sync_numrecs() : dispatcher->sync_numrecs()
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,14 +38,14 @@ ncmpio_file_sync(NC *ncp) {
     if (ncp->independent_fh != MPI_FILE_NULL) {
         TRACE_IO(MPI_File_sync)(ncp->independent_fh);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_File_sync");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync");
     }
 
     /* ncp->collective_fh is never MPI_FILE_NULL as collective mode is
      * default in PnetCDF */
     TRACE_IO(MPI_File_sync)(ncp->collective_fh);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_File_sync");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync");
 
     TRACE_COMM(MPI_Barrier)(ncp->comm);
 #endif
@@ -104,7 +104,7 @@ ncmpio_write_numrecs(NC         *ncp,
         TRACE_IO(MPI_File_write_at)(fh, NC_NUMRECS_OFFSET, (void*)pos, len,
                                     MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
             if (err == NC_EFILE) DEBUG_RETURN_ERROR(NC_EWRITE)
         }
         else {
@@ -158,7 +158,7 @@ ncmpio_sync_numrecs(void *ncdp)
     TRACE_COMM(MPI_Allreduce)(&ncp->numrecs, &max_numrecs, 1, MPI_OFFSET,
                               MPI_MAX, ncp->comm);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
 
     /* root process writes max_numrecs to file */
     status = ncmpio_write_numrecs(ncp, max_numrecs);
@@ -168,7 +168,7 @@ ncmpio_sync_numrecs(void *ncdp)
         int root_status = status;
         TRACE_COMM(MPI_Bcast)(&root_status, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         /* root's write has failed, which is serious */
         if (root_status == NC_EWRITE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
     }
@@ -189,12 +189,12 @@ ncmpio_sync_numrecs(void *ncdp)
             TRACE_IO(MPI_File_sync)(ncp->collective_fh);
         }
         if (mpireturn != MPI_SUCCESS) {
-            mpierr = ncmpio_handle_error(mpireturn, "MPI_File_sync");
+            mpierr = ncmpii_error_mpi2nc(mpireturn, "MPI_File_sync");
             if (status == NC_NOERR) status = mpierr;
         }
         TRACE_COMM(MPI_Barrier)(ncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpio_handle_error(mpireturn, "MPI_Barrier");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Barrier");
     }
 #endif
     return status;

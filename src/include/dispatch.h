@@ -10,9 +10,24 @@
 #include <pnetcdf.h>
 #include <mpi.h>
 
-#define INDEP_IO 0
-#define COLL_IO  1
-#define NONBLOCKING_IO  -1
+/* various I/O modes or types */
+#define NC_REQ_COLL    0x00000001  /* collective request */
+#define NC_REQ_INDEP   0x00000002  /* independent request */
+#define NC_REQ_WR      0x00000004  /* write request */
+#define NC_REQ_RD      0x00000008  /* read request */
+#define NC_REQ_ZERO    0x00000010  /* nonblocking API */
+#define NC_REQ_HL      0x00000020  /* high-level API */
+#define NC_REQ_FLEX    0x00000040  /* flexible API */
+#define NC_REQ_BLK     0x00000080  /* blocking get/put API */
+#define NC_REQ_NBI     0x00000100  /* nonblocking iget/iput API */
+#define NC_REQ_NBB     0x00000200  /* nonblocking bput API */
+
+#define NC_MODE_RDONLY 0x00001000  /* file is opned in read-only mode */
+#define NC_MODE_DEF    0x00002000  /* in define mode */
+#define NC_MODE_INDEP  0x00004000  /* in independent data mode */
+#define NC_MODE_CREATE 0x00008000  /* just created and still in define mode */
+#define NC_MODE_FILL   0x00010000  /* fill mode */
+#define NC_MODE_SAFE   0x00020000  /* safe mode enabled */
 
 /* list of all API kinds */
 typedef enum {
@@ -23,7 +38,7 @@ typedef enum {
     API_VARA,
     API_VARS,
     API_VARM
-} api_kind;
+} NC_api;
 
 struct PNC_Dispatch {
     /* APIs manipulate files */
@@ -66,22 +81,22 @@ struct PNC_Dispatch {
     int (*inq_varid)(void*,const char*,int*);
     int (*rename_var)(void*,int,const char*);
 
-    int (*get_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,api_kind,nc_type,int);
-    int (*put_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,api_kind,nc_type,int);
+    int (*get_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,NC_api,int);
+    int (*put_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,NC_api,int);
 
-    int (*get_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,nc_type,int);
-    int (*put_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,nc_type,int);
+    int (*get_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,int);
+    int (*put_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int);
 
     int (*get_vard)(void*,int,MPI_Datatype,void*,MPI_Offset,MPI_Datatype,int);
     int (*put_vard)(void*,int,MPI_Datatype,const void*,MPI_Offset,MPI_Datatype,int);
 
-    int (*iget_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,int*,api_kind,nc_type);
-    int (*iput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,api_kind,nc_type);
-    int (*bput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,api_kind,nc_type);
+    int (*iget_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
+    int (*iput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
+    int (*bput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
 
-    int (*iget_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,int*,nc_type);
-    int (*iput_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int*,nc_type);
-    int (*bput_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int*,nc_type);
+    int (*iget_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,int*,int);
+    int (*iput_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int*,int);
+    int (*bput_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int*,int);
 
     int (*buffer_attach)(void*,MPI_Offset);
     int (*buffer_detach)(void*);
@@ -91,13 +106,24 @@ struct PNC_Dispatch {
 
 typedef struct PNC_Dispatch PNC_Dispatch;
 
+struct PNC_var {
+    int         ndims;
+    nc_type     xtype;
+    MPI_Offset *shape;
+};
+typedef struct PNC_var PNC_var;
+
 /* Common Shared Structure for all Dispatched Objects */
 struct PNC {
     int                  mode;   /* file _open/_create mode */
+    int                  flag;   /* define/data/collective/indep mode */
     int                  format; /* file format */
     char                *path;   /* path name */
-    struct PNC_Dispatch *dispatch;
+    MPI_Comm             comm;
+    // int                  nvars;
+    // struct PNC_var      *vars;
     void                *ncp;    /* pointer to dispatcher data object */
+    struct PNC_Dispatch *dispatch;
 };
 
 typedef struct PNC PNC;

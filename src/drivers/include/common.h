@@ -7,6 +7,16 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <mpi.h>
+
+/*
+ * Macros for dealing with flag bits.
+ */
+#define fSet(t, f)      ((t) |=  (f))
+#define fClr(t, f)      ((t) &= ~(f))
+#define fIsSet(t, f)    ((t) &   (f))
+#define fMask(t, f)     ((t) & ~ (f))
+
 #ifndef MAX
 #define MAX(mm,nn) (((mm) > (nn)) ? (mm) : (nn))
 #endif
@@ -43,5 +53,24 @@ ncmpii_inq_malloc_max_size(size_t *size);
 
 extern int
 ncmpii_inq_malloc_list(void);
+
+extern int
+ncmpii_dtype_decode(MPI_Datatype dtype, MPI_Datatype *ptype, int *el_size,
+                    MPI_Offset *nelems, int *isderived,
+                    int *iscontig_of_ptypes);
+
+extern int
+ncmpii_create_imaptype(int ndims, const MPI_Offset *count,
+                       const MPI_Offset *imap, MPI_Datatype ptype,
+                       MPI_Datatype *imaptype);
+
+extern int
+ncmpii_error_mpi2nc(int mpi_errorcode, char *msg);
+
+extern int
+ncmpii_start_count_stride_check(int format, int api, int ndims, int numrecs,
+                const MPI_Offset *shape, const MPI_Offset *start,
+                const MPI_Offset *count, const MPI_Offset *stride,
+                const int rw_flag);
 
 #endif

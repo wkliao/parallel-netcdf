@@ -9,7 +9,6 @@
 #endif
 
 #include <stdio.h>
-#include <unistd.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -46,193 +45,6 @@ check_recsize_too_big(NC *ncp)
     return ret;
 }
 #endif
-
-/*----< ncmpio_start_count_stride_check() >----------------------------------*/
-/*
- * Check whether start, count, stride values are valid for the variable.
- * Note that even if the request size is zero, this check is enforced in both
- * netCDF and PnetCDF. Otherwise, many test cases under test directory can fail.
- * Arguments count and stride can be NULL.
- */
-int
-ncmpio_start_count_stride_check(const NC         *ncp,
-                                const NC_var     *varp,
-                                const MPI_Offset *start,
-                                const MPI_Offset *count,
-                                const MPI_Offset *stride,
-                                const int         rw_flag) /* read or write */
-{
-    int i=0;
-
-    if (varp->ndims == 0) return NC_NOERR; /* 'scalar' variable */
-
-    /* negative start[] is illegal */
-    if (start == NULL || start[0] < 0) DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-
-    if (IS_RECVAR(varp)) {
-        if (ncp->format < 5 && /* not CDF-5 */
-            start[0] > X_UINT_MAX) /* sanity check */
-            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-
-        if (count != NULL && count[0] < 0) /* no negative count[] */
-            DEBUG_RETURN_ERROR(NC_ENEGATIVECNT)
-
-        /* for record variable, [0] is the NC_UNLIMITED dimension */
-        if (rw_flag == READ_REQ) { /* read cannot go beyond current numrecs */
-#ifdef RELAX_COORD_BOUND
-            if (start[0] > ncp->numrecs) DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-#else
-            if (start[0] >= ncp->numrecs) DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-#endif
-            if (count != NULL) {
-#ifdef RELAX_COORD_BOUND
-                if (start[0] == ncp->numrecs && count[0] > 0)
-                    DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-#endif
-                if (stride == NULL) { /* for vara APIs */
-                    if (start[0] + count[0] > ncp->numrecs)
-                        DEBUG_RETURN_ERROR(NC_EEDGE)
-                }
-                else { /* for vars APIs */
-                    if (count[0] > 0 &&
-                        start[0] + (count[0]-1) * stride[0] >= ncp->numrecs)
-                        DEBUG_RETURN_ERROR(NC_EEDGE)
-                }
-            }
-            /* else is for var1 APIs */
-        }
-
-        if (stride != NULL && stride[0] == 0) DEBUG_RETURN_ERROR(NC_ESTRIDE)
-
-        /* In collective data mode where numrecs is always kept consistent
-         * across memory, then there is no need to update numrecs.
-         * (If NC_SHARE is set, then numrecs is even sync-ed with file.)
-         *
-         * In independent data mode, numrecs in memory across processes
-         * and file can be inconsistent. Even re-reading numrecs from file
-         * cannot get the latest value, because in independent mode,
-         * numrecs in file is not updated (due to race condition).
-         * For example, a subset of processes write a new record and at
-         * the same time another set writes 2 new records. Even if NC_SHARE
-         * is set, new values of numrecs cannot be written to the file,
-         * because it can cause a race condition (atomic read-modify IO is
-         * required to solve this problem and MPI-IO cannot do it). Simply
-         * said, numrecs is not automatically kept consistent in
-         * independent mode. Users must call ncmpi_sync_numrecs()
-         * collectively to sync the value. So, here what PnetCDF can do
-         * best is just to check numrecs against the local value.
-         */
-
-        /* skip checking the record dimension */
-        i = 1;
-    }
-
-    for (; i<varp->ndims; i++) {
-#ifdef RELAX_COORD_BOUND
-        if (start[i] < 0 || start[i] > varp->shape[i])
-            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-
-        if (count != NULL && start[i] == varp->shape[i] && count[i] > 0)
-            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-#else
-        if (start[i] < 0 || start[i] >= varp->shape[i])
-            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
-#endif
-
-        if (varp->shape[i] < 0) DEBUG_RETURN_ERROR(NC_EEDGE)
-
-        if (count != NULL) {
-            if (count[i] < 0) /* no negative count[] */
-                DEBUG_RETURN_ERROR(NC_ENEGATIVECNT)
-
-            if (stride == NULL) { /* for vara APIs */
-                if (count[i] > varp->shape[i] ||
-                    start[i] + count[i] > varp->shape[i])
-                    DEBUG_RETURN_ERROR(NC_EEDGE)
-            }
-            else { /* for vars APIs */
-                if (count[i] > 0 &&
-                    start[i] + (count[i]-1) * stride[i] >= varp->shape[i])
-                    DEBUG_RETURN_ERROR(NC_EEDGE)
-                if (stride[i] == 0) DEBUG_RETURN_ERROR(NC_ESTRIDE)
-            }
-        }
-        /* else is for var1 APIs */
-    }
-    return NC_NOERR;
-}
-
-/*----< ncmpio_get_offset() >------------------------------------------------*/
-/* returns the file offset of the last byte accessed of this request
- * If counts is NULL, this is equivalent to the starting offset of this
- * request
- */
-int
-ncmpio_get_offset(NC               *ncp,
-                  NC_var           *varp,
-                  const MPI_Offset  starts[],   /* [varp->ndims] */
-                  const MPI_Offset  counts[],   /* [varp->ndims] */
-                  const MPI_Offset  strides[],  /* [varp->ndims] */
-                  const int         rw_flag,
-                  MPI_Offset       *offset_ptr) /* return file offset */
-{
-    MPI_Offset offset, *end_off=NULL;
-    int status, i, ndims;
-
-    offset = varp->begin; /* beginning file offset of this variable */
-    ndims  = varp->ndims; /* number of dimensions of this variable */
-
-    if (counts != NULL) {
-        end_off = (MPI_Offset*) NCI_Malloc((size_t)ndims * SIZEOF_MPI_OFFSET);
-
-        if (strides != NULL) {
-            for (i=0; i<ndims; i++)
-                end_off[i] = starts[i] + (counts[i] - 1) * strides[i];
-        }
-        else { /* strides == NULL */
-            for (i=0; i<ndims; i++)
-                end_off[i] = starts[i] + counts[i] - 1;
-        }
-    }
-    else { /* when counts == NULL strides is of no use */
-        end_off = (MPI_Offset*) starts;
-    }
-
-    /* check whether end_off is valid */
-    status = ncmpio_start_count_stride_check(ncp, varp, end_off, NULL, NULL,
-                                             rw_flag);
-    if (status != NC_NOERR) {
-#ifdef CDEBUG
-        printf("%s(): ncmpio_start_count_stride_check() fails\n",__func__);
-#endif
-        if (end_off != NULL && end_off != starts) NCI_Free(end_off);
-        return status;
-    }
-
-    if (ndims > 0) {
-        if (IS_RECVAR(varp))
-            /* no need to check recsize here: if MPI_Offset is only 32 bits we
-               will have had problems long before here */
-            offset += end_off[0] * ncp->recsize;
-        else
-            offset += end_off[ndims-1] * varp->xsz;
-
-        if (ndims > 1) {
-            if (IS_RECVAR(varp))
-                offset += end_off[ndims - 1] * varp->xsz;
-            else
-                offset += end_off[0] * varp->dsizes[1] * varp->xsz;
-
-            for (i=1; i<ndims-1; i++)
-                offset += end_off[i] * varp->dsizes[i+1] * varp->xsz;
-        }
-    }
-    if (counts != NULL && end_off != NULL)
-        NCI_Free(end_off);
-
-    *offset_ptr = offset;
-    return NC_NOERR;
-}
 
 /*----< is_request_contiguous() >-------------------------------------------*/
 static int
@@ -327,13 +139,13 @@ type_create_subarray(int           ndims,
         /* take advantage of disps argument is of type MPI_Aint */
         err = MPI_Type_create_hindexed(1, &blklens[1], &disps[1], oldtype, &type1);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hindexed");
         MPI_Type_commit(&type1);
 
         /* add holes in the beginning and tail of type1 */
         err = MPI_Type_create_resized(type1, 0, array_size, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_resized");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_resized");
         MPI_Type_free(&type1);
 #else
         /* add holes in the beginning and tail of oldtype */
@@ -342,7 +154,7 @@ type_create_subarray(int           ndims,
         disps[0] = 0;                          disps[2] = array_size;
         err = MPI_Type_struct(3, blklens, disps, types, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_struct");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_struct");
 #endif
         return NC_NOERR;
     }
@@ -357,12 +169,12 @@ type_create_subarray(int           ndims,
     err = MPI_Type_create_hvector(array_of_subsizes[ndims-2], blklens[0],
                                   stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
 #else
     err = MPI_Type_hvector(array_of_subsizes[ndims-2], blklens[0],
                            stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_hvector");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
 #endif
     MPI_Type_commit(&type1);
 
@@ -372,11 +184,11 @@ type_create_subarray(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
         err = MPI_Type_create_hvector(array_of_subsizes[i], 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector(array_of_subsizes[i], 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
 #endif
         MPI_Type_commit(&type2);
         MPI_Type_free(&type1);
@@ -403,11 +215,11 @@ type_create_subarray(int           ndims,
     /* adjust LB and UB without using MPI_LB or MPI_UB */
     err = MPI_Type_create_hindexed(1, blklens, &disps[1], type1, &type2);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_hindexed");
     MPI_Type_commit(&type2);
     err = MPI_Type_create_resized(type2, disps[0], disps[2], newtype);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_resized");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_resized");
     MPI_Type_free(&type2);
 #else
     MPI_Datatype types[3];
@@ -416,7 +228,7 @@ type_create_subarray(int           ndims,
     types[2] = MPI_UB;
     err = MPI_Type_struct(3, blklens, disps, types, newtype);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_struct");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_struct");
 #endif
     MPI_Type_free(&type1);
 
@@ -476,7 +288,7 @@ type_create_subarray64(int           ndims,
                                        order, oldtype, newtype);
         NCI_Free(sizes);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_subarray");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_subarray");
 #else
         err = type_create_subarray(ndims, sizes, subsizes, starts,
                                    order, oldtype, newtype);
@@ -520,13 +332,13 @@ type_create_subarray64(int           ndims,
         /* take advantage of disps argument is of type MPI_Aint */
         err = MPI_Type_create_hindexed(1, &blklens[1], &disps[1], oldtype, &type1);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hindexed");
         MPI_Type_commit(&type1);
 
         /* add holes in the beginning and tail of type1 */
         err = MPI_Type_create_resized(type1, 0, array_size, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_resized");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_resized");
         MPI_Type_free(&type1);
 #else
         /* add holes in the beginning and tail of oldtype */
@@ -535,7 +347,7 @@ type_create_subarray64(int           ndims,
         disps[0] = 0;                          disps[2] = array_size;
         err = MPI_Type_struct(3, blklens, disps, types, newtype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_struct");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_struct");
 #endif
         return NC_NOERR;
     }
@@ -555,11 +367,11 @@ type_create_subarray64(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
     err = MPI_Type_create_hvector(count, blocklength, stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
 #else
     err = MPI_Type_hvector(count, blocklength, stride, oldtype, &type1);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_hvector");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
 #endif
     MPI_Type_commit(&type1);
 
@@ -572,11 +384,11 @@ type_create_subarray64(int           ndims,
 #ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
         err = MPI_Type_create_hvector(count, 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector(count, 1, stride, type1, &type2);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
 #endif
         MPI_Type_commit(&type2);
         MPI_Type_free(&type1);
@@ -602,11 +414,11 @@ type_create_subarray64(int           ndims,
     /* adjust LB and UB without using MPI_LB or MPI_UB */
     err = MPI_Type_create_hindexed(1, blklens, &disps[1], type1, &type2);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_hindexed");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_hindexed");
     MPI_Type_commit(&type2);
     err = MPI_Type_create_resized(type2, disps[0], disps[2], newtype);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_resized");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_resized");
     MPI_Type_free(&type2);
 #else
     MPI_Datatype types[3];
@@ -615,7 +427,7 @@ type_create_subarray64(int           ndims,
     types[2] = MPI_UB;
     err = MPI_Type_struct(3, blklens, disps, types, newtype);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_struct");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_struct");
 #endif
     MPI_Type_free(&type1);
 
@@ -638,11 +450,6 @@ filetype_create_vara(NC               *ncp,
     MPI_Offset   nbytes, offset;
     MPI_Datatype filetype;
 
-    /* check whether start, count are valid */
-    status = ncmpio_start_count_stride_check(ncp, varp, start, count, NULL,
-                                             rw_flag);
-    if (status != NC_NOERR) return status;
-
     /* calculate the request size */
     nbytes = varp->xsz;
     for (dim=0; dim<varp->ndims; dim++) nbytes *= count[dim];
@@ -661,8 +468,8 @@ filetype_create_vara(NC               *ncp,
 
     /* if the request is contiguous in file, no need to create a filetype */
     if (is_request_contiguous(ncp, varp, start, count)) {
-        status = ncmpio_get_offset(ncp, varp, start, NULL, NULL, rw_flag,
-                                   &offset);
+        status = ncmpio_last_offset(ncp, varp, start, NULL, NULL, rw_flag,
+                                    &offset);
         *offset_ptr   = offset;
         *filetype_ptr = MPI_BYTE;
         if (is_filetype_contig != NULL) *is_filetype_contig = 1;
@@ -730,12 +537,12 @@ filetype_create_vara(NC               *ncp,
         err = MPI_Type_create_hvector((int)count[0], blocklength, ncp->recsize,
                                       rectype, &filetype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
 #else
         err = MPI_Type_hvector((int)count[0], blocklength, ncp->recsize,
                                rectype, &filetype);
         if (err != MPI_SUCCESS)
-            return ncmpio_handle_error(err, "MPI_Type_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
 #endif
         if (rectype != MPI_BYTE) MPI_Type_free(&rectype);
     }
@@ -890,11 +697,6 @@ ncmpio_filetype_create_vars(NC               *ncp,
 
     /* now stride[] indicates a non-contiguous fileview */
 
-    /* check whether start, count, stride are valid */
-    err = ncmpio_start_count_stride_check(ncp, varp, start, count, stride,
-                                          rw_flag);
-    if (err != NC_NOERR) return err;
-
     /* calculate request amount */
     nelems = 1;
     for (dim=0; dim<varp->ndims; dim++) nelems *= count[dim];
@@ -939,7 +741,7 @@ ncmpio_filetype_create_vars(NC               *ncp,
     NCI_Free(disps);
     NCI_Free(blocklens);
     if (err != MPI_SUCCESS)
-        return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+        return ncmpii_error_mpi2nc(err, "MPI_Type_create_hindexed");
 
     MPI_Type_commit(&filetype);
 
@@ -1002,7 +804,7 @@ ncmpio_filetype_create_vars(NC               *ncp,
         if (err != MPI_SUCCESS) {
             NCI_Free(blockstride);
             NCI_Free(blockcounts);
-            return ncmpio_handle_error(err, "MPI_Type_create_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_create_hvector");
         }
 #else
         err = MPI_Type_hvector(blockcounts[dim], blocklens[dim],
@@ -1010,7 +812,7 @@ ncmpio_filetype_create_vars(NC               *ncp,
         if (err != MPI_SUCCESS) {
             NCI_Free(blockstride);
             NCI_Free(blockcounts);
-            return ncmpio_handle_error(err, "MPI_Type_hvector");
+            return ncmpii_error_mpi2nc(err, "MPI_Type_hvector");
         }
 #endif
         MPI_Type_commit(&filetype);
@@ -1125,9 +927,102 @@ ncmpio_file_set_view(NC           *ncp,
         *offset = 0;
     }
     if (mpireturn != MPI_SUCCESS) {
-        err = ncmpio_handle_error(mpireturn, "MPI_File_set_view");
+        err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_set_view");
         if (status == NC_NOERR) status = err;
     }
 
     return status;
 }
+
+/*----< ncmpio_calc_datatype_elems() >---------------------------------------*/
+/* obtain the following metadata about buftype:
+ * ptype: element data type (MPI primitive type) in buftype
+ * bufcount: If it is -1, then this is called from a high-level API and in
+ * this case buftype will be an MPI primitive data type. If not -1, then this
+ * is called from a flexible API. In the former case, we recalculate bufcount
+ * to match with count[].
+ * bnelems: number of ptypes in user buffer
+ * nbytes: number of bytes (in external data representation) to read/write
+ * from/to the file
+ * el_size: size of ptype
+ * buftype_is_contig: whether buftype is contiguous
+ */
+int
+ncmpio_calc_datatype_elems(NC_var           *varp,
+                           const MPI_Offset *count,
+                           MPI_Datatype      buftype,
+                           MPI_Datatype     *ptype,             /* out */
+                           MPI_Offset       *bufcount,          /* in/out */
+                           MPI_Offset       *bnelems,           /* out */
+                           MPI_Offset       *nbytes,            /* out */
+                           int              *el_size,           /* out */
+                           int              *buftype_is_contig) /* out */
+{
+    int i, err=NC_NOERR;
+    MPI_Offset fnelems;
+
+    /* Sanity check for error codes should have already done before reaching
+     * here
+     *
+     * when (*bufcount == -1), buftype is an MPI primitive data type,
+     * it means this subroutine is called from a high-level API.
+     */
+    if (*bufcount != -1 && buftype != MPI_DATATYPE_NULL) {
+        /* This subroutine is called from a flexible API */
+        int isderived;
+        /* check MPI derived datatype error */
+        err = ncmpii_dtype_decode(buftype, ptype, el_size, bnelems,
+                                  &isderived, buftype_is_contig);
+        if (err != NC_NOERR) return err;
+    }
+
+    /* fnelems is the total number of nc_type elements calculated from
+     * count[]. count[] is the access count to the variable defined in
+     * the netCDF file.
+     */
+    fnelems = 1;
+    for (i=0; i<varp->ndims; i++)
+        fnelems *= count[i];
+
+    if (*bufcount == -1) { /* buftype is an MPI primitive data type */
+        /* this subroutine is called from a high-level API */
+        *bnelems = *bufcount = fnelems;
+        *ptype = buftype;
+        MPI_Type_size(buftype, el_size); /* buffer element size */
+        *buftype_is_contig = 1;
+        /* nbytes is the amount in bytes of this request to file */
+        *nbytes = *bnelems * varp->xsz; /* varp->xsz is external element size */
+    }
+    else if (buftype == MPI_DATATYPE_NULL) {
+        /* This is called from a flexible API and buftype is set by user
+         * to MPI_DATATYPE_NULL. In this case, bufcount is set to match
+         * count[], and buf's data type to match the data type of variable
+         * defined in the file - no data conversion will be done.
+         */
+        *bnelems = *bufcount = fnelems;
+        *ptype = buftype = ncmpio_nc2mpitype(varp->type);
+        *el_size = varp->xsz;
+        *buftype_is_contig = 1;
+        /* nbytes is the amount in bytes of this request to file */
+        *nbytes = *bnelems * varp->xsz;
+    }
+    else {
+        /* This is called from a flexible API */
+
+        /* make bnelems the number of ptype in the whole user buf */
+        *bnelems *= *bufcount;
+
+        /* check mismatch between bnelems and fnelems */
+        if (fnelems != *bnelems) {
+            DEBUG_ASSIGN_ERROR(err, NC_EIOMISMATCH)
+            (fnelems>*bnelems) ? (fnelems=*bnelems) : (*bnelems=fnelems);
+            /* only handle partial of the request, smaller number of the two */
+        }
+        /* now fnelems == *bnelems */
+
+        /* nbytes is the amount in bytes of this request to file */
+        *nbytes = *bnelems * varp->xsz;
+    }
+    return err;
+}
+

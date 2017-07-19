@@ -92,13 +92,14 @@ compute_var_shape(NC *ncp)
 #define X_SIZEOF_NC_TYPE X_SIZEOF_INT
 #define X_SIZEOF_NC_TAG  X_SIZEOF_INT
 
+#if 0
 /*----< hdr_len_NC_name() >--------------------------------------------------*/
 inline static MPI_Offset
 hdr_len_NC_name(const NC_string *ncstrp,
                 int              sizeof_NON_NEG)     /* NON_NEG */
 {
     /* netCDF file format:
-     * name       = nelems  namestring
+     * name       = nelems namestring
      * nelems     = NON_NEG
      * namestring = ID1 [IDN ...] padding
      * ID1        = alphanumeric | '_'
@@ -116,6 +117,7 @@ hdr_len_NC_name(const NC_string *ncstrp,
 
     return sz;
 }
+#endif
 
 /*----< hdr_len_NC_dim() >---------------------------------------------------*/
 inline static MPI_Offset
@@ -124,7 +126,7 @@ hdr_len_NC_dim(const NC_dim *dimp,
 {
     /* netCDF file format:
      *  ...
-     * dim        = name  dim_length
+     * dim        = name dim_length
      * dim_length = NON_NEG
      * NON_NEG    = <non-negative INT> |  // CDF-1 and CDF-2
      *              <non-negative INT64>  // CDF-5
@@ -133,8 +135,8 @@ hdr_len_NC_dim(const NC_dim *dimp,
 
     assert(dimp != NULL);
 
-    sz = hdr_len_NC_name(dimp->name, sizeof_NON_NEG); /* name */
-    sz += sizeof_NON_NEG;                             /* dim_length */
+    sz  = sizeof_NON_NEG + _RNDUP(dimp->name_len, X_ALIGN); /* name */
+    sz += sizeof_NON_NEG;                                   /* dim_length */
 
     return sz;
 }
@@ -197,10 +199,10 @@ hdr_len_NC_attr(const NC_attr *attrp,
 
     assert(attrp != NULL);
 
-    sz  = hdr_len_NC_name(attrp->name, sizeof_NON_NEG); /* name */
-    sz += X_SIZEOF_NC_TYPE;                             /* nc_type */
-    sz += sizeof_NON_NEG;                               /* nelems */
-    sz += attrp->xsz;                                   /* [values ...] */
+    sz  = sizeof_NON_NEG + _RNDUP(attrp->name_len, X_ALIGN); /* name */
+    sz += X_SIZEOF_NC_TYPE;                                  /* nc_type */
+    sz += sizeof_NON_NEG;                                    /* nelems */
+    sz += attrp->xsz;                                        /* [values ...] */
 
     return sz;
 }
@@ -267,7 +269,7 @@ hdr_len_NC_var(const NC_var *varp,
      * for CDF-2, sizeof_off_t == 8 && sizeof_NON_NEG == 4
      * for CDF-5, sizeof_off_t == 8 && sizeof_NON_NEG == 8
      */
-    sz = hdr_len_NC_name(varp->name, sizeof_NON_NEG);         /* name */
+    sz  = sizeof_NON_NEG + _RNDUP(varp->name_len, X_ALIGN);   /* name */
     sz += sizeof_NON_NEG;                                     /* nelems */
     sz += sizeof_NON_NEG * varp->ndims;                       /* [dimid ...] */
     sz += hdr_len_NC_attrarray(&varp->attrs, sizeof_NON_NEG); /* vatt_list */
@@ -363,7 +365,7 @@ hdr_fetch(bufferinfo *gbp) {
                                    (gbp->offset)-slack, gbp->base,
                                    (int)gbp->size, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
-            err = ncmpio_handle_error(mpireturn, "MPI_File_read_at");
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at");
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(err, NC_EREAD)
         }
         else {
@@ -493,7 +495,7 @@ hdr_get_nc_type(bufferinfo *gbp,
 /*----< hdr_get_NC_name() >---------------------------------------------------*/
 static int
 hdr_get_NC_name(bufferinfo  *gbp,
-                NC_string  **ncstrpp)
+                char       **namep)
 {
     /* netCDF file format:
      *  ...
@@ -508,7 +510,6 @@ hdr_get_NC_name(bufferinfo  *gbp,
      */
     int err;
     char *cpos;
-    NC_string *ncstrp;
     MPI_Aint pos_addr, base_addr;
     MPI_Offset nchars, nbytes, padding, bufremain, strcount;
 
@@ -525,13 +526,14 @@ hdr_get_NC_name(bufferinfo  *gbp,
     }
     if (err != NC_NOERR) return err;
 
-    /* Allocate a NC_string structure large enough to hold nchars characters */
-    ncstrp = ncmpio_new_NC_string((size_t)nchars, NULL);
-    if (ncstrp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    /* Allocate a NC_string structure large enough to hold nchars characters.
+     * Note nchars is strlen(namestring) without terminal character.
+     */
+    *namep = (char*)NCI_Malloc((size_t)nchars + 1);
+    if (*namep == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     nbytes = nchars * X_SIZEOF_CHAR;
-    padding = _RNDUP(X_SIZEOF_CHAR * ncstrp->nchars, X_ALIGN)
-            - X_SIZEOF_CHAR * ncstrp->nchars;
+    padding = _RNDUP(X_SIZEOF_CHAR * nchars, X_ALIGN) - X_SIZEOF_CHAR * nchars;
 #ifdef HAVE_MPI_GET_ADDRESS
     MPI_Get_address(gbp->pos,  &pos_addr);
     MPI_Get_address(gbp->base, &base_addr);
@@ -540,9 +542,10 @@ hdr_get_NC_name(bufferinfo  *gbp,
     MPI_Address(gbp->base, &base_addr);
 #endif
     bufremain = gbp->size - (pos_addr - base_addr);
-    cpos = ncstrp->cp;
+    cpos = *namep;
 
-    /* get namestring with padding */
+    /* get namestring with padding (the space in file allocated for string
+     * namestring is upward aligned with 4 bytes */
     while (nbytes > 0) {
         if (bufremain > 0) {
             strcount = MIN(bufremain, nbytes);
@@ -556,7 +559,8 @@ hdr_get_NC_name(bufferinfo  *gbp,
         } else {
             err = hdr_fetch(gbp);
             if (err != NC_NOERR) {
-                ncmpio_free_NC_string(ncstrp);
+                NCI_Free(*namep);
+                *namep = NULL;
                 return err;
             }
             bufremain = gbp->size;
@@ -572,13 +576,13 @@ hdr_get_NC_name(bufferinfo  *gbp,
 #ifdef PNETCDF_DEBUG
             fprintf(stderr,"Error in file %s func %s line %d: NetCDF header non-zero padding found\n",__FILE__,__func__,__LINE__);
 #endif
-            ncmpio_free_NC_string(ncstrp);
+            NCI_Free(*namep);
+            *namep = NULL;
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
         gbp->pos = (void *)((char *)gbp->pos + padding);
     }
-
-    *ncstrpp = ncstrp;
+    (*namep)[nchars] = '\0'; /* add terminal character */
 
     return NC_NOERR;
 }
@@ -596,15 +600,20 @@ hdr_get_NC_dim(bufferinfo  *gbp,
      *              <non-negative INT64>  // CDF-5
      */
     int status;
-    NC_string *ncstrp;
+    char *name;
     NC_dim *dimp;
 
+    *dimpp = NULL;
+
     /* get name */
-    status = hdr_get_NC_name(gbp, &ncstrp);
+    status = hdr_get_NC_name(gbp, &name);
     if (status != NC_NOERR) return status;
 
-    dimp = ncmpio_new_x_NC_dim(ncstrp);
+    /* allocate and initialize NC_dim object */
+    dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
     if (dimp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    dimp->name     = name;
+    dimp->name_len = strlen(name);
 
     /* get dim_length */
     if (gbp->version < 5) {
@@ -617,8 +626,9 @@ hdr_get_NC_dim(bufferinfo  *gbp,
         status = hdr_get_uint64(gbp, &tmp);
         dimp->size = (MPI_Offset)tmp;
     }
-    if (status != NC_NOERR) {
-        ncmpio_free_NC_dim(dimp); /* frees dim */
+    if (status != NC_NOERR) { /* frees dim */
+        NCI_Free(dimp->name);
+        NCI_Free(dimp);
         return status;
     }
 
@@ -691,9 +701,9 @@ hdr_get_NC_dimarray(bufferinfo  *gbp,
 
         ncap->value = (NC_dim**) NCI_Malloc((size_t)ndefined * sizeof(NC_dim*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (int)ndefined;
+        ncap->nalloc = (size_t)ndefined;
         /* TODO: we should allow nalloc > 2^32, considering change the data
-         * type of nalloc from int to MPI_Offset */
+         * type of nalloc from size_t to MPI_Offset */
 
         for (i=0; i<ndefined; i++) {
             status = hdr_get_NC_dim(gbp, ncap->value + i);
@@ -791,21 +801,18 @@ hdr_get_NC_attr(bufferinfo  *gbp,
      *           <non-negative INT64>  // CDF-5
      */
     int status;
-    NC_string *strp;
+    char *name;
     nc_type type;
     MPI_Offset nelems;
     NC_attr *attrp;
 
     /* get name */
-    status = hdr_get_NC_name(gbp, &strp);
+    status = hdr_get_NC_name(gbp, &name);
     if (status != NC_NOERR) return status;
 
     /* get nc_type */
     status = hdr_get_nc_type(gbp, &type);
-    if (status != NC_NOERR) {
-        ncmpio_free_NC_string(strp);
-        return status;
-    }
+    if (status != NC_NOERR) return status;
 
     /* get nelems */
     if (gbp->version < 5) {
@@ -818,22 +825,21 @@ hdr_get_NC_attr(bufferinfo  *gbp,
         status = hdr_get_uint64(gbp, &tmp);
         nelems = (MPI_Offset)tmp;
     }
-    if (status != NC_NOERR) {
-        ncmpio_free_NC_string(strp);
-        return status;
-    }
+    if (status != NC_NOERR) return status;
 
     /* allocate space for attribute object */
-    attrp = ncmpio_new_x_NC_attr(strp, type, nelems);
-    if (attrp == NULL) {
-        ncmpio_free_NC_string(strp);
+    status = ncmpio_new_NC_attr(name, type, nelems, &attrp);
+    if (status != NC_NOERR) {
+        NCI_Free(name);
         return status;
     }
 
     /* get [values ...] */
     status = hdr_get_NC_attrV(gbp, attrp);
     if (status != NC_NOERR) {
-        ncmpio_free_NC_attr(attrp);
+        if (attrp->xvalue != NULL) NCI_Free(attrp->xvalue);
+        NCI_Free(attrp->name);
+        NCI_Free(attrp);
         return status;
     }
 
@@ -902,7 +908,7 @@ hdr_get_NC_attrarray(bufferinfo   *gbp,
 
         ncap->value = (NC_attr**)NCI_Malloc((size_t)ndefined *sizeof(NC_attr*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (int)ndefined;
+        ncap->nalloc = (size_t)ndefined;
 
         /* get [attr ...] */
         for (i=0; i<ndefined; i++) {
@@ -939,13 +945,13 @@ hdr_get_NC_var(bufferinfo  *gbp,
      *               <non-negative INT64>  // CDF-5
      */
     int status;
-    NC_string *strp;
+    char *name;
     MPI_Offset ndims=0, dim;
     MPI_Offset tmp_dimids=0;
     NC_var *varp;
 
     /* get name */
-    status = hdr_get_NC_name(gbp, &strp);
+    status = hdr_get_NC_name(gbp, &name);
     if (status != NC_NOERR) return status;
 
     /* nelems */
@@ -959,16 +965,14 @@ hdr_get_NC_var(bufferinfo  *gbp,
         status = hdr_get_uint64(gbp, &tmp);
         ndims = (MPI_Offset)tmp;
     }
-    if (status != NC_NOERR) {
-         ncmpio_free_NC_string(strp);
-         return status;
-    }
+    if (status != NC_NOERR) return status;
+
     if (ndims != (int)ndims) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
 
     /* allocate space for var object */
-    varp = ncmpio_new_x_NC_var(strp, (int)ndims);
+    varp = ncmpio_new_NC_var(name, (int)ndims);
     if (varp == NULL) {
-        ncmpio_free_NC_string(strp);
+        NCI_Free(name);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
 
@@ -1134,7 +1138,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
 
         ncap->value = (NC_var**) NCI_Malloc((size_t)ndefined * sizeof(NC_var*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (int)ndefined;
+        ncap->nalloc = (size_t)ndefined;
 
         /* get [var ...] */
         for (i=0; i<ndefined; i++) {

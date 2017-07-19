@@ -23,6 +23,7 @@
 #include "nc.h"
 #include "rnd.h"
 
+#if 0
 /*----< ncmpio_free_NC_string() >--------------------------------------------*/
 /*
  * Free string, and, if needed, its values.
@@ -95,6 +96,7 @@ ncmpio_set_NC_string(NC_string  *ncstrp,
 
     return NC_NOERR;
 }
+#endif
 
 #include "utf8proc.h"
 

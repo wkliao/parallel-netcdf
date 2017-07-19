@@ -7,6 +7,7 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <assert.h>
 
 #include <stdlib.h>
 #ifdef TAU_SSON
@@ -15,9 +16,7 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "macro.h"
 #include "subfile.h"
-#include "ncmpidtype.h"
 
 enum {ONE, BALANCED};
 #define SUBFILING_MIN_NDIMS 1
@@ -117,7 +116,7 @@ subfile_create(NC *ncp, int *ncidp)
      * for now, just passing 0 value. */
     TRACE_COMM(MPI_Comm_split)(ncp->comm, color, myrank, &comm_sf);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_Comm_split"); 
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Comm_split"); 
 
     sprintf(path_sf, "%s.subfile_%i.%s", ncp->path, color, "nc");
 
@@ -174,7 +173,7 @@ ncmpio_subfile_open(NC *ncp, int *ncidp)
      * for now, just passing 0 value. */
     TRACE_COMM(MPI_Comm_split)(ncp->comm, color, myrank, &comm_sf);
     if (mpireturn != MPI_SUCCESS)
-        return ncmpio_handle_error(mpireturn, "MPI_Comm_split"); 
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Comm_split"); 
 
     /* char path[1024], file[1024]; */
     /* find_path_and_fname(ncp->path, path, file); */
@@ -305,7 +304,7 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
 #ifdef SUBFILE_DEBUG
         if (myrank == 0)
             printf ("%s: var(%s): size of partitioning dim (id=%d)=%d\n",
-                    __func__, vpp[i]->name->cp, par_dim_id,
+                    __func__, vpp[i]->name, par_dim_id,
                     dpp[par_dim_id]->size);
 #endif
         /* divide only when dim is partitionable */
@@ -337,7 +336,7 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
                 double x; /* = org dim size / num_subfiles */
                 int min, max;
 
-                dim_name = dpp[vpp[i]->dimids[j]]->name->cp;
+                dim_name = dpp[vpp[i]->dimids[j]]->name;
                 dim_sz0 = dpp[vpp[i]->dimids[j]]->size; /* init both to org dim sz */
                 dim_sz = dim_sz0;
 
@@ -359,8 +358,8 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
                     dim_sz = max-min+1;
                 }
 
-                /* name->cp is always NULL terminated, see ncmpio_new_NC_string() */
-                sprintf(str, "%s.%s", dim_name, vpp[i]->name->cp);
+                /* name is always NULL terminated */
+                sprintf(str, "%s.%s", dim_name, vpp[i]->name);
 #ifdef SUBFILE_DEBUG
                 printf("rank(%d): new dim name = %s, dim_sz=%d\n", myrank, str, dim_sz);
 #endif
@@ -425,7 +424,7 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
                 }
 
             /* define a var with new dim */
-            status = ncmpio_def_var(ncp_sf, (*vpp[i]).name->cp,
+            status = ncmpio_def_var(ncp_sf, (*vpp[i]).name,
                                     vpp[i]->type, var_ndims, dimids, &varid);
             TEST_HANDLE_ERR(status)
 
@@ -463,8 +462,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
                            void             *buf,
                            MPI_Offset        bufcount,
                            MPI_Datatype      buftype, /* data type of the buffer */
-                           int               rw_flag,
-                           int               io_method)
+                           int               reqMode) /* data type of the buffer */
 {
     int mpireturn, errs=0, status;
     NC_subfile_access *my_req, *others_req;
@@ -480,18 +478,13 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     int color;
     int nasyncios=0;
 
-    /* check whether start, count, and stride are valid */
-    status = ncmpio_start_count_stride_check(ncp, varp, start, count, stride,
-                                             rw_flag);
-    if (status != NC_NOERR) return status;
-
     MPI_Comm_rank(ncp->comm, &myrank);
     MPI_Comm_size(ncp->comm, &nprocs);
 
 #ifdef SUBFILE_DEBUG
     for (i=0; i<ndims_org; i++)
         printf("rank(%d): %s: var(%s): start[%d]=%ld, count[%d]=%ld, stride[%d]=%ld, bufcount=%ld\n",
-               myrank, __func__, varp->name->cp, i, start[i], i, count[i], i,
+               myrank, __func__, varp->name, i, start[i], i, count[i], i,
                ((stride != NULL)?stride[i]:1), bufcount);
 #endif
 
@@ -504,7 +497,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     /* check attr for subfiles */
     int par_dim_id = 0; /* default is the most significant dim */
 
-    status = ncmpio_inq_varid(ncp, varp->name->cp, &varid);
+    status = ncmpio_inq_varid(ncp, varp->name, &varid);
     TEST_HANDLE_ERR(status)
 
     status = ncmpio_get_att(ncp, varid, "_PnetCDF_SubFiling.par_dim_index",
@@ -512,9 +505,9 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     TEST_HANDLE_ERR(status)
 #ifdef SUBFILE_DEBUG
     if (myrank == 0)
-        printf("_PnetCDF_SubFiling.par_dim_index of %s = %d\n", varp->name->cp, par_dim_id);
+        printf("_PnetCDF_SubFiling.par_dim_index of %s = %d\n", varp->name, par_dim_id);
 #endif
-    status = ncmpio_inq_varid(ncp_sf, varp->name->cp, &varid_sf);
+    status = ncmpio_inq_varid(ncp_sf, varp->name, &varid_sf);
     TEST_HANDLE_ERR(status)
 
     status = ncmpio_get_att(ncp_sf, varid_sf, "_PnetCDF_SubFiling.subfile_index",
@@ -592,7 +585,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
             int ii, jj, kk, stride_count;
             char key[256], *org_dim_name;
 
-            org_dim_name = strtok(dimp->name->cp, ".");
+            org_dim_name = strtok(dimp->name, ".");
             sprintf(key, "_PnetCDF_SubFiling.range(%s).subfile.%d", org_dim_name, i); /* dim name*/
 #ifdef SUBFILE_DEBUG
             if (myrank == 0) {
@@ -633,13 +626,13 @@ ncmpio_subfile_getput_vars(NC               *ncp,
                     jj++;
                 else {
 #ifdef SUBFILE_DEBUG
-                    printf("rank(%d): var(%s): i=%d, j=%d, ii=%d, jj=%d, kk=%d, jx=%d\n", myrank, varp->name->cp, i, j, ii, jj, kk, jx);
+                    printf("rank(%d): var(%s): i=%d, j=%d, ii=%d, jj=%d, kk=%d, jx=%d\n", myrank, varp->name, i, j, ii, jj, kk, jx);
 #endif
                     if (kk == 0) {
                         my_req[aproc].start[jx] = ii;
 #ifdef SUBFILE_DEBUG
                         printf("rank(%d): var(%s): my_req[%d].start[%d]=%d\n",
-                               myrank, varp->name->cp, aproc, jx, ii);
+                               myrank, varp->name, aproc, jx, ii);
 #endif
                     }
                     if (jx == par_dim_id) flag = 1;
@@ -673,7 +666,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
 #ifdef SUBFILE_DEBUG
     for (i=0; i<ncp->num_subfiles; i++) {
         char str_st[100], str_st_org[100], str_ct[100], str_t1[10];
-        sprintf(str_st, ">> rank(%d): subfile(%d): var(%s): start(", myrank, i, varp->name->cp);
+        sprintf(str_st, ">> rank(%d): subfile(%d): var(%s): start(", myrank, i, varp->name);
         sprintf(str_ct, ">> rank(%d): subfile(%d): count(", myrank, i);
         sprintf(str_st_org, "%d: start_org(", i);
         for (j=0; j<ndims_org; j++) {
@@ -748,7 +741,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
         buf_offset[i] = 0;
 
 #ifdef SUBFILE_DEBUG
-    if (myrank == 0) printf("varname=%s: etype=0x%x, etype_size=%d\n", varp->name->cp, varp->type, varp->xsz);
+    if (myrank == 0) printf("varname=%s: etype=0x%x, etype_size=%d\n", varp->name, varp->type, varp->xsz);
 #endif
 
     /* find the ptype (primitive MPI data type) from buftype
@@ -777,7 +770,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
         buftype = ncmpio_nc2mpitype(varp->type);
     }
 
-    status = ncmpio_dtype_decode(buftype, &ptype, &el_size, &bnelems,
+    status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,
                                  &isderived, &buftype_is_contig);
     /* bnelems now is the number of ptype in a buftype */
     TEST_HANDLE_ERR(status)
@@ -786,7 +779,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     MPI_Aint lb, extent;
     MPI_Type_get_extent(buftype, &lb, &extent);
     printf("rank(%d): var(%s): ptype=0x%x, el_size=%d, bnelems=%d, isderived=%d, buftype_is_contig=%d, lb=%d, extent=%d\n",
-           myrank, varp->name->cp, ptype, el_size, bnelems, isderived, buftype_is_contig, lb, extent);
+           myrank, varp->name, ptype, el_size, bnelems, isderived, buftype_is_contig, lb, extent);
 #endif
 
     /* if buftype is non-contiguous, pack to contiguous buffer*/
@@ -798,7 +791,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
         if (outsize  != (int)outsize) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
         if (bufcount != (int)bufcount) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
         cbuf = NCI_Malloc((size_t)outsize);
-        if (rw_flag == WRITE_REQ)
+        if (fIsSet(reqMode, NC_REQ_WR))
             MPI_Pack(buf, (int)bufcount, buftype, cbuf, (int)outsize,
                      &position, MPI_COMM_SELF);
     }
@@ -835,7 +828,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     printf("rank(%d): buf_offset[%d]=%d, buf_count_my[%d]=%d\n", myrank,
            myrank, buf_offset[myrank], myrank, buf_count_my[myrank]);
 
-    printf ("rank(%d): %s: var(%s)\n", myrank, __func__, varp->name->cp);
+    printf ("rank(%d): %s: var(%s)\n", myrank, __func__, varp->name);
     for (i=0; i<ndims_org; i++)
         printf("my_req[%d].start[%d]=%ld, my_req[%d].count[%d]=%ld, my_req[%d].stride[%d]=%ld, bufcount=%ld\n",
                myrank, i, my_req[myrank].start[i], myrank, i,
@@ -865,12 +858,12 @@ ncmpio_subfile_getput_vars(NC               *ncp,
                                      buf_count_my[myrank],
                                      (!buftype_is_contig?ptype:buftype),
                                      &array_of_requests[nasyncios++],
-                                     rw_flag,
-                                     0, 0);
+                                     reqMode,
+                                     0);
         TEST_HANDLE_ERR(status)
     }
 #ifdef SUBFILE_DEBUG
-    printf("rank(%d): var(%s): pushed local I/O to async calls...\n", myrank, varp->name->cp);
+    printf("rank(%d): var(%s): pushed local I/O to async calls...\n", myrank, varp->name);
 #endif
 
     /* doing other proc's request to my subfile
@@ -1053,8 +1046,8 @@ ncmpio_subfile_getput_vars(NC               *ncp,
                                          buf_count_others[i],
                                          (!buftype_is_contig?ptype:buftype),
                                          &array_of_requests[nasyncios++],
-                                         rw_flag,
-                                         0, 0);
+                                         reqMode,
+                                         0);
             TEST_HANDLE_ERR(status)
         }
     }
@@ -1075,7 +1068,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
     stime = MPI_Wtime();
     */
     array_of_statuses = (int *)NCI_Malloc((size_t)nasyncios * SIZEOF_INT);
-    status = ncmpio_wait(ncp_sf, nasyncios, array_of_requests, array_of_statuses, COLL_IO);
+    status = ncmpio_wait(ncp_sf, nasyncios, array_of_requests, array_of_statuses, NC_REQ_COLL);
     TEST_HANDLE_ERR(status)
     NCI_Free(array_of_statuses);
     NCI_Free(array_of_requests);
@@ -1092,7 +1085,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
 #endif
 
 #ifdef SUBFILE_DEBUG
-    printf("rank(%d): var(%s): after ncmpi_wait_all()\n", myrank, varp->name->cp);
+    printf("rank(%d): var(%s): after ncmpi_wait_all()\n", myrank, varp->name);
 #endif
 
     /* MPI_Barrier(ncp->comm); */

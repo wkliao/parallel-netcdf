@@ -51,7 +51,7 @@
 #define DEGREES_NORTH "degrees_north"
 
 /* These are used to construct some example data. */
-#define SAMPLE_PRESSURE 900
+#define SAMPLE_PRESSURE 900.0
 #define SAMPLE_TEMP 9.0
 #define START_LAT 25.0
 #define START_LON -125.0
@@ -101,7 +101,7 @@ main(int argc, char ** argv)
    if (argc > 2) {
        if (!rank) printf("Usage: %s [filename]\n",argv[0]);
        MPI_Finalize();
-       return 0;
+       return 1;
    }
    if (argc == 2) filename = argv[1];
 

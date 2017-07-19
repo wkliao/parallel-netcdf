@@ -77,10 +77,10 @@ dnl
 define(`CDF2_ITYPE_LIST', `text, schar, short, int, long, float, double')dnl
 dnl
 dnl
-define(`CollIndep', `ifelse(`$1', `_all', `COLL_IO', `INDEP_IO')')dnl
-define(`ReadWrite', `ifelse(`$1',  `get', `READ_REQ',
-                            `$1', `iget', `READ_REQ',
-                                          `WRITE_REQ')')dnl
+define(`CollIndep', `ifelse(`$1', `_all', `NC_REQ_COLL', `NC_REQ_INDEP')')dnl
+define(`ReadWrite', `ifelse(`$1',  `get', `NC_REQ_WR',
+                            `$1', `iget', `NC_REQ_RD',
+                                          `NC_REQ_WR')')dnl
 define(`BufArgs',   `ifelse(`$2', `',
                             `ifelse($1, `get', `void *buf,', `const void *buf,')
                              MPI_Offset bufcount, MPI_Datatype buftype',

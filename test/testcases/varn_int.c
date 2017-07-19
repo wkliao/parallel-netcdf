@@ -220,10 +220,7 @@ int main(int argc, char** argv)
 
     /* check error code: NC_ENULLSTART */
     err = ncmpi_put_varn_int_all(ncid, varid[0], 1, NULL, NULL, NULL);
-    if (err != NC_ENULLSTART) {
-        printf("expecting error code NC_ENULLSTART but got %s\n",nc_err_code_name(err));
-        nerrs++;
-    }
+    EXP_ERR(NC_ENULLSTART)
 
     /* write using varn API */
     err = ncmpi_put_varn_int_all(ncid, varid[0], num_reqs, starts, counts, buffer);

@@ -9,6 +9,20 @@ dnl
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/var_getput.m4
+ *
+ * ncmpi_get_var<kind>()            : dispatcher->get_var()
+ * ncmpi_put_var<kind>()            : dispatcher->put_var()
+ * ncmpi_get_var<kind>_<type>()     : dispatcher->get_var()
+ * ncmpi_put_var<kind>_<type>()     : dispatcher->put_var()
+ * ncmpi_get_var<kind>_all()        : dispatcher->get_var()
+ * ncmpi_put_var<kind>_all()        : dispatcher->put_var()
+ * ncmpi_get_var<kind>_<type>_all() : dispatcher->get_var()
+ * ncmpi_put_var<kind>_<type>_all() : dispatcher->put_var()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -26,203 +40,10 @@ dnl
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "ncx.h"
-#include "ncmpidtype.h"
 #include "macro.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
-
-
-/*----< ncmpio_calc_datatype_elems() >---------------------------------------*/
-/* obtain the following metadata about buftype:
- * ptype: element data type (MPI primitive type) in buftype
- * bufcount: If it is -1, then this is called from a high-level API and in
- * this case buftype will be an MPI primitive data type. If not -1, then this
- * is called from a flexible API. In the former case, we recalculate bufcount
- * to match with count[].
- * bnelems: number of ptypes in user buffer
- * nbytes: number of bytes (in external data representation) to read/write
- * from/to the file
- * el_size: size of ptype
- * buftype_is_contig: whether buftype is contiguous
- */
-int
-ncmpio_calc_datatype_elems(NC_var           *varp,
-                           const MPI_Offset *count,
-                           MPI_Datatype      buftype,
-                           MPI_Datatype     *ptype,             /* out */
-                           MPI_Offset       *bufcount,          /* in/out */
-                           MPI_Offset       *bnelems,           /* out */
-                           MPI_Offset       *nbytes,            /* out */
-                           int              *el_size,           /* out */
-                           int              *buftype_is_contig) /* out */
-{
-    int i, err=NC_NOERR;
-    MPI_Offset fnelems;
-
-    /* Sanity check for error codes should have already done before reaching
-     * here
-     *
-     * when (*bufcount == -1), buftype is an MPI primitive data type,
-     * it means this subroutine is called from a high-level API.
-     */
-    if (*bufcount != -1 && buftype != MPI_DATATYPE_NULL) {
-        /* This subroutine is called from a flexible API */
-        int isderived;
-        /* check MPI derived datatype error */
-        err = ncmpio_dtype_decode(buftype, ptype, el_size, bnelems,
-                                  &isderived, buftype_is_contig);
-        if (err != NC_NOERR) return err;
-    }
-
-    /* fnelems is the total number of nc_type elements calculated from
-     * count[]. count[] is the access count to the variable defined in
-     * the netCDF file.
-     */
-    fnelems = 1;
-    for (i=0; i<varp->ndims; i++)
-        fnelems *= count[i];
-
-    if (*bufcount == -1) { /* buftype is an MPI primitive data type */
-        /* this subroutine is called from a high-level API */
-        *bnelems = *bufcount = fnelems;
-        *ptype = buftype;
-        MPI_Type_size(buftype, el_size); /* buffer element size */
-        *buftype_is_contig = 1;
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * varp->xsz; /* varp->xsz is external element size */
-    }
-    else if (buftype == MPI_DATATYPE_NULL) {
-        /* This is called from a flexible API and buftype is set by user
-         * to MPI_DATATYPE_NULL. In this case, bufcount is set to match
-         * count[], and buf's data type to match the data type of variable
-         * defined in the file - no data conversion will be done.
-         */
-        *bnelems = *bufcount = fnelems;
-        *ptype = buftype = ncmpio_nc2mpitype(varp->type);
-        *el_size = varp->xsz;
-        *buftype_is_contig = 1;
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * varp->xsz;
-    }
-    else {
-        /* This is called from a flexible API */
-
-        /* make bnelems the number of ptype in the whole user buf */
-        *bnelems *= *bufcount;
-
-        /* check mismatch between bnelems and fnelems */
-        if (fnelems != *bnelems) {
-            DEBUG_ASSIGN_ERROR(err, NC_EIOMISMATCH)
-            (fnelems>*bnelems) ? (fnelems=*bnelems) : (*bnelems=fnelems);
-            /* only handle partial of the request, smaller number of the two */
-        }
-        /* now fnelems == *bnelems */
-
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * varp->xsz;
-    }
-    return err;
-}
-
-/*----< ncmpio_create_imaptype() >-------------------------------------------*/
-/* Check if a request is a true varm call. If yes, create an MPI derived
- * data type, imaptype, using imap[]
- */
-int
-ncmpio_create_imaptype(NC_var           *varp,
-                       const MPI_Offset *count,
-                       const MPI_Offset *imap,
-                       const MPI_Offset  bnelems, /* no. elements in user buf */
-                       const int         el_size, /* user buf element size */
-                       MPI_Datatype      ptype,   /* element type in buftype */
-                       MPI_Datatype     *imaptype)/* out */
-{
-    int dim, mpireturn;
-    MPI_Offset imap_contig_blocklen;
-
-    /* check if this is a vars call or a true varm call */
-    *imaptype = MPI_DATATYPE_NULL;
-
-    if (varp->ndims == 0) /* scalar var, only one value at one fixed place */
-        return NC_NOERR;
-
-    if (bnelems == 1) /* one element, same as var1 */
-        return NC_NOERR;
-
-    if (imap == NULL) /* no mapping, same as vars */
-        return NC_NOERR;
-
-    /* test each dim's contiguity in imap[] until the 1st non-contiguous
-     * dim is reached */
-    imap_contig_blocklen = 1;
-    dim = varp->ndims;
-    while (--dim >= 0 && imap_contig_blocklen == imap[dim])
-        imap_contig_blocklen *= count[dim];
-
-    if (dim == -1) /* imap is a contiguous layout */
-        return NC_NOERR;
-
-    /* We have a true varm call, as imap gives non-contiguous layout.
-     * User buffer will be packed (write case) or unpacked (read case)
-     * to/from a contiguous buffer based on imap[], before/after MPI-IO.
-     * First, we construct a derived data type, imaptype, based on
-     * imap[], and use it to pack lbuf to cbuf (for write), or unpack
-     * cbuf to lbuf (for read).
-     * dim is the first dimension (C order, eg. ZYX) that has
-     * non-contiguous imap.
-     */
-    if (imap_contig_blocklen != (int)imap_contig_blocklen)
-        DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-    if (count[dim] != (int)count[dim] || imap[dim] != (int)imap[dim])
-        DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-
-    mpireturn = MPI_Type_vector((int)count[dim], (int)imap_contig_blocklen,
-                                (int)imap[dim], ptype, imaptype);
-    if (mpireturn != MPI_SUCCESS) {
-        ncmpio_handle_error(mpireturn,"MPI_Type_vector");
-        DEBUG_RETURN_ERROR(NC_EMPI)
-    }
-    mpireturn = MPI_Type_commit(imaptype);
-    if (mpireturn != MPI_SUCCESS) {
-        ncmpio_handle_error(mpireturn,"MPI_Type_commit");
-        DEBUG_RETURN_ERROR(NC_EMPI)
-    }
-
-    for (dim--; dim>=0; dim--) {
-        MPI_Datatype tmptype;
-        if (count[dim] != (int)count[dim])
-            DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-#ifdef HAVE_MPI_TYPE_CREATE_HVECTOR
-        mpireturn = MPI_Type_create_hvector((int)count[dim], 1,
-                    imap[dim]*el_size, *imaptype, &tmptype);
-        if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Type_create_hvector");
-            DEBUG_RETURN_ERROR(NC_EMPI)
-        }
-#else
-        mpireturn = MPI_Type_hvector((int)count[dim], 1, imap[dim]*el_size,
-                    *imaptype, &tmptype);
-        if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Type_hvector");
-            DEBUG_RETURN_ERROR(NC_EMPI)
-        }
-#endif
-        mpireturn = MPI_Type_free(imaptype);
-        if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Type_free");
-            DEBUG_RETURN_ERROR(NC_EMPI)
-        }
-        mpireturn = MPI_Type_commit(&tmptype);
-        if (mpireturn != MPI_SUCCESS) {
-            ncmpio_handle_error(mpireturn,"MPI_Type_commit");
-            DEBUG_RETURN_ERROR(NC_EMPI)
-        }
-        *imaptype = tmptype;
-    }
-    return NC_NOERR;
-}
 
 /*----< getput_varm() >------------------------------------------------------*/
 /* buffer layers:
@@ -282,8 +103,7 @@ getput_varm(NC               *ncp,
             void             *buf,
             MPI_Offset        bufcount,  /* -1: from high-level API */
             MPI_Datatype      buftype,
-            int               rw_flag,   /* WRITE_REQ or READ_REQ */
-            int               io_method) /* COLL_IO or INDEP_IO */
+            int               reqMode)   /* WR/RD/COLL/INDEP */
 {
     void *lbuf=NULL, *cbuf=NULL, *xbuf=NULL;
     int mpireturn, err=NC_NOERR, status=NC_NOERR, warning=NC_NOERR;
@@ -306,8 +126,7 @@ getput_varm(NC               *ncp,
         }
         
         return ncmpio_subfile_getput_vars(ncp, varp, start, count, stride,
-                                          buf, bufcount, buftype,
-                                          rw_flag, io_method);
+                                          buf, bufcount, buftype, reqMode);
     }
 #endif
 
@@ -349,21 +168,21 @@ getput_varm(NC               *ncp,
      * then filetype == MPI_BYTE. Otherwise filetype will be an MPI derived
      * data type.
      */
-    err = ncmpio_filetype_create_vars(ncp, varp, start, count, stride, rw_flag,
+    err = ncmpio_filetype_create_vars(ncp, varp, start, count, stride, reqMode,
                                       NULL, &offset, &filetype, NULL);
     if (err != NC_NOERR) goto err_check;
 
     if (bufcount != (int)bufcount) DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
 
 err_check:
-    /* If io_method is COLL_IO and an error occurs, we'll still conduct a
+    /* If reqMode is NC_REQ_COLL and an error occurs, we'll still conduct a
      * zero-byte read/write (because every process must participate the
      * collective I/O call).
      */
     if (err != NC_NOERR || nbytes == 0) {
-        if (io_method == INDEP_IO) return err;
+        if (fIsSet(reqMode, NC_REQ_INDEP)) return err;
 
-        /* COLL_IO: participate the collective I/O operations */
+        /* NC_REQ_COLL: participate the collective I/O operations */
         filetype = MPI_BYTE;
         status   = err;
         nbytes   = 0;
@@ -377,11 +196,10 @@ err_check:
     /* Check if this is a vars call or a true varm call.
      * Construct a derived datatype, imaptype, if a true varm call
      */
-    err = ncmpio_create_imaptype(varp, count, imap, bnelems, el_size, ptype,
-                                 &imaptype);
+    err = ncmpii_create_imaptype(varp->ndims, count, imap, ptype, &imaptype);
     if (status == NC_NOERR) status = err;
 
-    if (rw_flag == WRITE_REQ) { /* pack request to xbuf */
+    if (fIsSet(reqMode, NC_REQ_WR)) { /* pack request to xbuf */
         int position;
         MPI_Offset outsize=bnelems*el_size;
         /* assert(bnelems > 0); */
@@ -439,9 +257,9 @@ err_check:
                 if (cbuf != buf)  NCI_Free(cbuf);
                 NCI_Free(xbuf);
                 xbuf = NULL;
-                if (io_method == INDEP_IO) return status;
+                if (fIsSet(reqMode, NC_REQ_INDEP)) return status;
 
-                /* COLL_IO: participate the collective I/O operations */
+                /* NC_REQ_COLL: participate the collective I/O operations */
                 filetype  = MPI_BYTE;
                 nbytes    = 0;
                 goto mpi_io;
@@ -468,7 +286,7 @@ err_check:
         /* cbuf is no longer needed */
         if (cbuf != buf && cbuf != xbuf) NCI_Free(cbuf);
     }
-    else { /* rw_flag == READ_REQ */
+    else { /* read request */
         /* allocate xbuf for reading */
         if (buftype_is_contig && imaptype == MPI_DATATYPE_NULL && !need_convert)
             xbuf = buf;
@@ -481,10 +299,10 @@ err_check:
      */
 
 mpi_io:
-    if (io_method == COLL_IO)
-        fh = ncp->collective_fh;
-    else
+    if (fIsSet(reqMode, NC_REQ_INDEP))
         fh = ncp->independent_fh;
+    else
+        fh = ncp->collective_fh;
 
     /* MPI_File_set_view is collective */
     err = ncmpio_file_set_view(ncp, fh, &offset, filetype);
@@ -494,12 +312,12 @@ mpi_io:
     }
     if (filetype != MPI_BYTE) MPI_Type_free(&filetype);
 
-    if (rw_flag == WRITE_REQ) {
-        if (io_method == COLL_IO) {
-            TRACE_IO(MPI_File_write_at_all)(fh, offset, xbuf, (int)nbytes,
-                                            MPI_BYTE, &mpistatus);
+    if (fIsSet(reqMode, NC_REQ_WR)) {
+        if (fIsSet(reqMode, NC_REQ_INDEP)) {
+            TRACE_IO(MPI_File_write_at)(fh, offset, xbuf, (int)nbytes,
+                                        MPI_BYTE,  &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
@@ -510,11 +328,11 @@ mpi_io:
                 ncp->put_size += nbytes;
             }
         }
-        else { /* io_method == INDEP_IO */
-            TRACE_IO(MPI_File_write_at)(fh, offset, xbuf, (int)nbytes,
-                                        MPI_BYTE,  &mpistatus);
+        else {  /* reqMode == NC_REQ_COLL */
+            TRACE_IO(MPI_File_write_at_all)(fh, offset, xbuf, (int)nbytes,
+                                            MPI_BYTE, &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_write_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
@@ -526,12 +344,12 @@ mpi_io:
             }
         }
     }
-    else {  /* rw_flag == READ_REQ */
-        if (io_method == COLL_IO) {
-            TRACE_IO(MPI_File_read_at_all)(fh, offset, xbuf, (int)nbytes,
-                                           MPI_BYTE, &mpistatus);
+    else {  /* read request */
+        if (fIsSet(reqMode, NC_REQ_INDEP)) {
+            TRACE_IO(MPI_File_read_at)(fh, offset, xbuf, (int)nbytes,
+                                       MPI_BYTE, &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at_all");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -542,11 +360,11 @@ mpi_io:
                 ncp->get_size += nbytes;
             }
         }
-        else { /* io_method == INDEP_IO */
-            TRACE_IO(MPI_File_read_at)(fh, offset, xbuf, (int)nbytes,
-                                       MPI_BYTE, &mpistatus);
+        else {  /* reqMode == NC_REQ_COLL */
+            TRACE_IO(MPI_File_read_at_all)(fh, offset, xbuf, (int)nbytes,
+                                           MPI_BYTE, &mpistatus);
             if (mpireturn != MPI_SUCCESS) {
-                err = ncmpio_handle_error(mpireturn, "MPI_File_read_at");
+                err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at_all");
                 /* return the first encountered error if there is any */
                 if (status == NC_NOERR) {
                     err = (err == NC_EFILE) ? NC_EREAD : err;
@@ -565,7 +383,7 @@ mpi_io:
                                  MPI_INFO_NULL);
      */
 
-    if (rw_flag == READ_REQ && nbytes > 0) {
+    if (fIsSet(reqMode, NC_REQ_RD) && nbytes > 0) {
         /* xbuf contains the data read from file.
          * Check if it needs to be type-converted + byte-swapped
          */
@@ -631,7 +449,7 @@ mpi_io:
         /* done with lbuf */
         if (lbuf != buf) NCI_Free(lbuf);
     }
-    else if (rw_flag == WRITE_REQ) {
+    else if (fIsSet(reqMode, NC_REQ_WR)) {
         if (xbuf != NULL && xbuf != buf) NCI_Free(xbuf);
 
         if (need_swap_back_buf) /* byte-swap back to buf's original contents */
@@ -651,7 +469,7 @@ mpi_io:
                 /* note new_numrecs can be smaller than ncp->numrecs */
             }
 
-            if (io_method == INDEP_IO) {
+            if (fIsSet(reqMode, NC_REQ_INDEP)) {
                 /* For independent put, we delay the sync for numrecs until
                  * the next collective call, such as end_indep(), sync(),
                  * enddef(), or close(). This is because if we update numrecs
@@ -663,7 +481,7 @@ mpi_io:
                     set_NC_ndirty(ncp);
                 }
             }
-            else { /* COLL_IO: sync numrecs in memory and file */
+            else { /* NC_REQ_COLL: sync numrecs in memory and file */
                 /* new_numrecs may be different among processes.
                  * First, find the max numrecs among all processes.
                  */
@@ -671,7 +489,7 @@ mpi_io:
                 TRACE_COMM(MPI_Allreduce)(&new_numrecs, &max_numrecs, 1,
                                           MPI_OFFSET, MPI_MAX, ncp->comm);
                 if (mpireturn != MPI_SUCCESS) {
-                    err = ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+                    err = ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
                     if (status == NC_NOERR) status = err;
                 }
                 /* In collective mode, ncp->numrecs is always sync-ed among
@@ -686,7 +504,7 @@ mpi_io:
 
         if (NC_doFsync(ncp)) { /* NC_SHARE is set */
             TRACE_IO(MPI_File_sync)(fh);
-            if (io_method == COLL_IO)
+            if (fIsSet(reqMode, NC_REQ_COLL))
                 TRACE_COMM(MPI_Barrier)(ncp->comm);
         }
     }
@@ -701,6 +519,18 @@ dnl
 define(`GETPUT_API',dnl
 `dnl
 /*----< ncmpio_$1_var() >----------------------------------------------------*/
+/* start  can be NULL only when api is NC_VAR
+ * count  can be NULL only when api is NC_VAR or NC_VAR1
+ * stride can be NULL only when api is NC_VAR, NC_VAR1, or NC_VARA
+ * imap   can be NULL only when api is NC_VAR, NC_VAR1, NC_VARA, or NC_VARS
+ * bufcount can be NULL only when api is NC_VAR NC_VAR1, NC_VARA
+ * buftype is an MPI primitive data type for high-level APIs. When called from
+ *         flexible APIs and if its value is MPI_DATATYPE_NULL, then it means
+ *         the data type of buffer in memory matches the variable external
+ *         data type and bufcount is thus ignored.
+ * api     NC_VAR, NC_VAR1, NC_VARA, NC_VARS, or NC_VARM
+ * reqMode indicates modes (NC_REQ_COLL/NC_REQ_INDEP/NC_REQ_WR etc.)
+ */
 int
 ncmpio_$1_var(void             *ncdp,
               int               varid,
@@ -711,9 +541,8 @@ ncmpio_$1_var(void             *ncdp,
               ifelse(`$1',`put',`const') void *buf,
               MPI_Offset        bufcount,
               MPI_Datatype      buftype,
-              api_kind          api,
-              nc_type           itype,
-              int               io_method)
+              NC_api            api,
+              int               reqMode)
 
 {
     int         err, status;
@@ -721,13 +550,32 @@ ncmpio_$1_var(void             *ncdp,
     NC_var     *varp=NULL;
     MPI_Offset *_start, *_count;
 
-    status = ncmpio_sanity_check(ncp, varid, start, count, stride,
-                                 bufcount, buftype, api,
-                                 (itype==NC_NAT), 1, ReadWrite($1),
-                                 io_method, &varp);
+    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
+     * NC_ECHAR, NC_EINVAL */
+    status = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
+
+    if (status == NC_NOERR &&
+        fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
+        /* this collective API has a zero-length request */
+        return ncmpio_getput_zero_req(ncp, reqMode);
+
+    if (status == NC_NOERR)
+        /* check NC_EINVALCOORDS, NC_EEDGE, NC_ESTRIDE */
+        status = ncmpii_start_count_stride_check(ncp->format, api, varp->ndims,
+                                 ncp->numrecs, varp->shape, start, count,
+                                 stride, reqMode);
+
+    if (ncp->safe_mode == 1 && fIsSet(reqMode, NC_REQ_COLL)) {
+        int min_st, mpireturn;
+        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN,
+                                  ncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (min_st != NC_NOERR) return min_st;
+    }
 
     if (status != NC_NOERR) {
-        if (io_method == INDEP_IO ||
+        if (fIsSet(reqMode, NC_REQ_INDEP) ||
             status == NC_EBADID ||
             status == NC_EPERM ||
             status == NC_EINDEFINE ||
@@ -737,7 +585,7 @@ ncmpio_$1_var(void             *ncdp,
 
         /* for collective API, participate the collective I/O with zero-length
          * request for this process */
-        err = ncmpio_getput_zero_req(ncp, ReadWrite($1));
+        err = ncmpio_getput_zero_req(ncp, reqMode);
         assert(err == NC_NOERR);
 
         /* return the error code from sanity check */
@@ -750,7 +598,7 @@ ncmpio_$1_var(void             *ncdp,
     else if (api == API_VAR1) GET_ONE_COUNT(_count)
 
     status = getput_varm(ncp, varp, _start, _count, stride, imap, (void*)buf,
-                         bufcount, buftype, ReadWrite($1), io_method);
+                         bufcount, buftype, reqMode);
 
          if (api == API_VAR)  NCI_Free(_start);
     else if (api == API_VAR1) NCI_Free(_count);

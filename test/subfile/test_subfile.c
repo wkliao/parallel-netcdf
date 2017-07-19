@@ -120,39 +120,39 @@ int main(int argc, char **argv)
     buf = (int **)malloc(nvars*sizeof(int*));
     if (buf == NULL){
         printf("buf malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     bufcount_list = (MPI_Offset *)malloc(nvars*sizeof(MPI_Offset));
     if (bufcount_list == NULL){
         printf("bufcount_list malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     starts_list = (MPI_Offset **)malloc(nvars*sizeof(MPI_Offset *));
     if (starts_list== NULL){
         printf("starts_list malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     count_list = (MPI_Offset **)malloc(nvars*sizeof(MPI_Offset *));
     if (count_list == NULL){
         printf("count_list malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
     datatype_list = (MPI_Datatype*)malloc(nvars*sizeof(MPI_Datatype));
     if (datatype_list == NULL){
         printf("count_list malloc error\n");
-        return 0;
+        nerrs++; goto fn_exit;
     }
 
     for (i=0; i<nvars; i++) {
 	starts_list[i] = (MPI_Offset *)malloc(ndims*sizeof(MPI_Offset));
 	if (starts_list[i] == NULL){
 	    printf("starts_list[%d] malloc error\n", i);
-	    return 0;
+	    nerrs++; goto fn_exit;
 	}
 	count_list[i] = (MPI_Offset *)malloc(ndims*sizeof(MPI_Offset));
 	if (count_list[i] == NULL){
 	    printf("count_list[%d] malloc error\n", i);
-	    return 0;
+	    nerrs++; goto fn_exit;
 	}
     }
 
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 	buf[i] = (int *) malloc(bufcount * sizeof(int));
 	if (buf[i] == NULL){
 	    printf("buf[i]malloc error\n");
-	    return 0;
+	    nerrs++; goto fn_exit;
 	}
 
 	for (j=0; j<bufcount; j++)
@@ -412,7 +412,7 @@ end:
         else       printf(PASS_STR);
     }
 
+fn_exit:
     MPI_Finalize();
-
     return (nerrs > 0);
 }

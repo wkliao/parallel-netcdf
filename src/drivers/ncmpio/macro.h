@@ -25,7 +25,7 @@
         NC_dim *dimp;                                                         \
         int _dimid;                                                           \
         _dimid = (varp->num_subfiles>1)?varp->dimids_org[_i]:varp->dimids[_i];\
-        dimp = ncmpio_elem_NC_dimarray(&ncp->dims, _dimid);                   \
+        dimp = ncp->dims.value[_dimid];                                       \
         if (dimp->size == NC_UNLIMITED)                                       \
             count[_i] = ncp->numrecs;                                         \
         else                                                                  \

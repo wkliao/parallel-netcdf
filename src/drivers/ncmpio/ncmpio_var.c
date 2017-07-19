@@ -4,6 +4,16 @@
  */
 /* $Id$ */
 
+/*
+ * This file implements the corresponding APIs defined in
+ * src/dispatchers/variable.c
+ *
+ * ncmpi_def_var()    : dispatcher->def_var()
+ * ncmpi_inq_varid()  : dispatcher->inq_varid()
+ * ncmpi_inq_var()    : dispatcher->inq_var()
+ * ncmpi_rename_var() : dispatcher->rename_var()
+ */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -24,18 +34,15 @@
 #include "rnd.h"
 #include "utf8proc.h"
 
-/*----< ncmpio_free_NC_var() >------------------------------------------------*/
-/*
- * Free var
- * Formerly
-NC_free_var(var)
- */
+/*----< ncmpio_free_NC_var() >-----------------------------------------------*/
+/* Free NC_var object */
 inline void
 ncmpio_free_NC_var(NC_var *varp)
 {
     if (varp == NULL) return;
+
     ncmpio_free_NC_attrarray(&varp->attrs);
-    ncmpio_free_NC_string(varp->name);
+    NCI_Free(varp->name);
 #ifdef ENABLE_SUBFILING
     if (varp->num_subfiles > 1) /* deallocate it */
         NCI_Free(varp->dimids_org);
@@ -47,22 +54,14 @@ ncmpio_free_NC_var(NC_var *varp)
     NCI_Free(varp);
 }
 
-
-/*----< ncmpio_new_x_NC_var() >-----------------------------------------------*/
-/*
- * Used by new_NC_var() and ncx_get_NC_var()
- */
+/*----< ncmpio_new_NC_var() >------------------------------------------------*/
 NC_var *
-ncmpio_new_x_NC_var(NC_string *strp,
-                    int        ndims)
+ncmpio_new_NC_var(char *name, int ndims)
 {
     NC_var *varp;
 
     varp = (NC_var *) NCI_Calloc(1, sizeof(NC_var));
     if (varp == NULL) return NULL;
-
-    varp->name = strp;
-    varp->ndims = ndims;
 
     if (ndims > 0) {
         varp->shape  = (MPI_Offset*)NCI_Calloc(ndims, SIZEOF_MPI_OFFSET);
@@ -70,78 +69,39 @@ ncmpio_new_x_NC_var(NC_string *strp,
         varp->dimids = (int *)      NCI_Calloc(ndims, SIZEOF_INT);
     }
 
-    varp->xsz = 0;
-    varp->len = 0;
-    varp->begin = 0;
+    varp->name     = name;         /* name has been malloc-ed */
+    varp->name_len = strlen(name); /* name has been NULL checked */
+    varp->ndims    = ndims;
+    varp->xsz      = 0;
+    varp->len      = 0;
+    varp->begin    = 0;
 
     return varp;
-}
-
-/*----< new_NC_var() >-------------------------------------------------------*/
-/*
- * Formerly, NC_new_var()
- */
-static int
-new_NC_var(NC_vararray  *vcap,
-           const char   *name,  /* normalized variable name (NULL terminated) */
-           nc_type       type,
-           int           ndims,
-           const int    *dimids,
-           NC_var      **varp)
-{
-    NC_string *strp;
-
-    strp = ncmpio_new_NC_string(strlen(name), name);
-    if (strp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    *varp = ncmpio_new_x_NC_var(strp, ndims);
-    if (*varp == NULL ) {
-        ncmpio_free_NC_string(strp);
-        DEBUG_RETURN_ERROR(NC_ENOMEM)
-    }
-
-    (*varp)->type = type;
-
-    if (ndims != 0 && dimids != NULL)
-        memcpy((*varp)->dimids, dimids, (size_t)ndims * SIZEOF_INT);
-
-#ifndef SEARCH_NAME_LINEARLY
-    if (vcap != NULL) { /* insert new var to hash table */
-        int key;
-        NC_nametable *nameT = vcap->nameT; /* var name lookup table */
-
-        /* hash the var name into a key for name lookup */
-        key = HASH_FUNC(name);
-
-        /* allocate or expand the space for nameT[key].list */
-        if (nameT[key].num % NC_NAME_TABLE_CHUNK == 0)
-            nameT[key].list = (int*) NCI_Realloc(nameT[key].list,
-                              (size_t)(nameT[key].num+NC_NAME_TABLE_CHUNK) * SIZEOF_INT);
-
-        /* add the new variable ID to the name lookup table
-         * the new varid will be vcap->ndefined
-         */
-        nameT[key].list[nameT[key].num] = vcap->ndefined;
-        nameT[key].num++;
-    }
-    /* else case is for variable duplication called from dup_NC_var() */
-#endif
-
-    return NC_NOERR;
 }
 
 /*----< dup_NC_var() >-------------------------------------------------------*/
 static NC_var *
 dup_NC_var(const NC_var *rvarp)
 {
-    int err;
+    char *name;
     NC_var *varp;
 
-    /* note that name in rvarp->name->cp is already normalized */
-    err = new_NC_var(NULL, rvarp->name->cp, rvarp->type, rvarp->ndims,
-                     rvarp->dimids, &varp);
-    if (err != NC_NOERR) return NULL;
+    /* note that name in rvarp->name is already normalized */
+    name = (char*) NCI_Malloc(strlen(rvarp->name)+1);
+    if (name == NULL) return NULL;
+    strcpy(name, rvarp->name);
 
+    /* allocate a NC_var object */
+    varp = ncmpio_new_NC_var(name, rvarp->ndims);
+    if (varp == NULL ) return NULL;
+
+    varp->type = rvarp->type;
+
+    /* copy dimids[] */
+    if (rvarp->ndims != 0 && rvarp->dimids != NULL)
+        memcpy(varp->dimids, rvarp->dimids, (size_t)rvarp->ndims * SIZEOF_INT);
+
+    /* copy attributes */
     if (ncmpio_dup_NC_attrarray(&varp->attrs, &rvarp->attrs) != NC_NOERR) {
         ncmpio_free_NC_var(varp);
         return NULL;
@@ -152,8 +112,8 @@ dup_NC_var(const NC_var *rvarp)
      */
     memcpy(varp->shape,  rvarp->shape,  (size_t)rvarp->ndims * SIZEOF_MPI_OFFSET);
     memcpy(varp->dsizes, rvarp->dsizes, (size_t)rvarp->ndims * SIZEOF_MPI_OFFSET);
-    varp->xsz = rvarp->xsz;
-    varp->len = rvarp->len;
+    varp->xsz   = rvarp->xsz;
+    varp->len   = rvarp->len;
     varp->begin = rvarp->begin;
 
     return varp;
@@ -181,14 +141,11 @@ ncmpio_free_NC_vararray(NC_vararray *ncap)
     ncap->nalloc   = 0;
     ncap->ndefined = 0;
 
+#ifndef SEARCH_NAME_LINEARLY
     /* free space allocated for var name lookup table */
-    for (i=0; i<HASH_TABLE_SIZE; i++) {
-        if (ncap->nameT[i].num > 0)
-            NCI_Free(ncap->nameT[i].list);
-        ncap->nameT[i].num = 0;
-    }
+    ncmpio_hash_table_free(ncap->nameT);
+#endif
 }
-
 
 /*----< ncmpio_dup_NC_vararray() >-------------------------------------------*/
 int
@@ -208,11 +165,12 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
     }
 
     if (ref->nalloc > 0) {
-        ncap->value = (NC_var **) NCI_Calloc((size_t)ref->nalloc, sizeof(NC_var*));
+        ncap->value = (NC_var **) NCI_Calloc(ref->nalloc, sizeof(NC_var*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
         ncap->nalloc = ref->nalloc;
     }
 
+    /* duplicate one NC_var object at a time */
     ncap->ndefined = 0;
     for (i=0; i<ref->ndefined; i++) {
         ncap->value[i] = dup_NC_var(ref->value[i]);
@@ -220,29 +178,21 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
             DEBUG_ASSIGN_ERROR(status, NC_ENOMEM)
             break;
         }
+        ncap->ndefined++;
     }
-
     if (status != NC_NOERR) {
         ncmpio_free_NC_vararray(ncap);
         return status;
     }
+    assert(ncap->ndefined == ref->ndefined);
 
-    ncap->ndefined = ref->ndefined;
-
+#ifndef SEARCH_NAME_LINEARLY
     /* duplicate var name lookup table */
-    for (i=0; i<HASH_TABLE_SIZE; i++) {
-        ncap->nameT[i].num = ref->nameT[i].num;
-        ncap->nameT[i].list = NULL;
-        if (ncap->nameT[i].num > 0) {
-            ncap->nameT[i].list = NCI_Malloc((size_t)ncap->nameT[i].num * SIZEOF_INT);
-            memcpy(ncap->nameT[i].list, ref->nameT[i].list,
-                   (size_t)ncap->nameT[i].num * SIZEOF_INT);
-        }
-    }
+    ncmpio_hash_table_copy(ncap->nameT, ref->nameT);
+#endif
 
     return NC_NOERR;
 }
-
 
 /*----< incr_NC_vararray() >-------------------------------------------------*/
 /* Add a new handle on the end of an array of handles */
@@ -265,7 +215,7 @@ incr_NC_vararray(NC_vararray *ncap,
     }
     else if (ncap->ndefined + 1 > ncap->nalloc) {
         vp = (NC_var **) NCI_Realloc(ncap->value,
-                         (size_t)(ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_var *));
+                         (ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_var*));
         if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
@@ -295,7 +245,6 @@ elem_NC_vararray(const NC_vararray *ncap,
     return ncap->value[varid];
 }
 
-
 /* End vararray per se */
 
 
@@ -318,10 +267,9 @@ NC_findvar(const NC_vararray *ncap,
     if (ncap->ndefined == 0) return NC_ENOTVAR;
 
     nchars = strlen(name);
-
     for (varid=0; varid<ncap->ndefined; varid++) {
-        if (ncap->value[varid]->name->nchars == nchars &&
-            strncmp(ncap->value[varid]->name->cp, name, nchars) == 0) {
+        if (ncap->value[varid]->name_len == nchars &&
+            strcmp(ncap->value[varid]->name, name) == 0) {
             if (varidp != NULL) *varidp = varid;
             return NC_NOERR; /* found it */
         }
@@ -340,6 +288,7 @@ NC_findvar(const NC_vararray  *ncap,
            int                *varidp)
 {
     int i, key, varid;
+    size_t nchars;
 
     assert (ncap != NULL);
 
@@ -349,9 +298,11 @@ NC_findvar(const NC_vararray  *ncap,
     key = HASH_FUNC(name);
 
     /* check the list using linear search */
+    nchars = strlen(name);
     for (i=0; i<ncap->nameT[key].num; i++) {
         varid = ncap->nameT[key].list[i];
-        if (strcmp(name, ncap->value[varid]->name->cp) == 0) {
+        if (ncap->value[varid]->name_len == nchars &&
+            strcmp(ncap->value[varid]->name, name) == 0) {
             if (varidp != NULL) *varidp = varid;
             return NC_NOERR; /* the name already exists */
         }
@@ -369,14 +320,14 @@ static int
 ncx_szof(nc_type type)
 {
     switch(type){
-        case NC_BYTE:
-        case NC_CHAR:   return (1);
-        case NC_SHORT:  return (2);
+        case NC_BYTE:   return X_SIZEOF_BYTE;
+        case NC_CHAR:   return X_SIZEOF_CHAR;
+        case NC_SHORT:  return X_SIZEOF_SHORT;
         case NC_INT:    return X_SIZEOF_INT;
         case NC_FLOAT:  return X_SIZEOF_FLOAT;
         case NC_DOUBLE: return X_SIZEOF_DOUBLE;
-        case NC_UBYTE:  return (1);
-        case NC_USHORT: return (2);
+        case NC_UBYTE:  return X_SIZEOF_UBYTE;
+        case NC_USHORT: return X_SIZEOF_USHORT;
         case NC_UINT:   return X_SIZEOF_UINT;
         case NC_INT64:  return X_SIZEOF_INT64;
         case NC_UINT64: return X_SIZEOF_UINT64;
@@ -389,9 +340,7 @@ ncx_szof(nc_type type)
 }
 
 /*----< ncmpio_NC_var_shape64() >--------------------------------------------*/
-/*
- * set varp->xsz, varp->shape and varp->len of a variable
- */
+/* set varp->xsz, varp->shape and varp->len of a variable */
 int
 ncmpio_NC_var_shape64(NC_var            *varp,
                       const NC_dimarray *dims)
@@ -404,21 +353,11 @@ ncmpio_NC_var_shape64(NC_var            *varp,
 
     if (varp->ndims == 0) goto out;
 
-    /*
-     * use the user supplied dimension indices to determine the shape
-     */
+    /* determine shape[] of the variable */
     for (i=0; i<varp->ndims; i++) {
-        const NC_dim *dimp;
+        /* varp->dimids[i] has been checked */
 
-        if (varp->dimids[i] < 0)
-            DEBUG_RETURN_ERROR(NC_EBADDIM)
-
-        if (varp->dimids[i] >= ((dims != NULL) ? dims->ndefined : 1))
-            DEBUG_RETURN_ERROR(NC_EBADDIM)
-
-        /* get the pointer to the dim object */
-        dimp = ncmpio_elem_NC_dimarray(dims, varp->dimids[i]);
-        varp->shape[i] = dimp->size;
+        varp->shape[i] = dims->value[varp->dimids[i]]->size;
 
         /* check for record variable, only the highest dimension can
          * be unlimited */
@@ -427,7 +366,7 @@ ncmpio_NC_var_shape64(NC_var            *varp,
     }
 
     /*
-     * compute the dsizes, the right to left product of shape
+     * compute dsizes[], the right to left product of shape
      */
     product = 1;
     if (varp->ndims == 1) {
@@ -489,8 +428,7 @@ ncmpio_NC_lookupvar(NC      *ncp,
     return NC_NOERR;
 }
 
-
-/*----< ncmpio_def_var() >----------------------------------------------------*/
+/*----< ncmpio_def_var() >---------------------------------------------------*/
 int
 ncmpio_def_var(void       *ncdp,
                const char *name,
@@ -499,7 +437,7 @@ ncmpio_def_var(void       *ncdp,
                const int  *dimids,
                int        *varidp)
 {
-    int err=NC_NOERR;
+    int i, err=NC_NOERR;
     char *nname=NULL; /* normalized name */
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
@@ -571,18 +509,42 @@ ncmpio_def_var(void       *ncdp,
     else
         err = NC_NOERR;
 
+    /* check dimids[] */
+    if (ndims > 0 && dimids == NULL) { /* for non-scalar variable */
+        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
+        goto err_check;
+    }
+    for (i=0; i<ndims; i++) {
+        if (dimids[i] < 0 || ncp->dims.ndefined == 0 ||
+            dimids[i] >= ncp->dims.ndefined) {
+            DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
+            goto err_check;
+        }
+    }
+
 err_check:
     if (ncp->safe_mode) {
         int root_name_len, root_ndims, status, mpireturn;
         char *root_name;
+
+        /* first check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        }
+        if (status != NC_NOERR) {
+            if (nname != NULL) NCI_Free(nname);
+            return status;
+        }
 
         /* check if name is consistent among all processes */
         root_name_len = 1;
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
         }
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
@@ -590,9 +552,9 @@ err_check:
         if (name != NULL) strcpy(root_name, name);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
+            if (nname != NULL) NCI_Free(nname);
             NCI_Free(root_name);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NAME)
@@ -602,8 +564,8 @@ err_check:
         nc_type root_type=type;
         TRACE_COMM(MPI_Bcast)(&root_type, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_type != type)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_TYPE)
@@ -612,24 +574,24 @@ err_check:
         root_ndims=ndims;
         TRACE_COMM(MPI_Bcast)(&root_ndims, 1, MPI_INT, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && root_ndims != ndims)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NDIMS)
 
         /* check if dimids is consistent among all processes */
         if (root_ndims > 0) {
-            int *root_dimids = (int*)NCI_Malloc((size_t)root_ndims * SIZEOF_INT);
+            int *root_dimids = (int*)NCI_Malloc((size_t)root_ndims *SIZEOF_INT);
             if (dimids != NULL)
                 memcpy(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT);
             else
                 memset(root_dimids, 0, (size_t)root_ndims*SIZEOF_INT);
-            TRACE_COMM(MPI_Bcast)(root_dimids, root_ndims, MPI_INT, 0, ncp->comm);
+            TRACE_COMM(MPI_Bcast)(root_dimids, root_ndims, MPI_INT,0,ncp->comm);
             if (mpireturn != MPI_SUCCESS) {
-                if (nname != NULL) free(nname);
+                if (nname != NULL) NCI_Free(nname);
                 NCI_Free(root_dimids);
-                return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
             }
             if (err == NC_NOERR && dimids != NULL &&
                 memcmp(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT))
@@ -638,25 +600,40 @@ err_check:
         }
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) free(nname);
-            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            if (nname != NULL) NCI_Free(nname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (err == NC_NOERR) err = status;
+        if (status != NC_NOERR) {
+            if (nname != NULL) NCI_Free(nname);
+            return status;
+        }
     }
 
     if (err != NC_NOERR) {
-        if (nname != NULL) free(nname);
+        if (nname != NULL) NCI_Free(nname);
         return err;
     }
 
     assert(nname != NULL);
 
-    /* create a new variable */
-    err = new_NC_var(&ncp->vars, nname, type, ndims, dimids, &varp);
-    free(nname);
-    if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
+    /* allocate a new NC_var object */
+    varp = ncmpio_new_NC_var(nname, ndims);
+    if (varp == NULL ) {
+        NCI_Free(nname);
+        DEBUG_RETURN_ERROR(NC_ENOMEM)
+    }
+    varp->type = type;
+
+    /* copy dimids[] */
+    if (ndims != 0 && dimids != NULL)
+        memcpy(varp->dimids, dimids, (size_t)ndims * SIZEOF_INT);
+
+#ifndef SEARCH_NAME_LINEARLY
+    /* insert nname to the lookup table */
+    ncmpio_hash_insert(ncp->vars.nameT, nname, ncp->vars.ndefined);
+#endif
 
     /* set up array dimensional structures */
     err = ncmpio_NC_var_shape64(varp, &ncp->dims);
@@ -671,8 +648,6 @@ err_check:
         ncmpio_free_NC_var(varp);
         DEBUG_RETURN_ERROR(err)
     }
-
-    assert(varp != NULL);
 
     /* ncp->vars.ndefined has been increased in incr_NC_vararray() */
     varp->varid = (int)ncp->vars.ndefined - 1; /* varid */
@@ -708,7 +683,7 @@ ncmpio_inq_varid(void       *ncdp,
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     err = NC_findvar(&ncp->vars, nname, varid);
-    free(nname);
+    NCI_Free(nname);
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
     return NC_NOERR;
@@ -750,8 +725,8 @@ ncmpio_inq_var(void       *ncdp,
     if (varp == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     if (name != NULL)
-        /* in PnetCDF, name->cp is always NULL character terminated */
-        strcpy(name, varp->name->cp);
+        /* in PnetCDF, name is always NULL character terminated */
+        strcpy(name, varp->name);
 
     if (xtypep != NULL)
         *xtypep = varp->type;
@@ -774,8 +749,7 @@ ncmpio_inq_var(void       *ncdp,
 #endif
             memcpy(dimids, varp->dimids, (size_t)varp->ndims * SIZEOF_INT);
     }
-    if (nattsp != NULL)
-        *nattsp = (int) varp->attrs.ndefined;
+    if (nattsp != NULL) *nattsp = (int) varp->attrs.ndefined;
 
     if (offsetp != NULL) *offsetp = varp->begin;
 
@@ -790,7 +764,7 @@ ncmpio_inq_var(void       *ncdp,
 }
 
 
-/*----< ncmpio_rename_var() >-------------------------------------------------*/
+/*----< ncmpio_rename_var() >------------------------------------------------*/
 /* This API is collective.
  * If the new name is longer than the old name, the netCDF file must be in
  * define mode. Otherwise, it can be called in either define or data mode.
@@ -802,9 +776,9 @@ ncmpio_rename_var(void       *ncdp,
 {
     int err=NC_NOERR;
     char *nnewname=NULL; /* normalized name */
+    size_t nnewname_len=0;
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
-    NC_string *newStr=NULL;
 
     /* check whether file's write permission */
     if (NC_readonly(ncp)) {
@@ -842,6 +816,7 @@ ncmpio_rename_var(void       *ncdp,
         DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
         goto err_check;
     }
+    nnewname_len = strlen(nnewname);
 
     /* check whether new name is already in use, for this API (rename) the
      * name should NOT already exist */
@@ -852,23 +827,16 @@ ncmpio_rename_var(void       *ncdp,
     }
     else err = NC_NOERR;  /* reset err */
 
-    if (! NC_indef(ncp) && /* when file is in data mode */
-        varp->name->nchars < (MPI_Offset)strlen(nnewname)) {
-        /* must in define mode when newname is longer */
+    if (! NC_indef(ncp) && varp->name_len < nnewname_len) {
+        /* when in data mode, newname cannot be longer thne the old one */
         DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
-    newStr = ncmpio_new_NC_string(strlen(nnewname), nnewname);
-    if (newStr == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
         goto err_check;
     }
 
 #ifndef SEARCH_NAME_LINEARLY
     /* update var name lookup table */
     err = ncmpio_update_name_lookup_table(ncp->vars.nameT, varid,
-          ncp->vars.value[varid]->name->cp, nnewname);
+                        ncp->vars.value[varid]->name, nnewname);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -876,28 +844,35 @@ ncmpio_rename_var(void       *ncdp,
 #endif
 
 err_check:
-    if (nnewname != NULL) free(nnewname);
     if (ncp->safe_mode) {
         int root_name_len, root_varid, status, mpireturn;
         char *root_name;
+
+        /* First check error code so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            if (nnewname != NULL) NCI_Free(nnewname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        }
+        if (status != NC_NOERR) {
+            if (nnewname != NULL) NCI_Free(nnewname);
+            return status;
+        }
 
         /* check if newname is consistent among all processes */
         root_name_len = 1;
         if (newname != NULL) root_name_len += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast root_name_len");
-        }
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
         root_name[0] = '\0';
         if (newname != NULL) strcpy(root_name, newname);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
             NCI_Free(root_name);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
         if (err == NC_NOERR && strcmp(root_name, newname))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NAME)
@@ -906,32 +881,34 @@ err_check:
         /* check if varid is consistent across all processes */
         root_varid = varid;
         TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Bcast");
-        }
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         if (err == NC_NOERR && root_varid != varid)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (newStr != NULL) ncmpio_free_NC_string(newStr);
-            return ncmpio_handle_error(mpireturn, "MPI_Allreduce");
+            if (nnewname != NULL) NCI_Free(nnewname);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (err == NC_NOERR) err = status;
+        if (status != NC_NOERR) {
+            if (nnewname != NULL) NCI_Free(nnewname);
+            return status;
+        }
     }
 
     if (err != NC_NOERR) {
-        if (newStr != NULL) ncmpio_free_NC_string(newStr);
+        if (nnewname != NULL) NCI_Free(nnewname);
         return err;
     }
 
     assert(varp != NULL);
 
     /* replace the old name with new name */
-    ncmpio_free_NC_string(varp->name);
-    varp->name = newStr;
+    NCI_Free(varp->name);
+    varp->name     = nnewname;
+    varp->name_len = nnewname_len;
 
     if (! NC_indef(ncp)) { /* when file is in data mode */
         /* Let root write the entire header to the file. Note that we cannot
