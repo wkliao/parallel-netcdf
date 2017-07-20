@@ -447,7 +447,7 @@ ncmpio_rename_att(void       *ncdp,
     }
 
     /* check whether new name is legal */
-    err = ncmpio_NC_check_name(newname, ncp->format);
+    err = ncmpii_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -1192,7 +1192,7 @@ ncmpio_put_att_$1(void       *ncdp,
     }
 
     /* check if the attribute name is legal (check for NC_EBADNAME) */
-    err = ncmpio_NC_check_name(name, ncp->format);
+    err = ncmpii_check_name(name, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -1323,6 +1323,7 @@ err_check:
             if (nname != NULL) NCI_Free(nname);
             return status;
         }
+        assert(nname != NULL);
 
         /* check if name is consistent among all processes */
         root_name_len = 1;

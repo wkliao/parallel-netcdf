@@ -459,7 +459,7 @@ ncmpio_def_var(void       *ncdp,
     }
 
     /* check if the name string is legal for netcdf format */
-    err = ncmpio_NC_check_name(name, ncp->format);
+    err = ncmpii_check_name(name, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -537,6 +537,7 @@ err_check:
             if (nname != NULL) NCI_Free(nname);
             return status;
         }
+        assert(nname != NULL);
 
         /* check if name is consistent among all processes */
         root_name_len = 1;
@@ -804,7 +805,7 @@ ncmpio_rename_var(void       *ncdp,
     }
 
     /* check whether new name is legal */
-    err = ncmpio_NC_check_name(newname, ncp->format);
+    err = ncmpii_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -858,6 +859,7 @@ err_check:
             if (nnewname != NULL) NCI_Free(nnewname);
             return status;
         }
+        assert(nnewname != NULL);
 
         /* check if newname is consistent among all processes */
         root_name_len = 1;

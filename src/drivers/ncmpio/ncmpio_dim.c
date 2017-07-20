@@ -241,6 +241,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
 
+#if 0
     /* must be called in define mode */
     if (!NC_indef(ncp)) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
@@ -258,7 +259,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
     }
 
     /* check if the name string is legal for the netcdf format */
-    err = ncmpio_NC_check_name(name, ncp->format);
+    err = ncmpii_check_name(name, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -344,6 +345,7 @@ err_check:
             NCI_Free(nname);
             return status;
         }
+        assert(nname != NULL);
 
         MPI_Comm_rank(ncp->comm, &rank);
 
@@ -396,8 +398,11 @@ err_check:
         if (nname != NULL) NCI_Free(nname);
         return err;
     }
-
-    assert(nname != NULL);
+#else
+    /* create a normalized character string */
+    nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
+    if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+#endif
 
     /* create a new dimension object (dimp->name points to nname) */
     dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
@@ -513,7 +518,7 @@ ncmpio_rename_dim(void       *ncdp,
     }
 
     /* check whether newname is legal */
-    err = ncmpio_NC_check_name(newname, ncp->format);
+    err = ncmpii_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -574,6 +579,7 @@ err_check:
             NCI_Free(nnewname);
             return status;
         }
+        assert(nnewname != NULL);
 
         MPI_Comm_rank(ncp->comm, &rank);
 

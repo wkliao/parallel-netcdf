@@ -42,6 +42,7 @@ ncmpio_redef(void *ncdp)
 {
     NC *ncp = (NC*)ncdp;
 
+#if 0
     if (NC_readonly(ncp)) DEBUG_RETURN_ERROR(NC_EPERM) /* read-only */
     /* if open mode is inconsistent, then this return might cause parallel
      * program to hang */
@@ -52,6 +53,7 @@ ncmpio_redef(void *ncdp)
     /* sync all metadata, including numrecs, if changed in independent mode.
      * also ensure exiting define mode always entering collective data mode
      */
+#endif
     if (NC_indep(ncp)) /* exit independent mode, if in independent mode */
         ncmpio_end_indep_data(ncp);
 

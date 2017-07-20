@@ -102,7 +102,7 @@ ncmpio_open(MPI_Comm     comm,
 
     /* PnetCDF default fill mode is no fill */
     fClr(ncp->flags, NC_MODE_FILL);
-    if (fIsSet(omode, NC_NOWRITE)) fSet(ncp->flags, NC_MODE_RDONLY);
+    if (!fIsSet(omode, NC_WRITE)) fSet(ncp->flags, NC_MODE_RDONLY);
 
     ncp->ncid         = ncid;
     ncp->safe_mode    = 0;
