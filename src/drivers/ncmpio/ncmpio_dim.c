@@ -346,6 +346,7 @@ err_check:
             return status;
         }
         assert(nname != NULL);
+        assert(name != NULL);
 
         MPI_Comm_rank(ncp->comm, &rank);
 

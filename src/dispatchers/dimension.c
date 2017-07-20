@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <pnetcdf.h>
 #include <dispatch.h>
@@ -119,6 +120,7 @@ err_check:
         MPI_Comm_rank(pncp->comm, &rank);
 
         /* check if name is consistent among all processes */
+        assert(name != NULL);
         root_nameLen = 1;
         if (rank == 0 && name != NULL) root_nameLen += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
@@ -287,6 +289,7 @@ err_check:
         MPI_Comm_rank(pncp->comm, &rank);
 
         /* check if name is consistent among all processes */
+        assert(newname != NULL);
         root_nameLen = 1;
         if (rank == 0 && newname != NULL) root_nameLen += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);

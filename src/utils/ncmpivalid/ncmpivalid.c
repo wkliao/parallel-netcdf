@@ -250,6 +250,7 @@ val_get_NC_string(int fd, bufferinfo *gbp, char **namep) {
     MPI_Offset nchars=0, padding, bufremain, strcount;
     MPI_Aint pos_addr, base_addr;
 
+    *namep = NULL;
     status = val_get_size_t(fd, gbp, &nchars);
     if (status != NC_NOERR) {
         printf("the name string of ");
@@ -322,7 +323,10 @@ val_get_NC_dim(int fd, bufferinfo *gbp, NC_dim **dimpp) {
     if (status != NC_NOERR) return status;
 
     dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
-    if (dimp == NULL) DEBUG_RETURN(NC_ENOMEM)
+    if (dimp == NULL) {
+        if (name != NULL) NCI_Free(name);
+        DEBUG_RETURN(NC_ENOMEM)
+    }
     dimp->name     = name;
     dimp->name_len = strlen(name);
 
@@ -551,7 +555,7 @@ new_NC_attr(char        *name,
 
 static int
 val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
-  char *name;
+  char *name=NULL;
   int status;
   nc_type type; 
   MPI_Offset nelems;
@@ -563,20 +567,20 @@ val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
   status = val_get_nc_type(fd, gbp, &type);
   if(status != NC_NOERR) {
     printf("\"%s\" - ", name);
-    free(name);
+    if (name != NULL) free(name);
     return status;
   }
 
   status = val_get_size_t(fd, gbp, &nelems); 
   if(status != NC_NOERR) {
     printf("the values of \"%s\" - ", name);
-    free(name);
+    if (name != NULL) free(name);
     return status;
   }
 
   status = new_NC_attr(name, type, nelems, &attrp);
   if(status != NC_NOERR) {
-    free(name);
+    if (name != NULL) free(name);
     return status;
   }
 
@@ -712,7 +716,7 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
      * NON_NEG     = <non-negative INT> |  // CDF-1 and CDF-2
      *               <non-negative INT64>  // CDF-5
      */
-    char *name;
+    char *name=NULL;
     int dim, status;
     MPI_Offset ndims, dimid;
     NC_var *varp;
@@ -723,13 +727,13 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
     status = val_get_size_t(fd, gbp, &ndims);
     if (status != NC_NOERR) {
         printf("the dimid list of \"%s\" - ", name);
-        free(name);
+        if (name != NULL) free(name);
         return status;
     }
 
     varp = val_new_NC_var(name, ndims);
     if (varp == NULL) {
-        free(name);
+        if (name != NULL) free(name);
         DEBUG_RETURN(NC_ENOMEM)
     }
 

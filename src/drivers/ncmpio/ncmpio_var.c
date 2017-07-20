@@ -538,6 +538,7 @@ err_check:
             return status;
         }
         assert(nname != NULL);
+        assert(name != NULL);
 
         /* check if name is consistent among all processes */
         root_name_len = 1;
@@ -860,6 +861,7 @@ err_check:
             return status;
         }
         assert(nnewname != NULL);
+        assert(newname != NULL);
 
         /* check if newname is consistent among all processes */
         root_name_len = 1;

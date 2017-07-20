@@ -54,7 +54,7 @@ getput_varn(NC                *ncp,
             int                reqMode)
 {
     int i, j, el_size, status=NC_NOERR, min_st, err, free_cbuf=0;
-    int req_id=NC_REQ_NULL, st, isSameGroup, position;
+    int req_id=NC_REQ_NULL, isSameGroup, position;
     void *cbuf=NULL;
     char *bufp;
     MPI_Offset packsize=0, **_counts=NULL;
@@ -207,7 +207,7 @@ err_check:
 
         if (min_st != NC_NOERR) {
             if (req_id != NC_REQ_NULL) /* cancel pending nonblocking request */
-                ncmpio_cancel(ncp, 1, &req_id, &st);
+                ncmpio_cancel(ncp, 1, &req_id, NULL);
             if (free_cbuf) NCI_Free(cbuf);
             return status;
         }
@@ -215,7 +215,7 @@ err_check:
 
     if (fIsSet(reqMode, NC_REQ_INDEP) && status != NC_NOERR) {
         if (req_id != NC_REQ_NULL) /* cancel pending nonblocking request */
-            ncmpio_cancel(ncp, 1, &req_id, &st);
+            ncmpio_cancel(ncp, 1, &req_id, NULL);
         if (free_cbuf) NCI_Free(cbuf);
         return status;
     }
@@ -227,8 +227,8 @@ err_check:
            calls in wait_all */
         num = 0;
 
-    err = ncmpio_wait(ncp, num, &req_id, &st, reqMode);
-    /* if error occurs, st is reflected in err */
+    err = ncmpio_wait(ncp, num, &req_id, NULL, reqMode);
+    /* if error occurs, it is reflected in err */
 
     /* unpack cbuf to user buf, if buftype is noncontiguous */
     if (status == NC_NOERR && fIsSet(reqMode, NC_REQ_RD) && free_cbuf) {
