@@ -490,6 +490,7 @@ err_check:
         }
 
         /* check if name is consistent among all processes */
+        assert(name != NULL);
         root_name_len = 1;
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
@@ -509,6 +510,7 @@ err_check:
         NCI_Free(root_name);
 
         /* check if newname is consistent among all processes */
+        assert(newname != NULL);
         root_name_len = 1;
         if (newname != NULL) root_name_len += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
@@ -626,6 +628,7 @@ ncmpio_copy_att(void       *ncdp_in,
 
     err = NC_lookupattr(ncap_in, nname, &iattrp);
     if (err != NC_NOERR) {
+        assert(iattrp == NULL);
         DEBUG_TRACE_ERROR
         goto err_check;
     }
@@ -683,6 +686,7 @@ err_check:
         }
 
         /* check if name is consistent among all processes */
+        assert(name != NULL);
         root_name_len = 1;
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp_out->comm);
@@ -843,6 +847,7 @@ err_check:
         if (status != NC_NOERR) return status;
 
         /* check if name is consistent among all processes */
+        assert(name != NULL);
         root_name_len = 1;
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
@@ -1326,6 +1331,7 @@ err_check:
         assert(nname != NULL);
 
         /* check if name is consistent among all processes */
+        assert(name != NULL);
         root_name_len = 1;
         if (name != NULL) root_name_len += strlen(name);
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
@@ -1376,22 +1382,26 @@ err_check:
         if (err == NC_NOERR && root_xtype != xtype)
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_TYPE)')
 
-        /* check if buf contents is consistent across all processes */
-        /* note xsz is aligned, thus must use the exact size of buf */
-        buf_size = (size_t)root_nelems * SIZEOFITYPE($1);
-        MPI_Comm_rank(ncp->comm, &rank);
-        if (rank > 0)
-            root_buf = (void*) NCI_Malloc(buf_size);
-        else
-            root_buf = (void*)buf;
-        TRACE_COMM(MPI_Bcast)(root_buf, (int)buf_size, MPI_BYTE, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        if (root_nelems > 0) { /* non-scalar attribute */
+            /* check if buf contents is consistent across all processes */
+            /* note xsz is aligned, thus must use the exact size of buf */
+            buf_size = (size_t)root_nelems * SIZEOFITYPE($1);
+            MPI_Comm_rank(ncp->comm, &rank);
+            if (rank > 0)
+                root_buf = (void*) NCI_Malloc(buf_size);
+            else
+                root_buf = (void*)buf;
+            TRACE_COMM(MPI_Bcast)(root_buf, (int)buf_size, MPI_BYTE, 0,
+                                  ncp->comm);
+            if (mpireturn != MPI_SUCCESS) {
+                if (nname != NULL) NCI_Free(nname);
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+            }
+            if (err == NC_NOERR &&
+                (root_nelems != nelems || memcmp(root_buf, buf, buf_size)))
+                DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
+            if (rank > 0) NCI_Free(root_buf);
         }
-        if (err == NC_NOERR && (root_nelems != nelems || memcmp(root_buf, buf, buf_size)))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
-        if (rank > 0) NCI_Free(root_buf);
 
         /* find min error code across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
