@@ -9,9 +9,12 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 
-#include <dispatch.h>
 #include <pnetcdf.h>
+#include <dispatch.h>
+#include <pnc_debug.h>
+#include <common.h>
 
 /*----< ncmpi_def_dim() >----------------------------------------------------*/
 /* This is a collective subroutine. */
@@ -21,13 +24,138 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
               MPI_Offset  size,    /* IN:  dimension size */
               int        *dimidp)  /* OUT: dimension ID */
 {
-    int err;
+    int err=NC_NOERR, ndims, xtendim;
     PNC *pncp;
 
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    if (!(pncp->flag & NC_MODE_DEF)) { /* must be called in define mode */
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
+        goto err_check;
+    }
+
+    if (name == NULL || *name == 0) { /* name cannot be NULL or NULL string */
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (strlen(name) > NC_MAX_NAME) { /* name length */
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
+        goto err_check;
+    }
+
+    /* check if the name string is legal for the netcdf format */
+    err = ncmpii_check_name(name, pncp->format);
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+    /* MPI_Offset is usually a signed value, but serial netcdf uses size_t.
+     * In 1999 ISO C standard, size_t is an unsigned integer type of at least
+     * 16 bit. */
+    if (pncp->format == NC_FORMAT_CDF2) { /* CDF-2 format, max is 2^32-4 */
+        if (size > NC_MAX_UINT - 3 || (size < 0))
+            /* "-3" handles rounded-up size */
+            err = NC_EDIMSIZE;
+    } else if (pncp->format == NC_FORMAT_CDF5) { /* CDF-5 format*/
+        if (size < 0)
+            err = NC_EDIMSIZE;
+    } else { /* CDF-1 format, max is 2^31-4 */
+        if (size > NC_MAX_INT - 3 || (size < 0))
+            /* "-3" handles rounded-up size */
+            err = NC_EDIMSIZE;
+    }
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+    err = pncp->dispatch->inq(pncp->ncp, &ndims, NULL, NULL, &xtendim);
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+    if (size == NC_UNLIMITED && xtendim != -1) {
+        /* netcdf allows one unlimited dimension defined per file */
+        DEBUG_ASSIGN_ERROR(err, NC_EUNLIMIT) /* already defined */
+        goto err_check;
+    }
+
+    /* Note we no longer limit the number of dimensions, as CDF file formats
+     * impose no such limit. Thus, the value of NC_MAX_DIMS has been changed
+     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signed int and so is
+     * ndims argument in ncmpi_inq_varndims()
+     */
+    if (ndims == NC_MAX_DIMS) {
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXDIMS)
+        goto err_check;
+    }
+
+    /* check if the name string is previously used */
+    err = pncp->dispatch->inq_dimid(pncp->ncp, name, NULL);
+    if (err != NC_EBADDIM) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
+        goto err_check;
+    }
+    else err = NC_NOERR;
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int root_nameLen, rank, minE, mpireturn;
+        char *root_name=NULL;
+        MPI_Offset root_size;
+
+        /* check the error so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR)
+            return minE;
+
+        MPI_Comm_rank(pncp->comm, &rank);
+
+        /* check if name is consistent among all processes */
+        root_nameLen = 1;
+        if (rank == 0 && name != NULL) root_nameLen += strlen(name);
+        TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_nameLen");
+
+        if (rank == 0)
+            root_name = (char*)name;
+        else
+            root_name = (char*) NCI_Malloc((size_t)root_nameLen);
+        TRACE_COMM(MPI_Bcast)(root_name, root_nameLen, MPI_CHAR, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            if (rank > 0) NCI_Free(root_name);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        }
+        if (err == NC_NOERR && rank > 0 && strcmp(root_name, name))
+            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
+        if (rank > 0) NCI_Free(root_name);
+
+        /* check if sizes are consistent across all processes */
+        root_size = size;
+        TRACE_COMM(MPI_Bcast)(&root_size, 1, MPI_OFFSET, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        if (err == NC_NOERR && root_size != size)
+            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_SIZE)
+
+        /* find min error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR)
+            return minE;
+    }
+
+    if (err != NC_NOERR) return err;
+    
     /* calling the subroutine that implements ncmpi_def_dim() */
     return pncp->dispatch->def_dim(pncp->ncp, name, size, dimidp);
 }

@@ -16,9 +16,10 @@
 #include <assert.h>  /* assert() */
 #include <errno.h>   /* errno */
 
-#include <dispatch.h>
 #include <pnetcdf.h>
+#include <dispatch.h>
 #include <pnc_debug.h>
+#include <common.h>
 
 /* TODO: the following 3 global variables make PnetCDF not thread safe */
 
@@ -243,7 +244,7 @@ ncmpi_create(MPI_Comm    comm,
     strcpy(pncp->path, path);
     pncp->mode     = cmode;
     pncp->dispatch = dispatcher;
-    pncp->flag     = NC_MODE_DEF;
+    pncp->flag     = NC_MODE_DEF | NC_MODE_CREATE;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
 
@@ -403,6 +404,8 @@ ncmpi_open(MPI_Comm    comm,
     strcpy(pncp->path, path);
     pncp->mode     = omode;
     pncp->dispatch = dispatcher;
+    pncp->flag     = 0;
+    if (!fIsSet(omode, NC_WRITE)) pncp->flag |= NC_MODE_RDONLY;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
 
@@ -475,7 +478,12 @@ ncmpi_enddef(int ncid) {
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_enddef() */
-    return pncp->dispatch->enddef(pncp->ncp);
+    err = pncp->dispatch->enddef(pncp->ncp);
+    if (err != NC_NOERR) return err;
+
+    fClr(pncp->flag, NC_MODE_INDEP); /* default enters collective data mode */
+    fClr(pncp->flag, NC_MODE_DEF);
+    return NC_NOERR;
 }
 
 /*----< ncmpi__enddef() >----------------------------------------------------*/
@@ -495,8 +503,13 @@ ncmpi__enddef(int        ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi__enddef() */
-    return pncp->dispatch->_enddef(pncp->ncp, h_minfree, v_align,
-                                              v_minfree, r_align);
+    err = pncp->dispatch->_enddef(pncp->ncp, h_minfree, v_align,
+                                             v_minfree, r_align);
+    if (err != NC_NOERR) return err;
+
+    fClr(pncp->flag, NC_MODE_INDEP); /* default enters collective data mode */
+    fClr(pncp->flag, NC_MODE_DEF);
+    return NC_NOERR;
 }
 
 /*----< ncmpi_redef() >------------------------------------------------------*/
@@ -511,8 +524,20 @@ ncmpi_redef(int ncid)
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    if (fIsSet(pncp->flag, NC_MODE_RDONLY)) /* read-only */
+        DEBUG_RETURN_ERROR(NC_EPERM)
+    /* if open mode is inconsistent, then this return might cause parallel
+     * program to hang */
+    
+    /* cannot be in define mode, must enter from data mode */
+    if (fIsSet(pncp->flag, NC_MODE_DEF)) DEBUG_RETURN_ERROR(NC_EINDEFINE)
+    
     /* calling the subroutine that implements ncmpi_redef() */
-    return pncp->dispatch->redef(pncp->ncp);
+    err = pncp->dispatch->redef(pncp->ncp);
+    if (err != NC_NOERR) return err;
+
+    fSet(pncp->flag, NC_MODE_DEF);
+    return NC_NOERR;
 }
 
 /*----< ncmpi_sync() >-------------------------------------------------------*/
@@ -574,7 +599,11 @@ ncmpi_set_fill(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_set_fill() */
-    return pncp->dispatch->set_fill(pncp->ncp, fill_mode, old_fill_mode);
+    err = pncp->dispatch->set_fill(pncp->ncp, fill_mode, old_fill_mode);
+    if (err != NC_NOERR) return err;
+
+    fSet(pncp->flag, NC_MODE_FILL);
+    return NC_NOERR;
 }
 
 /*----< ncmpi_inq_format() >-------------------------------------------------*/
@@ -926,7 +955,11 @@ ncmpi_begin_indep_data(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_begin_indep_data() */
-    return pncp->dispatch->begin_indep_data(pncp->ncp);
+    err = pncp->dispatch->begin_indep_data(pncp->ncp);
+    if (err != NC_NOERR) return err;
+
+    fSet(pncp->flag, NC_MODE_INDEP);
+    return NC_NOERR;
 }
 
 /*----< ncmpi_end_indep_data() >---------------------------------------------*/
@@ -942,7 +975,11 @@ ncmpi_end_indep_data(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_end_indep_data() */
-    return pncp->dispatch->end_indep_data(pncp->ncp);
+    err = pncp->dispatch->end_indep_data(pncp->ncp);
+    if (err != NC_NOERR) return err;
+
+    fClr(pncp->flag, NC_MODE_INDEP);
+    return NC_NOERR;
 }
 
 /*----< ncmpi_sync_numrecs() >-----------------------------------------------*/

@@ -73,4 +73,7 @@ ncmpii_start_count_stride_check(int format, int api, int ndims, int numrecs,
                 const MPI_Offset *count, const MPI_Offset *stride,
                 const int rw_flag);
 
+extern int
+ncmpii_check_name(const char *name, int file_ver);
+
 #endif
