@@ -626,7 +626,6 @@ req_commit(NC  *ncp,
         get_list        = ncp->get_list;
         ncp->numGetReqs = 0;
         ncp->get_list   = NULL;
-        num_reqs        = 0;
     }
     if (num_reqs == NC_PUT_REQ_ALL || num_reqs == NC_REQ_ALL) {
         /* in this case, arguments req_ids[] and statuses[] are ignored */
@@ -634,7 +633,6 @@ req_commit(NC  *ncp,
         put_list        = ncp->put_list;
         ncp->numPutReqs = 0;
         ncp->put_list   = NULL;
-        num_reqs        = 0;
     }
 
     /* extract the matched requests from the pending queues (get_list and
