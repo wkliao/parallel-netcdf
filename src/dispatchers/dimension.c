@@ -224,12 +224,107 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
                  int         dimid,   /* IN: dimension ID */
                  const char *newname) /* IN: name of dimension */
 {
-    int err;
+    int err=NC_NOERR, inq_id, skip_rename=0;
     PNC *pncp;
 
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (pncp->flag & NC_MODE_RDONLY) { /* cannot be read-only */
+        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
+        goto err_check;
+    }
+
+    if (newname == NULL || *newname == 0) { /* cannot be NULL or NULL string */
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (strlen(newname) > NC_MAX_NAME) { /* newname length */
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
+        goto err_check;
+    }
+
+    /* check if the newname string is legal for the netcdf format */
+    err = ncmpii_check_name(newname, pncp->format);
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+    /* check NC_EBADDIM for whether ncid is valid */
+    err = pncp->dispatch->inq_dim(pncp->ncp, dimid, NULL, NULL);
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+    /* check if the name string is previously used */
+    err = pncp->dispatch->inq_dimid(pncp->ncp, newname, &inq_id);
+    if (err == NC_NOERR) { /* name already exist */
+        if (inq_id == dimid) /* same name, same dimid, skip rename */
+            skip_rename = 1;
+        else
+            DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
+    }
+    else if (err == NC_EBADDIM) { /* cannot find dimid with this name */
+        err = NC_NOERR;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int root_nameLen, root_dimid, rank, minE, mpireturn;
+        char *root_name=NULL;
+
+        /* check the error so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR)
+            return minE;
+
+        MPI_Comm_rank(pncp->comm, &rank);
+
+        /* check if name is consistent among all processes */
+        root_nameLen = 1;
+        if (rank == 0 && newname != NULL) root_nameLen += strlen(newname);
+        TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_nameLen");
+
+        if (rank == 0)
+            root_name = (char*)newname;
+        else
+            root_name = (char*) NCI_Malloc((size_t)root_nameLen);
+        TRACE_COMM(MPI_Bcast)(root_name, root_nameLen, MPI_CHAR, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS) {
+            if (rank > 0) NCI_Free(root_name);
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        }
+        if (err == NC_NOERR && rank > 0 && strcmp(root_name, newname))
+            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
+        if (rank > 0) NCI_Free(root_name);
+
+        /* check if dimid is consistent across all processes */
+        root_dimid = dimid;
+        TRACE_COMM(MPI_Bcast)(&root_dimid, 1, MPI_INT, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        if (err == NC_NOERR && root_dimid != dimid)
+            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
+
+        /* find min error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR)
+            return minE;
+    }
+
+    if (err != NC_NOERR) return err;
+
+    if (skip_rename) return NC_NOERR;
 
     /* calling the subroutine that implements ncmpi_rename_dim() */
     return pncp->dispatch->rename_dim(pncp->ncp, dimid, newname);

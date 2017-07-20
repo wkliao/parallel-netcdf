@@ -501,6 +501,7 @@ ncmpio_rename_dim(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
 
+#if 0
     /* check file's write permission */
     if (NC_readonly(ncp)) {
         DEBUG_ASSIGN_ERROR(err, NC_EPERM)
@@ -523,7 +524,7 @@ ncmpio_rename_dim(void       *ncdp,
         DEBUG_TRACE_ERROR
         goto err_check;
     }
-
+#endif
     /* create a normalized character string */
     nnewname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)newname);
     if (nnewname == NULL) {
@@ -531,7 +532,7 @@ ncmpio_rename_dim(void       *ncdp,
         goto err_check;
     }
     nnewname_len = strlen(nnewname);
-
+#if 0
     /* check whether newname is already in use */
     err = NC_finddim(&ncp->dims, nnewname, NULL);
     if (err != NC_EBADDIM) { /* expecting NC_EBADDIM */
@@ -539,7 +540,7 @@ ncmpio_rename_dim(void       *ncdp,
         goto err_check;
     }
     else err = NC_NOERR;  /* reset err */
-
+#endif
     /* retrieve dim object */
     dimp = inq_NC_dim(&ncp->dims, dimid);
     if (dimp == NULL) {
@@ -566,8 +567,7 @@ ncmpio_rename_dim(void       *ncdp,
 
 err_check:
     if (ncp->safe_mode) {
-        int root_name_len, root_dimid, rank, status, mpireturn;
-        char *root_name=NULL;
+        int status, mpireturn;
 
         /* check the error so far across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
@@ -579,6 +579,9 @@ err_check:
             NCI_Free(nnewname);
             return status;
         }
+#if 0
+        int rank, root_name_len, root_dimid;
+        char *root_name=NULL;
         assert(nnewname != NULL);
 
         MPI_Comm_rank(ncp->comm, &rank);
@@ -621,10 +624,11 @@ err_check:
             NCI_Free(nnewname);
             return status;
         }
+#endif
     }
 
     if (err != NC_NOERR) {
-        NCI_Free(nnewname);
+        if (nnewname != NULL) NCI_Free(nnewname);
         return err;
     }
 
