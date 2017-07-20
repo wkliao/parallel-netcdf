@@ -31,7 +31,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_def_var() */
-    return pncp->dispatch->def_var(pncp->ncp, name, type, ndims, dimids, varidp);
+    return pncp->driver->def_var(pncp->ncp, name, type, ndims, dimids, varidp);
 }
 
 /*----< ncmpi_def_var_fill() >-----------------------------------------------*/
@@ -53,7 +53,7 @@ ncmpi_def_var_fill(int         ncid,    /* IN:  file ID */
     if(varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_def_var_fill() */
-    return pncp->dispatch->def_var_fill(pncp->ncp, varid, nofill, fill_value);
+    return pncp->driver->def_var_fill(pncp->ncp, varid, nofill, fill_value);
 }
 
 /*----< ncmpi_inq_varid() >--------------------------------------------------*/
@@ -71,7 +71,7 @@ ncmpi_inq_varid(int         ncid,    /* IN:  file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_varid() */
-    return pncp->dispatch->inq_varid(pncp->ncp, name, varidp);
+    return pncp->driver->inq_varid(pncp->ncp, name, varidp);
 }
 
 /*----< ncmpi_inq_var() >----------------------------------------------------*/
@@ -100,8 +100,8 @@ ncmpi_inq_var(int      ncid,    /* IN:  file ID */
         return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_var() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, name, xtypep, ndimsp,
-                                   dimids, nattsp, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, name, xtypep, ndimsp,
+                                 dimids, nattsp, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_varname() >------------------------------------------------*/
@@ -124,8 +124,8 @@ ncmpi_inq_varname(int   ncid,    /* IN:  file ID */
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_varname() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, name, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, name, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_vartype() >------------------------------------------------*/
@@ -148,8 +148,8 @@ ncmpi_inq_vartype(int      ncid,    /* IN:  file ID */
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_vartype() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, xtypep, NULL,
-                                   NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, xtypep, NULL,
+                                 NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_varndims() >-----------------------------------------------*/
@@ -172,8 +172,8 @@ ncmpi_inq_varndims(int  ncid,    /* IN:  file ID */
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_varndims() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, NULL, ndimsp,
-                                   NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, ndimsp,
+                                 NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_vardimid() >-----------------------------------------------*/
@@ -196,8 +196,8 @@ ncmpi_inq_vardimid(int  ncid,    /* IN:  file ID */
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_vardimid() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
-                                   dimids, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
+                                 dimids, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_varnatts() >-----------------------------------------------*/
@@ -215,8 +215,8 @@ ncmpi_inq_varnatts(int  ncid,    /* IN:  file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_varnatts() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
-                                   NULL, nattsp, NULL, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
+                                 NULL, nattsp, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_varoffset() >----------------------------------------------*/
@@ -239,8 +239,8 @@ ncmpi_inq_varoffset(int         ncid,   /* IN: file ID */
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_varoffset() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
-                                   NULL, NULL, offset, NULL, NULL);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
+                                 NULL, NULL, offset, NULL, NULL);
 }
 
 /*----< ncmpi_inq_var_fill() >-----------------------------------------------*/
@@ -264,8 +264,8 @@ ncmpi_inq_var_fill(int   ncid,
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_inq_var_fill() */
-    return pncp->dispatch->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, no_fill, fill_value);
+    return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, no_fill, fill_value);
 }
 
 /*----< ncmpi_fill_var_rec() >-----------------------------------------------*/
@@ -286,7 +286,7 @@ ncmpi_fill_var_rec(int        ncid,
     if (varid == NC_GLOBAL) return NC_EGLOBAL;
 
     /* calling the subroutine that implements ncmpi_fill_var_rec() */
-    return pncp->dispatch->fill_rec(pncp->ncp, varid, recno);
+    return pncp->driver->fill_rec(pncp->ncp, varid, recno);
 }
 
 /*----< ncmpi_rename_var() >-------------------------------------------------*/
@@ -304,6 +304,6 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_rename_var() */
-    return pncp->dispatch->rename_var(pncp->ncp, varid, newname);
+    return pncp->driver->rename_var(pncp->ncp, varid, newname);
 }
 

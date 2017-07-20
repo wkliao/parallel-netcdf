@@ -9,10 +9,10 @@
 #endif
 
 #include <dispatch.h>
-#include <ncmpio_dispatch.h>
+#include <ncmpio_driver.h>
 #include <nc.h>
 
-static PNC_Dispatch ncmpio_dispatcher = {
+static PNC_driver ncmpio_driver = {
     /* FILE APIs */
     ncmpio_create,
     ncmpio_open,
@@ -71,7 +71,7 @@ static PNC_Dispatch ncmpio_dispatcher = {
     ncmpio_cancel
 };
 
-PNC_Dispatch* ncmpio_inq_dispatcher(void) {
-    return &ncmpio_dispatcher;
+PNC_driver* ncmpio_inq_driver(void) {
+    return &ncmpio_driver;
 }
 

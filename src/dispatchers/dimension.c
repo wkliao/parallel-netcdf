@@ -74,7 +74,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
         goto err_check;
     }
 
-    err = pncp->dispatch->inq(pncp->ncp, &ndims, NULL, NULL, &xtendim);
+    err = pncp->driver->inq(pncp->ncp, &ndims, NULL, NULL, &xtendim);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -97,7 +97,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
     }
 
     /* check if the name string is previously used */
-    err = pncp->dispatch->inq_dimid(pncp->ncp, name, NULL);
+    err = pncp->driver->inq_dimid(pncp->ncp, name, NULL);
     if (err != NC_EBADDIM) {
         DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
         goto err_check;
@@ -159,7 +159,7 @@ err_check:
     if (err != NC_NOERR) return err;
     
     /* calling the subroutine that implements ncmpi_def_dim() */
-    return pncp->dispatch->def_dim(pncp->ncp, name, size, dimidp);
+    return pncp->driver->def_dim(pncp->ncp, name, size, dimidp);
 }
 
 /*----< ncmpi_inq_dimid() >--------------------------------------------------*/
@@ -177,7 +177,7 @@ ncmpi_inq_dimid(int         ncid,    /* IN:  file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_dimid() */
-    return pncp->dispatch->inq_dimid(pncp->ncp, name, dimidp);
+    return pncp->driver->inq_dimid(pncp->ncp, name, dimidp);
 }
 
 /*----< ncmpi_inq_dim() >----------------------------------------------------*/
@@ -196,7 +196,7 @@ ncmpi_inq_dim(int         ncid,    /* IN:  file ID */
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_dim() */
-    return pncp->dispatch->inq_dim(pncp->ncp, dimid, name, lengthp);
+    return pncp->driver->inq_dim(pncp->ncp, dimid, name, lengthp);
 }
 
 /*----< ncmpi_inq_dimname() >------------------------------------------------*/
@@ -256,14 +256,14 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
     }
 
     /* check NC_EBADDIM for whether ncid is valid */
-    err = pncp->dispatch->inq_dim(pncp->ncp, dimid, NULL, NULL);
+    err = pncp->driver->inq_dim(pncp->ncp, dimid, NULL, NULL);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
     }
 
     /* check if the name string is previously used */
-    err = pncp->dispatch->inq_dimid(pncp->ncp, newname, &inq_id);
+    err = pncp->driver->inq_dimid(pncp->ncp, newname, &inq_id);
     if (err == NC_NOERR) { /* name already exist */
         if (inq_id == dimid) /* same name, same dimid, skip rename */
             skip_rename = 1;
@@ -330,6 +330,6 @@ err_check:
     if (skip_rename) return NC_NOERR;
 
     /* calling the subroutine that implements ncmpi_rename_dim() */
-    return pncp->dispatch->rename_dim(pncp->ncp, dimid, newname);
+    return pncp->driver->rename_dim(pncp->ncp, dimid, newname);
 }
 

@@ -75,11 +75,11 @@ ifelse(`$1',`put',`
         return NC_EGLOBAL;')
 
     /* calling the subroutine that implements APINAME($1,$2)() */
-    return pncp->dispatch->`$1'_att(pncp->ncp,
-                                    varid, name,
-                                    ifelse(`$1',`put',`ifelse(`$2',`text',`NC_CHAR,',`xtype,') nelems,')
-                                    buf,
-                                    itype);
+    return pncp->driver->`$1'_att(pncp->ncp,
+                                  varid, name,
+                                  ifelse(`$1',`put',`ifelse(`$2',`text',`NC_CHAR,',`xtype,') nelems,')
+                                  buf,
+                                  itype);
 }
 ')dnl
 

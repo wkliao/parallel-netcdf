@@ -171,7 +171,7 @@ ncmpi_create(MPI_Comm    comm,
     char *env_str;
     MPI_Info combined_info=MPI_INFO_NULL;
     PNC *pncp;
-    PNC_Dispatch *dispatcher;
+    PNC_driver *driver;
 
     MPI_Comm_rank(comm, &rank);
 
@@ -215,9 +215,9 @@ ncmpi_create(MPI_Comm    comm,
      * inconsistency error, if there is any */
 
     /* TODO: Use cmode to tell the file format which is later used to select
-     * the right dispatcher. For now, we have only one dispatcher, ncmpio.
+     * the right driver. For now, we have only one driver, ncmpio.
      */
-    dispatcher = ncmpio_inq_dispatcher();
+    driver = ncmpio_inq_driver();
 
 #if 0 /* refer to netCDF library's USE_REFCOUNT */
     /* check whether this path is already opened */
@@ -229,7 +229,7 @@ ncmpi_create(MPI_Comm    comm,
     err = new_id_PNCList(ncidp);
     if (err != NC_NOERR) return err;
 
-    /* Create a PNC object and save the dispatcher pointer */
+    /* Create a PNC object and save the driver pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
     if (pncp == NULL) {
         *ncidp = -1;
@@ -242,9 +242,9 @@ ncmpi_create(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode     = cmode;
-    pncp->dispatch = dispatcher;
-    pncp->flag     = NC_MODE_DEF | NC_MODE_CREATE;
+    pncp->mode   = cmode;
+    pncp->driver = driver;
+    pncp->flag   = NC_MODE_DEF | NC_MODE_CREATE;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
 
@@ -252,7 +252,7 @@ ncmpi_create(MPI_Comm    comm,
     combine_env_hints(info, &combined_info);
 
     /* calling the create subroutine */
-    err = dispatcher->create(comm, path, cmode, *ncidp, combined_info,
+    err = driver->create(comm, path, cmode, *ncidp, combined_info,
                              &pncp->ncp);
     if (status == NC_NOERR) status = err;
     if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
@@ -301,7 +301,7 @@ ncmpi_open(MPI_Comm    comm,
     char *env_str;
     MPI_Info combined_info=MPI_INFO_NULL;
     PNC *pncp;
-    PNC_Dispatch *dispatcher;
+    PNC_driver *driver;
 
     MPI_Comm_rank(comm, &rank);
 
@@ -326,7 +326,7 @@ ncmpi_open(MPI_Comm    comm,
     if (path == NULL || *path == '\0') DEBUG_RETURN_ERROR(NC_EBAD_FILE)
 
     /* Check the file signature to tell the file format which is later used to
-     * select the right dispatcher.
+     * select the right driver.
      */
     format = NC_FORMAT_UNKNOWN;
     if (rank == 0) {
@@ -368,10 +368,10 @@ ncmpi_open(MPI_Comm    comm,
     if (format == NC_FORMAT_CLASSIC ||
         format == NC_FORMAT_CDF2 ||
         format == NC_FORMAT_CDF5) {
-        /* TODO: currently we only have ncmpio dispatcher. Need to add other
-         * dispatchers once they are available
+        /* TODO: currently we only have ncmpio driver. Need to add other
+         * drivers once they are available
          */
-        dispatcher = ncmpio_inq_dispatcher();
+        driver = ncmpio_inq_driver();
     }
     else if (format == NC_FORMAT_NETCDF4_CLASSIC) {
         fprintf(stderr,"NC_FORMAT_NETCDF4_CLASSIC is not yet supported\n");
@@ -389,7 +389,7 @@ ncmpi_open(MPI_Comm    comm,
     err = new_id_PNCList(ncidp);
     if (err != NC_NOERR) return err;
 
-    /* Create a PNC object and save its dispatcher pointer */
+    /* Create a PNC object and save its driver pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
     if (pncp == NULL) {
         *ncidp = -1;
@@ -402,9 +402,9 @@ ncmpi_open(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode     = omode;
-    pncp->dispatch = dispatcher;
-    pncp->flag     = 0;
+    pncp->mode   = omode;
+    pncp->driver = driver;
+    pncp->flag   = 0;
     if (!fIsSet(omode, NC_WRITE)) pncp->flag |= NC_MODE_RDONLY;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
@@ -413,7 +413,7 @@ ncmpi_open(MPI_Comm    comm,
     combine_env_hints(info, &combined_info);
 
     /* calling the open subroutine */
-    err = dispatcher->open(comm, path, omode, *ncidp, combined_info,
+    err = driver->open(comm, path, omode, *ncidp, combined_info,
                            &pncp->ncp);
     if (status == NC_NOERR) status = err;
     if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
@@ -453,7 +453,7 @@ ncmpi_close(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_close() */
-    err = pncp->dispatch->close(pncp->ncp);
+    err = pncp->driver->close(pncp->ncp);
 
     /* Remove from the PNCList, even if err != NC_NOERR */
     del_from_PNCList(ncid);
@@ -478,7 +478,7 @@ ncmpi_enddef(int ncid) {
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_enddef() */
-    err = pncp->dispatch->enddef(pncp->ncp);
+    err = pncp->driver->enddef(pncp->ncp);
     if (err != NC_NOERR) return err;
 
     fClr(pncp->flag, NC_MODE_INDEP); /* default enters collective data mode */
@@ -503,8 +503,8 @@ ncmpi__enddef(int        ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi__enddef() */
-    err = pncp->dispatch->_enddef(pncp->ncp, h_minfree, v_align,
-                                             v_minfree, r_align);
+    err = pncp->driver->_enddef(pncp->ncp, h_minfree, v_align,
+                                           v_minfree, r_align);
     if (err != NC_NOERR) return err;
 
     fClr(pncp->flag, NC_MODE_INDEP); /* default enters collective data mode */
@@ -533,7 +533,7 @@ ncmpi_redef(int ncid)
     if (fIsSet(pncp->flag, NC_MODE_DEF)) DEBUG_RETURN_ERROR(NC_EINDEFINE)
     
     /* calling the subroutine that implements ncmpi_redef() */
-    err = pncp->dispatch->redef(pncp->ncp);
+    err = pncp->driver->redef(pncp->ncp);
     if (err != NC_NOERR) return err;
 
     fSet(pncp->flag, NC_MODE_DEF);
@@ -555,7 +555,7 @@ ncmpi_sync(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_sync() */
-    return pncp->dispatch->sync(pncp->ncp);
+    return pncp->driver->sync(pncp->ncp);
 }
 
 /*----< ncmpi_abort() >------------------------------------------------------*/
@@ -571,7 +571,7 @@ ncmpi_abort(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_abort() */
-    err = pncp->dispatch->abort(pncp->ncp);
+    err = pncp->driver->abort(pncp->ncp);
 
     /* Remove from the PNCList, even if err != NC_NOERR */
     del_from_PNCList(ncid);
@@ -599,7 +599,7 @@ ncmpi_set_fill(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_set_fill() */
-    err = pncp->dispatch->set_fill(pncp->ncp, fill_mode, old_fill_mode);
+    err = pncp->driver->set_fill(pncp->ncp, fill_mode, old_fill_mode);
     if (err != NC_NOERR) return err;
 
     fSet(pncp->flag, NC_MODE_FILL);
@@ -716,7 +716,7 @@ ncmpi_inq(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq() */
-    return pncp->dispatch->inq(pncp->ncp, ndimsp, nvarsp, nattsp, xtendimp);
+    return pncp->driver->inq(pncp->ncp, ndimsp, nvarsp, nattsp, xtendimp);
 }
 
 /*----< ncmpi_inq_ndims() >--------------------------------------------------*/
@@ -768,9 +768,9 @@ ncmpi_inq_path(int   ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_path() */
-    return pncp->dispatch->inq_misc(pncp->ncp, pathlen, path, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, pathlen, path, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_num_fix_vars() >-------------------------------------------*/
@@ -786,9 +786,9 @@ ncmpi_inq_num_fix_vars(int ncid, int *num_fix_varsp)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_num_fix_vars() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, num_fix_varsp, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, num_fix_varsp, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_num_rec_vars() >-------------------------------------------*/
@@ -804,9 +804,9 @@ ncmpi_inq_num_rec_vars(int ncid, int *num_rec_varsp)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_num_rec_vars() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, num_rec_varsp,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, num_rec_varsp,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_striping() >-----------------------------------------------*/
@@ -822,9 +822,9 @@ ncmpi_inq_striping(int ncid, int *striping_size, int *striping_count)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_striping() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    striping_size, striping_count, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  striping_size, striping_count, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_header_size() >--------------------------------------------*/
@@ -840,9 +840,9 @@ ncmpi_inq_header_size(int ncid, MPI_Offset *header_size)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_header_size() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, header_size, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, header_size, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_header_extent() >------------------------------------------*/
@@ -858,9 +858,9 @@ ncmpi_inq_header_extent(int ncid, MPI_Offset *header_extent)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_header_extent() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, header_extent, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, header_extent, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_recsize() >-----------------------------------------------*/
@@ -876,9 +876,9 @@ ncmpi_inq_recsize(int ncid, MPI_Offset *recsize)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_recsize() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, recsize, NULL,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, recsize, NULL,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_put_size() >----------------------------------------------*/
@@ -894,9 +894,9 @@ ncmpi_inq_put_size(int ncid, MPI_Offset *put_size)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_put_size() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, put_size,
-                                    NULL, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, put_size,
+                                  NULL, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_get_size() >----------------------------------------------*/
@@ -912,9 +912,9 @@ ncmpi_inq_get_size(int ncid, MPI_Offset *get_size)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_get_size() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    get_size, NULL, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  get_size, NULL, NULL, NULL, NULL);
 }
 
 /*----< ncmpi_inq_file_info() >---------------------------------------------*/
@@ -930,9 +930,9 @@ ncmpi_inq_file_info(int ncid, MPI_Info *info)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_file_info() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, info, NULL, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, info, NULL, NULL, NULL);
 }
 
 /* ncmpi_get_file_info() is now deprecated, replaced by ncmpi_inq_file_info() */
@@ -955,7 +955,7 @@ ncmpi_begin_indep_data(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_begin_indep_data() */
-    err = pncp->dispatch->begin_indep_data(pncp->ncp);
+    err = pncp->driver->begin_indep_data(pncp->ncp);
     if (err != NC_NOERR) return err;
 
     fSet(pncp->flag, NC_MODE_INDEP);
@@ -975,7 +975,7 @@ ncmpi_end_indep_data(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_end_indep_data() */
-    err = pncp->dispatch->end_indep_data(pncp->ncp);
+    err = pncp->driver->end_indep_data(pncp->ncp);
     if (err != NC_NOERR) return err;
 
     fClr(pncp->flag, NC_MODE_INDEP);
@@ -998,7 +998,7 @@ ncmpi_sync_numrecs(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_sync_numrecs() */
-    return pncp->dispatch->sync_numrecs(pncp->ncp);
+    return pncp->driver->sync_numrecs(pncp->ncp);
 }
 
 /*----< ncmpi_set_default_format() >-----------------------------------------*/
@@ -1080,9 +1080,9 @@ ncmpi_inq_nreqs(int  ncid,
     if (nreqs == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
     /* calling the subroutine that implements ncmpi_inq_nreqs() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, nreqs, NULL, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, nreqs, NULL, NULL);
 }
 
 /*----< ncmpi_inq_buffer_usage() >-------------------------------------------*/
@@ -1101,9 +1101,9 @@ ncmpi_inq_buffer_usage(int         ncid,
     if (usage == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
     /* calling the subroutine that implements ncmpi_inq_buffer_usage() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, usage, NULL);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, usage, NULL);
 }
 
 /*----< ncmpi_inq_buffer_size() >--------------------------------------------*/
@@ -1122,9 +1122,9 @@ ncmpi_inq_buffer_size(int         ncid,
     if (buf_size == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
     /* calling the subroutine that implements ncmpi_inq_buffer_size() */
-    return pncp->dispatch->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, buf_size);
+    return pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, buf_size);
 }
 
 /*----< ncmpi_buffer_attach() >-----------------------------------------------*/
@@ -1143,7 +1143,7 @@ ncmpi_buffer_attach(int        ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_buffer_attach() */
-    return pncp->dispatch->buffer_attach(pncp->ncp, bufsize);
+    return pncp->driver->buffer_attach(pncp->ncp, bufsize);
 }
 
 /*----< ncmpi_buffer_detach() >-----------------------------------------------*/
@@ -1159,7 +1159,7 @@ ncmpi_buffer_detach(int ncid)
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_buffer_detach() */
-    return pncp->dispatch->buffer_detach(pncp->ncp);
+    return pncp->driver->buffer_detach(pncp->ncp);
 }
 
 /*----< ncmpi_delete() >-----------------------------------------------------*/
@@ -1191,8 +1191,8 @@ ncmpi_wait(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_wait() */
-    return pncp->dispatch->wait(pncp->ncp, num_reqs, req_ids, statuses,
-                                NC_REQ_INDEP);
+    return pncp->driver->wait(pncp->ncp, num_reqs, req_ids, statuses,
+                              NC_REQ_INDEP);
 }
 
 /*----< ncmpi_wait_all() >---------------------------------------------------*/
@@ -1215,8 +1215,8 @@ ncmpi_wait_all(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_wait_all() */
-    return pncp->dispatch->wait(pncp->ncp, num_reqs, req_ids, statuses,
-                                NC_REQ_COLL);
+    return pncp->driver->wait(pncp->ncp, num_reqs, req_ids, statuses,
+                              NC_REQ_COLL);
 }
 
 /*----< ncmpi_cancel() >-----------------------------------------------------*/
@@ -1239,6 +1239,6 @@ ncmpi_cancel(int  ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_cancel() */
-    return pncp->dispatch->cancel(pncp->ncp, num_reqs, req_ids, statuses);
+    return pncp->driver->cancel(pncp->ncp, num_reqs, req_ids, statuses);
 }
 

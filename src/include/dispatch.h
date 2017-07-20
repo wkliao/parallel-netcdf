@@ -40,7 +40,7 @@ typedef enum {
     API_VARM
 } NC_api;
 
-struct PNC_Dispatch {
+struct PNC_driver {
     /* APIs manipulate files */
     int (*create)(MPI_Comm, const char*, int, int, MPI_Info, void**);
     int (*open)(MPI_Comm, const char*, int, int, MPI_Info, void**);
@@ -104,7 +104,7 @@ struct PNC_Dispatch {
     int (*cancel)(void*,int,int*,int*);
 };
 
-typedef struct PNC_Dispatch PNC_Dispatch;
+typedef struct PNC_driver PNC_driver;
 
 struct PNC_var {
     int         ndims;
@@ -115,22 +115,22 @@ typedef struct PNC_var PNC_var;
 
 /* Common Shared Structure for all Dispatched Objects */
 struct PNC {
-    int                  mode;   /* file _open/_create mode */
-    int                  flag;   /* define/data/collective/indep mode */
-    int                  format; /* file format */
-    char                *path;   /* path name */
-    MPI_Comm             comm;
+    int                mode;   /* file _open/_create mode */
+    int                flag;   /* define/data/collective/indep mode */
+    int                format; /* file format */
+    char              *path;   /* path name */
+    MPI_Comm           comm;
     // int                  nvars;
     // struct PNC_var      *vars;
-    void                *ncp;    /* pointer to dispatcher data object */
-    struct PNC_Dispatch *dispatch;
+    void              *ncp;    /* pointer to driver internal object */
+    struct PNC_driver *driver;
 };
 
 typedef struct PNC PNC;
 
 /* subroutine prototypes */
 
-extern PNC_Dispatch* ncmpio_inq_dispatcher(void);
+extern PNC_driver* ncmpio_inq_driver(void);
 
 extern int PNC_check_id(int ncid, PNC **pncp);
 

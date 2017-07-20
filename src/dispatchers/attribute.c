@@ -30,7 +30,7 @@ ncmpi_inq_att(int         ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_att() */
-    return pncp->dispatch->inq_att(pncp->ncp, varid, name, xtypep, lenp);
+    return pncp->driver->inq_att(pncp->ncp, varid, name, xtypep, lenp);
 }
 
 /*----< ncmpi_inq_atttype() >------------------------------------------------*/
@@ -71,7 +71,7 @@ ncmpi_inq_attid(int         ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_attid() */
-    return pncp->dispatch->inq_attid(pncp->ncp, varid, name, attnump);
+    return pncp->driver->inq_attid(pncp->ncp, varid, name, attnump);
 }
 
 /*----< ncmpi_inq_attname() >------------------------------------------------*/
@@ -90,7 +90,7 @@ ncmpi_inq_attname(int   ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_inq_attname() */
-    return pncp->dispatch->inq_attname(pncp->ncp, varid, attnum, name);
+    return pncp->driver->inq_attname(pncp->ncp, varid, attnum, name);
 }
 
 /*----< ncmpi_copy_att() >---------------------------------------------------*/
@@ -119,8 +119,8 @@ ncmpi_copy_att(int         ncid_in,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_copy_att() */
-    return pncp_in->dispatch->copy_att(pncp_in->ncp,  varid_in, name,
-                                       pncp_out->ncp, varid_out);
+    return pncp_in->driver->copy_att(pncp_in->ncp,  varid_in, name,
+                                     pncp_out->ncp, varid_out);
 }
 
 /*----< ncmpi_rename_att() >-------------------------------------------------*/
@@ -141,7 +141,7 @@ ncmpi_rename_att(int         ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_rename_att() */
-    return pncp->dispatch->rename_att(pncp->ncp, varid, name, newname);
+    return pncp->driver->rename_att(pncp->ncp, varid, name, newname);
 }
 
 /*----< ncmpi_del_att() >----------------------------------------------------*/
@@ -161,6 +161,6 @@ ncmpi_del_att(int         ncid,
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_del_att() */
-    return pncp->dispatch->del_att(pncp->ncp, varid, name);
+    return pncp->driver->del_att(pncp->ncp, varid, name);
 }
 

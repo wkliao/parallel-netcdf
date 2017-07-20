@@ -53,14 +53,14 @@ APINAME($1,$2,$3,$4)(int ncid,
               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements APINAME($1,$2,$3,$4)() */
-    return pncp->dispatch->`$1'_var(pncp->ncp,
-                                    varid,
-                                    ArgStartCountStrideMap($2),
-                                    buf,
-                                    ifelse(`$3',`',`bufcount, buftype',
-                                                   `-1, ITYPE2MPI($3)'),
-                                    API_KIND($2),
-                                    reqMode);
+    return pncp->driver->`$1'_var(pncp->ncp,
+                                  varid,
+                                  ArgStartCountStrideMap($2),
+                                  buf,
+                                  ifelse(`$3',`',`bufcount, buftype',
+                                                 `-1, ITYPE2MPI($3)'),
+                                  API_KIND($2),
+                                  reqMode);
 }
 ')dnl
 dnl
@@ -123,15 +123,15 @@ NAPINAME($1,$2,$3)(int                ncid,
               ifelse(`$3',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements NAPINAME($1,$2,$3)() */
-    return pncp->dispatch->`$1'_varn(pncp->ncp,
-                                     varid,
-                                     num,
-                                     starts,
-                                     counts,
-                                     buf,
-                                     ifelse(`$2',`',`bufcount, buftype',
-                                                    `-1, ITYPE2MPI($2)'),
-                                     reqMode);
+    return pncp->driver->`$1'_varn(pncp->ncp,
+                                   varid,
+                                   num,
+                                   starts,
+                                   counts,
+                                   buf,
+                                   ifelse(`$2',`',`bufcount, buftype',
+                                                  `-1, ITYPE2MPI($2)'),
+                                   reqMode);
 }
 ')dnl
 dnl
@@ -198,19 +198,19 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     reqs = (int*) malloc((size_t)nvars * SIZEOF_INT);
     for (i=0; i<nvars; i++) {
         /* call the nonblocking subroutines */
-        err = pncp->dispatch->i`$1'_var(pncp->ncp,
-                                        varids[i],
-                                        MArgStartCountStrideMap($2),
-                                        bufs[i],
-                                        ifelse(`$3',`',`bufcounts[i], buftypes[i]',
-                                                       `-1, ITYPE2MPI($3)'),
-                                        &reqs[i],
-                                        API_KIND($2),
-                                        reqMode);
+        err = pncp->driver->i`$1'_var(pncp->ncp,
+                                      varids[i],
+                                      MArgStartCountStrideMap($2),
+                                      bufs[i],
+                                      ifelse(`$3',`',`bufcounts[i], buftypes[i]',
+                                                     `-1, ITYPE2MPI($3)'),
+                                      &reqs[i],
+                                      API_KIND($2),
+                                      reqMode);
         if (status == NC_NOERR) status = err;
     }
 
-    err = pncp->dispatch->wait(pncp->ncp, nvars, reqs, NULL, reqMode);
+    err = pncp->driver->wait(pncp->ncp, nvars, reqs, NULL, reqMode);
     if (status == NC_NOERR) status = err;
     free(reqs);
 
@@ -261,15 +261,15 @@ IAPINAME($1,$2,$3)(int ncid,
               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL');
 
     /* calling the subroutine that implements IAPINAME($1,$2,$3)() */
-    return pncp->dispatch->`$1'_var(pncp->ncp,
-                                    varid,
-                                    ArgStartCountStrideMap($2),
-                                    buf,
-                                    ifelse(`$3',`',`bufcount, buftype',
-                                                   `-1, ITYPE2MPI($3)'),
-                                    reqid,
-                                    API_KIND($2),
-                                    reqMode);
+    return pncp->driver->`$1'_var(pncp->ncp,
+                                  varid,
+                                  ArgStartCountStrideMap($2),
+                                  buf,
+                                  ifelse(`$3',`',`bufcount, buftype',
+                                                 `-1, ITYPE2MPI($3)'),
+                                  reqid,
+                                  API_KIND($2),
+                                  reqMode);
 }
 ')dnl
 dnl
@@ -336,16 +336,16 @@ INAPINAME($1,$2)(int                ncid,
               ifelse(`$2',`',`NC_REQ_FLEX',`NC_REQ_HL');
 
     /* calling the subroutine that implements INAPINAME($1,$2)() */
-    return pncp->dispatch->`$1'_varn(pncp->ncp,
-                                     varid,
-                                     num,
-                                     starts,
-                                     counts,
-                                     buf,
-                                     ifelse(`$2',`',`bufcount, buftype',
-                                                    `-1, ITYPE2MPI($2)'),
-                                     reqid,
-                                     reqMode);
+    return pncp->driver->`$1'_varn(pncp->ncp,
+                                   varid,
+                                   num,
+                                   starts,
+                                   counts,
+                                   buf,
+                                   ifelse(`$2',`',`bufcount, buftype',
+                                                  `-1, ITYPE2MPI($2)'),
+                                   reqid,
+                                   reqMode);
 }
 ')dnl
 dnl
@@ -386,13 +386,13 @@ ncmpi_$1_vard$2(int           ncid,
               ifelse(`$2',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements ncmpi_$1_vard$2() */
-    return pncp->dispatch->$1_vard(pncp->ncp,
-                                   varid,
-                                   filetype,
-                                   buf,
-                                   bufcount,
-                                   buftype,
-                                   reqMode);
+    return pncp->driver->$1_vard(pncp->ncp,
+                                 varid,
+                                 filetype,
+                                 buf,
+                                 bufcount,
+                                 buftype,
+                                 reqMode);
 }
 ')
 dnl

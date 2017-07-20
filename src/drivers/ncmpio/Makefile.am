@@ -33,13 +33,13 @@ M4_SRCS   = ncmpio_getput.m4 \
             ncmpio_attr.m4 \
             convert_swap.m4
 
-H_SRCS = ncmpio_dispatch.h \
+H_SRCS = ncmpio_driver.h \
          nc.h \
          rnd.h \
          macro.h \
          subfile.h
 
-C_SRCS = ncmpio_dispatch.c \
+C_SRCS = ncmpio_driver.c \
          ncmpio_create.c \
          ncmpio_open.c \
          ncmpio_enddef.c \

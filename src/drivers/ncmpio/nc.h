@@ -15,7 +15,7 @@
 #include <sys/types.h>  /* off_t */
 
 #include <dispatch.h>
-#include "ncmpio_dispatch.h"
+#include "ncmpio_driver.h"
 
 #define FILE_ALIGNMENT_DEFAULT 512
 #define HEADER_ALIGNMENT_LB    4
