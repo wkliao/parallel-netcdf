@@ -314,13 +314,16 @@ val_get_NC_string(int fd, bufferinfo *gbp, char **namep) {
 static int
 val_get_NC_dim(int fd, bufferinfo *gbp, NC_dim **dimpp) {
     int status;
-    char *name;
+    char *name=NULL;
     NC_dim *dimp;
 
     *dimpp = NULL;
 
     status = val_get_NC_string(fd, gbp, &name);
-    if (status != NC_NOERR) return status;
+    if (status != NC_NOERR) {
+        if (name != NULL) free(name);
+        return status;
+    }
 
     dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
     if (dimp == NULL) {
@@ -562,7 +565,10 @@ val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
   NC_attr *attrp;
 
   status = val_get_NC_string(fd, gbp, &name);
-  if(status != NC_NOERR) return status;
+  if (status != NC_NOERR) {
+      if (name != NULL) free(name);
+      return status;
+  }
 
   status = val_get_nc_type(fd, gbp, &type);
   if(status != NC_NOERR) {
@@ -722,7 +728,10 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
     NC_var *varp;
 
     status = val_get_NC_string(fd, gbp, &name);
-    if (status != NC_NOERR) return status;
+    if (status != NC_NOERR) {
+        if (name != NULL) free(name);
+        return status;
+    }
 
     status = val_get_size_t(fd, gbp, &ndims);
     if (status != NC_NOERR) {
