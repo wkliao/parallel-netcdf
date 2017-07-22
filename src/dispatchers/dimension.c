@@ -200,6 +200,8 @@ ncmpi_inq_dim(int         ncid,    /* IN:  file ID */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    if (dimid < 0 || dimid >= pncp->ndims) DEBUG_RETURN_ERROR(NC_EBADDIM)
+
     /* calling the subroutine that implements ncmpi_inq_dim() */
     return pncp->driver->inq_dim(pncp->ncp, dimid, name, lengthp);
 }
@@ -261,7 +263,7 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
     }
 
     /* check NC_EBADDIM for whether dimid is valid */
-    if (dimid < 0 || pncp->ndims == 0 || dimid >= pncp->ndims) {
+    if (dimid < 0 || dimid >= pncp->ndims) {
         DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
         goto err_check;
     }
