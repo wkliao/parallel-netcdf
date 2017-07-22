@@ -56,7 +56,7 @@ ptest:
 	  done ) ;
 
 ptests:
-	for i in 2 4 6 8 10 ; do \
+	for i in 2 4 6 ; do \
 	(echo "=============================================")  && \
 	(echo "    Parallel testing on $$i MPI processes")  && \
 	(echo "=============================================")  && \
