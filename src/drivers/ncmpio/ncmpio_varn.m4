@@ -220,14 +220,13 @@ err_check:
         return status;
     }
 
-    num = 1;
-    if (status != NC_NOERR)
+    if (status == NC_NOERR)
+        err = ncmpio_wait(ncp, 1, &req_id, NULL, reqMode);
+    else
         /* This can only be reached for NC_REQ_COLL and safe_mode == 0.
-           Set num=0 just so this process can participate the collective
-           calls in wait_all */
-        num = 0;
+         * Let this process participate the collective calls in wait_all */
+        err = ncmpio_wait(ncp, 0, NULL, NULL, reqMode);
 
-    err = ncmpio_wait(ncp, num, &req_id, NULL, reqMode);
     /* if error occurs, it is reflected in err */
 
     /* unpack cbuf to user buf, if buftype is noncontiguous */

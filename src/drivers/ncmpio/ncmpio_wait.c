@@ -988,6 +988,8 @@ ncmpio_wait(void *ncdp,
     else if (coll_indep == NC_REQ_COLL && NC_indep(ncp))
         DEBUG_RETURN_ERROR(NC_EINDEP)
 
+    if (coll_indep == NC_REQ_INDEP && num_reqs == 0) return NC_NOERR;
+
     return req_commit(ncp, num_reqs, req_ids, statuses, coll_indep);
 #else
     /* If request aggregation is disabled, we call an independent wait() for
@@ -1012,6 +1014,8 @@ ncmpio_wait(void *ncdp,
 	 * data mode, illegal in collective mode.
          */
         if (!NC_indep(ncp)) DEBUG_RETURN_ERROR(NC_ENOTINDEP);
+
+        if (coll_indep == NC_REQ_INDEP && num_reqs == 0) return NC_NOERR;
     }
     else {
         /* This is called from ncmpi_wait_all(), which is a collective call
