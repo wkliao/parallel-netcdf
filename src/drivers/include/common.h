@@ -24,6 +24,18 @@
 #define MIN(mm,nn) (((mm) < (nn)) ? (mm) : (nn))
 #endif
 
+/* useful for aligning memory */
+#define _RNDUP(x, unit)      ((((x) + (unit) - 1) / (unit)) * (unit))
+#define _RNDDOWN(x, unit)    ((x) - ((x)%(unit)))
+
+/* #define M_RND_UNIT   (sizeof(double))
+ * SIZEOF_DOUBLE is defined in config.h
+ */
+#define M_RND_UNIT        SIZEOF_DOUBLE
+#define M_RNDUP(x)        _RNDUP(x, M_RND_UNIT)
+#define M_RNDDOWN(x)      _RNDDOWN(x, M_RND_UNIT)
+#define D_RNDUP(x, align) _RNDUP(x, (off_t)(align))
+
 extern void *
 NCI_Malloc_fn(size_t size, const int lineno, const char *func,
               const char *filename);

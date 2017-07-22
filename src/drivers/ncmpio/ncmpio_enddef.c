@@ -27,7 +27,6 @@
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "rnd.h"    /* D_RNDUP() */
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif

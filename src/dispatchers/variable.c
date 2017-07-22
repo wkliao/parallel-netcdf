@@ -187,6 +187,30 @@ err_check:
     err = pncp->driver->def_var(pncp->ncp, name, type, ndims, dimids, varidp);
     if (err != NC_NOERR) return err;
 
+    assert(*varidp == pncp->nvars);
+
+    /* add new variable into pnc-vars[] */
+    if (pncp->nvars % PNC_VARS_CHUNK == 0)
+        pncp->vars = NCI_Realloc(pncp->vars,
+                                 (pncp->nvars+PNC_VARS_CHUNK)*sizeof(PNC_var));
+
+    pncp->vars[*varidp].ndims  = ndims;
+    pncp->vars[*varidp].xtype  = type;
+    pncp->vars[*varidp].recdim = -1;   /* if fixed-size variable */
+    pncp->vars[*varidp].shape  = NULL;
+    if (ndims > 0) {
+        if (dimids[0] == pncp->unlimdimid) /* record variable */
+            pncp->vars[*varidp].recdim = pncp->unlimdimid;
+
+        pncp->vars[*varidp].shape = (MPI_Offset*)
+                                    NCI_Malloc(ndims * SIZEOF_MPI_OFFSET);
+        for (i=0; i<ndims; i++) {
+            /* obtain size of dimension i */
+            err = pncp->driver->inq_dim(pncp->ncp, dimids[i], NULL,
+                                        pncp->vars[*varidp].shape+i);
+            if (err != NC_NOERR) return err;
+        }
+    }
     pncp->nvars++;
 
     return NC_NOERR;

@@ -106,10 +106,13 @@ struct PNC_driver {
 
 typedef struct PNC_driver PNC_driver;
 
+#define PNC_VARS_CHUNK 64
+
 struct PNC_var {
     int         ndims;
+    int         recdim;
     nc_type     xtype;
-    MPI_Offset *shape;
+    MPI_Offset *shape;    /* [ndims] */
 };
 typedef struct PNC_var PNC_var;
 
@@ -121,7 +124,7 @@ struct PNC {
     char              *path;        /* path name */
     MPI_Comm           comm;        /* MPI communicator */
     int                ndims;       /* number of dimensions defined */
-    int                unlimdimid;  /* dim ID of NC_UNLIMITED */
+int                unlimdimid;  /* dim ID of NC_UNLIMITED */
     int                nvars;       /* number of variables */
     struct PNC_var    *vars;        /* array of variable objects */
     void              *ncp;         /* pointer to driver internal object */

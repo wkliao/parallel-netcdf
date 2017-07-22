@@ -17,9 +17,201 @@ dnl
 
 #include <pnetcdf.h>
 #include <dispatch.h>
+#include <pnc_debug.h>
+#include <common.h>
 
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
+
+define(`GOTO_CHECK',`{ DEBUG_ASSIGN_ERROR(err, $1) goto err_check; }')
+
+dnl CHECK_EINVALCOORDS(api_kind, start[i], count[i], shape[i])
+define(`CHECK_EINVALCOORDS',dnl
+`
+#ifdef RELAX_COORD_BOUND
+        if ($2 < 0 || $2 > $4)
+            GOTO_CHECK(NC_EINVALCOORDS)
+        if ($2 == $4) {
+            ifelse(`$',`1',`/* for var1 APIs, count[0] is considered of 1 */
+            GOTO_CHECK(NC_EINVALCOORDS)',`
+            if (count != NULL && $3 > 0)
+                GOTO_CHECK(NC_EINVALCOORDS)')
+        }
+#else
+        if ($2 < 0 || $2 >= $4)
+            GOTO_CHECK(NC_EINVALCOORDS)
+#endif')dnl
+dnl
+
+dnl CHECK_EEDGE(start[i], count[i], stride[i], shape[i])
+define(`CHECK_EEDGE',dnl
+`
+        ifelse(`$3',`',`/* vara APIs */
+        if ($2 > $4 || $1 + $2 > $4)
+            GOTO_CHECK(NC_EEDGE)',`
+        if (stride == NULL) { /* vars APIs but stride is NULL */
+            if ($2 > $4 || $1 + $2 > $4)
+                GOTO_CHECK(NC_EEDGE)
+        }
+        else { /* for vars/varm APIs */
+            if ($2 > 0 && $1 + ($2 - 1) * $3 >= $4)
+                GOTO_CHECK(NC_EEDGE)
+        }')')dnl
+dnl
+
+dnl CHECK_STRIDE
+define(`CHECK_STRIDE',dnl
+`
+    /* Check NC_ESTRIDE for non-positive values. We did not check
+     * stride[i] >= shape[i], as it is caught as NC_EEDGE error above */
+    if (stride != NULL) {
+        for (i=0; i<ndims; i++) {
+            if (stride[i] <= 0)
+                GOTO_CHECK(NC_ESTRIDE)
+        }
+    }')dnl
+dnl
+
+dnl SANITY_CHECK_ASM(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
+define(`SANITY_CHECK_ASM',dnl
+`
+    /* for API vara/vars/varm, count cannot be NULL, except for scalars */
+    if (count == NULL) GOTO_CHECK(NC_EEDGE)
+
+    firstDim = 0;
+    /* check NC_EINVALCOORDS for record dimension */
+    if (pncp->vars[varid].recdim >= 0) {
+        if (count[0] < 0)  /* no negative count[] */
+            GOTO_CHECK(NC_ENEGATIVECNT)
+
+        /* for record variable, [0] is the NC_UNLIMITED dimension */
+        /* read cannot go beyond current numrecs */
+        ifelse(`$1',`put',`',`$1',`iput',`',`$1',`bput',`',
+               `ifelse(`$2',`a',
+               `CHECK_EEDGE(start[0], count[0], `',        shape[0])',
+               `CHECK_EEDGE(start[0], count[0], stride[0], shape[0])')')
+
+        firstDim = 1; /* skip checking the record dimension */
+    }
+
+    /* continue to check NC_EEDGE for the rest dimensions */
+    for (i=firstDim; i<ndims; i++) {
+        if (shape[i] < 0) GOTO_CHECK(NC_EEDGE)
+
+        if (count[i] < 0) /* no negative count[] */
+            GOTO_CHECK(NC_ENEGATIVECNT)
+
+        ifelse(`$2',`a',
+               `CHECK_EEDGE(start[i], count[i], `',        shape[i])',
+               `CHECK_EEDGE(start[i], count[i], stride[i], shape[i])')
+    }
+
+    ifelse(`$2',`s',`CHECK_STRIDE', `$2',`m',`CHECK_STRIDE')
+')dnl
+dnl
+
+dnl SANITY_CHECK_1ASM(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
+define(`SANITY_CHECK_1ASM',dnl
+`
+{   /* only var1, vara, vars, and varm APIs will reach here */
+    int i, ndims, firstDim;
+    MPI_Offset *shape=NULL;
+
+    shape = pncp->vars[varid].shape;
+    /* if record variable, inquire the current record size */
+    if (pncp->vars[varid].recdim >= 0) {
+        err = pncp->driver->inq_dim(pncp->ncp, pncp->vars[varid].recdim, NULL,
+                                    &shape[0]);
+        if (err != NC_NOERR) goto err_check;
+    }
+
+    /* Check NC_EINVALCOORDS error for argument start[]
+     * for API var1/vara/vars/varm, start cannot be NULL, except for scalars
+     * and negative start[] is illegal */
+    if (start == NULL || start[0] < 0) GOTO_CHECK(NC_EINVALCOORDS)
+
+    firstDim = 0;
+    /* check NC_EINVALCOORDS for record dimension */
+    if (pncp->vars[varid].recdim >= 0) {
+        if (pncp->format < NC_FORMAT_CDF5 && start[0] > NC_MAX_UINT)
+            GOTO_CHECK(NC_EINVALCOORDS) /* CDF-1 and 2 */
+
+        /* for record variable, [0] is the NC_UNLIMITED dimension */
+        /* read cannot go beyond current numrecs */
+        ifelse(`$1',`put',`',`$1',`iput',`',`$1',`bput',`',
+               `CHECK_EINVALCOORDS($3, start[0], count[0], shape[0])')
+        firstDim = 1; /* done for checking the record dimension */
+    }
+
+    /* continue to check NC_EINVALCOORDS for the rest dimensions */
+    ndims = pncp->vars[varid].ndims;
+    for (i=firstDim; i<ndims; i++) {
+        CHECK_EINVALCOORDS($3, start[i], count[i], shape[i])
+    }
+
+    /* Now check NC_EEDGE error for argument count[] */
+    ifelse(`$2',`', `/* var  APIs have no count argument */',
+           `$2',`1',`/* var1 APIs have no count argument */',
+           `SANITY_CHECK_ASM($1, $2, $3, $4)')
+}')dnl
+dnl
+
+dnl SANITY_CHECK(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
+define(`SANITY_CHECK',dnl
+`
+    ifelse(`$1',`get',`',`$1',`iget',`',`/* check file write permission */
+    if (pncp->flag & NC_MODE_RDONLY) GOTO_CHECK(NC_EPERM)')
+
+    /* blocking get/put must be called in data mode */
+    ifelse(`$1',`put',`if (pncp->flag & NC_MODE_DEF) GOTO_CHECK(NC_EINDEFINE)',
+           `$1',`get',`if (pncp->flag & NC_MODE_DEF) GOTO_CHECK(NC_EINDEFINE)')
+
+    dnl for blocking APIs, check if in collective or independent mode */
+    ifelse(`$1',`put',`ifelse(`$4',`_all',`
+    /* check if in collective data mode */
+    if (pncp->flag & NC_MODE_INDEP) GOTO_CHECK(NC_EINDEP)',`
+    /* check if in independent data mode */
+    if (!(pncp->flag & NC_MODE_INDEP)) GOTO_CHECK(NC_ENOTINDEP)')',
+           `$1',`get',`ifelse(`$4',`_all',`
+    /* check if in collective data mode */
+    if (pncp->flag & NC_MODE_INDEP) GOTO_CHECK(NC_EINDEP)',`
+    /* check if in independent data mode */
+    if (!(pncp->flag & NC_MODE_INDEP)) GOTO_CHECK(NC_ENOTINDEP)')')
+
+    /* variable NC_GLOBAL is illegal in this API */
+    if (varid == NC_GLOBAL) GOTO_CHECK(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) GOTO_CHECK(NC_ENOTVAR)
+
+    /* check itype against xtype for NC_ECHAR */
+    ifelse(`$3', `', `', `$3', `text',
+    `if (pncp->vars[varid].xtype != NC_CHAR) GOTO_CHECK(NC_ECHAR)',
+    `if (pncp->vars[varid].xtype == NC_CHAR) GOTO_CHECK(NC_ECHAR)')
+
+    /* scalar variable */
+    if (pncp->vars[varid].ndims == 0) goto err_check;
+
+    ifelse(`$2',`', `/* done with var  as start/count/stride are NULL */',
+           `$2',`d',`/* done with vard as start/count/stride are NULL */',
+           `$2',`n',`/* done with varn: delay check */',
+           `SANITY_CHECK_1ASM($1, $2, $3, $4)')
+
+err_check:
+    ifelse(`$4', `_all', `if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,
+                                  pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+        if (minE != NC_NOERR) return minE;
+    }
+    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
+             err == NC_ENOTINDEP) {
+        return err;  /* fatal error, cannot continue */
+    }',`if (err != NC_NOERR) return err;')
+')dnl
+dnl
 
 dnl
 define(`APINAME',`ifelse(`$3',`',`ncmpi_$1_var$2$4',`ncmpi_$1_var$2_$3$4')')dnl
@@ -36,7 +228,7 @@ APINAME($1,$2,$3,$4)(int ncid,
                      ArgKind($2)
                      BufArgs($1,$3))
 {
-    int err, reqMode;
+    int err1st=NC_NOERR, err, reqMode;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -47,13 +239,20 @@ APINAME($1,$2,$3,$4)(int ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    SANITY_CHECK($1, $2, $3, $4)
+
     reqMode = NC_REQ_BLK |
               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
-    /* calling the subroutine that implements APINAME($1,$2,$3,$4)() */
-    return pncp->driver->`$1'_var(pncp->ncp,
+    ifelse(`$4',`_all',`/* if error, participate collective call */
+    if (err != NC_NOERR) reqMode |= NC_REQ_ZERO;')
+
+    err1st = err;
+
+    /* call the subroutine that implements APINAME($1,$2,$3,$4)() */
+    err = pncp->driver->`$1'_var(pncp->ncp,
                                   varid,
                                   ArgStartCountStrideMap($2),
                                   buf,
@@ -61,6 +260,8 @@ APINAME($1,$2,$3,$4)(int ncid,
                                                  `-1, ITYPE2MPI($3)'),
                                   API_KIND($2),
                                   reqMode);
+
+    return (err1st != NC_NOERR) ? err1st : err;
 }
 ')dnl
 dnl

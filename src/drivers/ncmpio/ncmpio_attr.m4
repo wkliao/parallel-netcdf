@@ -40,7 +40,6 @@ dnl
 #include <common.h>
 #include "nc.h"
 #include "ncx.h"
-#include "rnd.h"
 #include "utf8proc.h"
 
 include(`foreach.m4')dnl

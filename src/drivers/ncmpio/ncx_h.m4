@@ -18,7 +18,7 @@ dnl
 
 #include <mpi.h>
 
-#include "rnd.h"
+#include <common.h>
 
 /*
  * An external data representation interface.
