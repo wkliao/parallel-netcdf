@@ -279,38 +279,34 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
 
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
-        int root_nameLen, root_dimid, rank, minE, mpireturn;
+        int root_nameLen, root_dimid, minE, mpireturn;
         char *root_name=NULL;
 
         /* check the error so far across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (minE != NC_NOERR)
-            return minE;
-
-        MPI_Comm_rank(pncp->comm, &rank);
+        if (minE != NC_NOERR) return minE;
 
         /* check if name is consistent among all processes */
         assert(newname != NULL);
         root_nameLen = 1;
-        if (rank == 0 && newname != NULL) root_nameLen += strlen(newname);
+        if (newname != NULL) root_nameLen += strlen(newname);
         TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_nameLen");
 
-        if (rank == 0)
-            root_name = (char*)newname;
-        else
-            root_name = (char*) NCI_Malloc((size_t)root_nameLen);
+        root_name = (char*) NCI_Malloc((size_t)root_nameLen);
+        root_name[0] = '\0';
+        if (newname != NULL) strcpy(root_name, newname);
         TRACE_COMM(MPI_Bcast)(root_name, root_nameLen, MPI_CHAR, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (rank > 0) NCI_Free(root_name);
+            NCI_Free(root_name);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
-        if (err == NC_NOERR && rank > 0 && strcmp(root_name, newname))
+        if (err == NC_NOERR && strcmp(root_name, newname))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
-        if (rank > 0) NCI_Free(root_name);
+        NCI_Free(root_name);
 
         /* check if dimid is consistent across all processes */
         root_dimid = dimid;
@@ -324,8 +320,7 @@ err_check:
         TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (minE != NC_NOERR)
-            return minE;
+        if (minE != NC_NOERR) return minE;
     }
 
     if (err != NC_NOERR) return err;
