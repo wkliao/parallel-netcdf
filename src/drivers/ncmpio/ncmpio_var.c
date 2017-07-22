@@ -437,60 +437,10 @@ ncmpio_def_var(void       *ncdp,
                const int  *dimids,
                int        *varidp)
 {
-    int i, err=NC_NOERR;
+    int err=NC_NOERR;
     char *nname=NULL; /* normalized name */
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
-
-    /* check if called in define mode */
-    if (!NC_indef(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check if the name string is legal for netcdf format */
-    err = ncmpii_check_name(name, ncp->format);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
-
-    /* check if type is a valid netcdf type */
-    err = ncmpio_cktype(ncp->format, type);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
-
-    /* TODO: make ndims of type MPI_Offset so ndims can be > 2^31-1 in CDF-5
-     *
-     * When checking against max number of dimensions per variable,
-     * because there is no error code for this, thus we use NC_EINVAL
-    */
-    if (ndims < 0 || ndims == NC_MAX_VAR_DIMS) {
-        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
-        goto err_check;
-    }
-
-    /* Note we no longer limit the number of variables, as CDF file formats
-     * impose no such limit. Thus, the value of NC_MAX_VARS has been changed
-     * to NC_MAX_INT, as NC_vararray.ndefined is of type signd int and so is
-     * nvars argument in ncmpi_inq_nvars()
-     */
-    if (ncp->vars.ndefined == NC_MAX_VARS) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXVARS)
-        goto err_check;
-    }
 
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
@@ -499,117 +449,19 @@ ncmpio_def_var(void       *ncdp,
         goto err_check;
     }
 
-    /* check whether new name is already in use, for this API (def_var) the
-     * name should NOT already exist */
-    err = NC_findvar(&ncp->vars, nname, NULL);
-    if (err != NC_ENOTVAR) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
-        goto err_check;
-    }
-    else
-        err = NC_NOERR;
-
-    /* check dimids[] */
-    if (ndims > 0 && dimids == NULL) { /* for non-scalar variable */
-        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
-        goto err_check;
-    }
-    for (i=0; i<ndims; i++) {
-        if (dimids[i] < 0 || ncp->dims.ndefined == 0 ||
-            dimids[i] >= ncp->dims.ndefined) {
-            DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
-            goto err_check;
-        }
-    }
-
 err_check:
     if (ncp->safe_mode) {
-        int root_name_len, root_ndims, status, mpireturn;
-        char *root_name;
+        int minE, mpireturn;
 
         /* first check the error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) NCI_Free(nname);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (status != NC_NOERR) {
+        if (minE != NC_NOERR) {
             if (nname != NULL) NCI_Free(nname);
-            return status;
-        }
-        assert(nname != NULL);
-        assert(name != NULL);
-
-        /* check if name is consistent among all processes */
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-        }
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = '\0';
-        if (name != NULL) strcpy(root_name, name);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NAME)
-        NCI_Free(root_name);
-
-        /* check if type is consistent among all processes */
-        nc_type root_type=type;
-        TRACE_COMM(MPI_Bcast)(&root_type, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_type != type)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_TYPE)
-
-        /* check if ndims is consistent among all processes */
-        root_ndims=ndims;
-        TRACE_COMM(MPI_Bcast)(&root_ndims, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_ndims != ndims)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NDIMS)
-
-        /* check if dimids is consistent among all processes */
-        if (root_ndims > 0) {
-            int *root_dimids = (int*)NCI_Malloc((size_t)root_ndims *SIZEOF_INT);
-            if (dimids != NULL)
-                memcpy(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT);
-            else
-                memset(root_dimids, 0, (size_t)root_ndims*SIZEOF_INT);
-            TRACE_COMM(MPI_Bcast)(root_dimids, root_ndims, MPI_INT,0,ncp->comm);
-            if (mpireturn != MPI_SUCCESS) {
-                if (nname != NULL) NCI_Free(nname);
-                NCI_Free(root_dimids);
-                return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-            }
-            if (err == NC_NOERR && dimids != NULL &&
-                memcmp(root_dimids, dimids, (size_t)root_ndims*SIZEOF_INT))
-                DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_DIMIDS)
-            NCI_Free(root_dimids);
-        }
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nname != NULL) NCI_Free(nname);
-            return status;
+            return minE;
         }
     }
 
@@ -782,31 +634,8 @@ ncmpio_rename_var(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    /* check whether file's write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
     /* check whether variable ID is valid */
     err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
-
-    if (newname == NULL || *newname == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(newname) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check whether new name is legal */
-    err = ncmpii_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
         DEBUG_TRACE_ERROR
         goto err_check;
@@ -819,15 +648,6 @@ ncmpio_rename_var(void       *ncdp,
         goto err_check;
     }
     nnewname_len = strlen(nnewname);
-
-    /* check whether new name is already in use, for this API (rename) the
-     * name should NOT already exist */
-    err = NC_findvar(&ncp->vars, nnewname, NULL);
-    if (err != NC_ENOTVAR) { /* expecting NC_ENOTVAR */
-        DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
-        goto err_check;
-    }
-    else err = NC_NOERR;  /* reset err */
 
     if (! NC_indef(ncp) && varp->name_len < nnewname_len) {
         /* when in data mode, newname cannot be longer thne the old one */
@@ -847,58 +667,17 @@ ncmpio_rename_var(void       *ncdp,
 
 err_check:
     if (ncp->safe_mode) {
-        int root_name_len, root_varid, status, mpireturn;
-        char *root_name;
+        int minE, mpireturn;
 
         /* First check error code so far across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nnewname != NULL) NCI_Free(nnewname);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (status != NC_NOERR) {
+        if (minE != NC_NOERR) {
             if (nnewname != NULL) NCI_Free(nnewname);
-            return status;
-        }
-        assert(nnewname != NULL);
-        assert(newname != NULL);
-
-        /* check if newname is consistent among all processes */
-        root_name_len = 1;
-        if (newname != NULL) root_name_len += strlen(newname);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = '\0';
-        if (newname != NULL) strcpy(root_name, newname);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, newname))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_VAR_NAME)
-        NCI_Free(root_name);
-
-        /* check if varid is consistent across all processes */
-        root_varid = varid;
-        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        if (err == NC_NOERR && root_varid != varid)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nnewname != NULL) NCI_Free(nnewname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nnewname != NULL) NCI_Free(nnewname);
-            return status;
+            return minE;
         }
     }
 
