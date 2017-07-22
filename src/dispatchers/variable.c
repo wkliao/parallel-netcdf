@@ -27,7 +27,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
               const int  *dimids,
               int        *varidp)
 {
-    int i, err, ndims_def, nvars_def;
+    int i, err;
     PNC *pncp;
 
     /* check if ncid is valid */
@@ -83,10 +83,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
      * to NC_MAX_INT, as argument nvars is of type signed int in API
      * ncmpi_inq_nvars()
      */
-    err = pncp->driver->inq(pncp->ncp, &ndims_def, &nvars_def, NULL, NULL);
-    if (err != NC_NOERR) goto err_check;
-
-    if (nvars_def == NC_MAX_VARS) {
+    if (pncp->nvars == NC_MAX_VARS) {
         DEBUG_ASSIGN_ERROR(err, NC_EMAXVARS)
         goto err_check;
     }
@@ -107,7 +104,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
         goto err_check;
     }
     for (i=0; i<ndims; i++) {
-        if (dimids[i] < 0 || ndims_def == 0 || dimids[i] >= ndims_def) {
+        if (dimids[i] < 0 || pncp->ndims == 0 || dimids[i] >= pncp->ndims) {
             DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
             goto err_check;
         }
@@ -187,7 +184,12 @@ err_check:
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_def_var() */
-    return pncp->driver->def_var(pncp->ncp, name, type, ndims, dimids, varidp);
+    err = pncp->driver->def_var(pncp->ncp, name, type, ndims, dimids, varidp);
+    if (err != NC_NOERR) return err;
+
+    pncp->nvars++;
+
+    return NC_NOERR;
 }
 
 /*----< ncmpi_def_var_fill() >-----------------------------------------------*/
@@ -205,8 +207,33 @@ ncmpi_def_var_fill(int         ncid,    /* IN:  file ID */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    /* setting global _FillValue is not allowed */
-    if(varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (!(pncp->flag & NC_MODE_DEF)) { /* must be called in define mode */
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
+        goto err_check;
+    }
+
+    if (varid == NC_GLOBAL) { /* setting global _FillValue is not allowed */
+        DEBUG_ASSIGN_ERROR(err, NC_EGLOBAL)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
+        goto err_check;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+        /* check error code so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
+
+    if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_def_var_fill() */
     return pncp->driver->def_var_fill(pncp->ncp, varid, nofill, fill_value);
@@ -225,6 +252,9 @@ ncmpi_inq_varid(int         ncid,    /* IN:  file ID */
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
+        DEBUG_RETURN_ERROR(NC_EBADNAME)
 
     /* calling the subroutine that implements ncmpi_inq_varid() */
     return pncp->driver->inq_varid(pncp->ncp, name, varidp);
@@ -253,7 +283,11 @@ ncmpi_inq_var(int      ncid,    /* IN:  file ID */
      */
     if (varid == NC_GLOBAL &&
         (name != NULL || xtypep != NULL || ndimsp != NULL || dimids != NULL))
-        return NC_EGLOBAL;
+        DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+        DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_var() */
     return pncp->driver->inq_var(pncp->ncp, varid, name, xtypep, ndimsp,
@@ -277,7 +311,10 @@ ncmpi_inq_varname(int   ncid,    /* IN:  file ID */
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_varname() */
     return pncp->driver->inq_var(pncp->ncp, varid, name, NULL, NULL,
@@ -301,7 +338,10 @@ ncmpi_inq_vartype(int      ncid,    /* IN:  file ID */
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_vartype() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, xtypep, NULL,
@@ -325,7 +365,10 @@ ncmpi_inq_varndims(int  ncid,    /* IN:  file ID */
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_varndims() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, ndimsp,
@@ -349,7 +392,10 @@ ncmpi_inq_vardimid(int  ncid,    /* IN:  file ID */
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_vardimid() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
@@ -369,6 +415,10 @@ ncmpi_inq_varnatts(int  ncid,    /* IN:  file ID */
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+         DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_varnatts() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
@@ -392,7 +442,10 @@ ncmpi_inq_varoffset(int         ncid,   /* IN: file ID */
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_varoffset() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
@@ -417,7 +470,10 @@ ncmpi_inq_var_fill(int   ncid,
     /* using NC_GLOBAL in varid is illegal for this API. See
      * http://www.unidata.ucar.edu/mailing_lists/archives/netcdfgroup/2015/msg00196.html
      */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_var_fill() */
     return pncp->driver->inq_var(pncp->ncp, varid, NULL, NULL, NULL,
@@ -438,21 +494,56 @@ ncmpi_fill_var_rec(int        ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    if (pncp->flag & NC_MODE_RDONLY) { /* cannot be read-only */
+        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
+        goto err_check;
+    }
+
+    if (pncp->flag & NC_MODE_DEF) { /* must be called in data mode */
+        DEBUG_ASSIGN_ERROR(err, NC_EINDEFINE)
+        goto err_check;
+    }
+
     /* using NC_GLOBAL in varid is illegal for this API */
-    if (varid == NC_GLOBAL) return NC_EGLOBAL;
+    if (varid == NC_GLOBAL) {
+         DEBUG_ASSIGN_ERROR(err, NC_EGLOBAL)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid < 0 || varid >= pncp->nvars) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
+        goto err_check;
+    }
+
+/* TODO check whether varid is a record variable */
+
+    if (pncp->flag & NC_MODE_INDEP) { /* must be called in collective mode */
+        DEBUG_ASSIGN_ERROR(err, NC_EINDEP)
+        goto err_check;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+        /* check error code so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
 
     /* calling the subroutine that implements ncmpi_fill_var_rec() */
     return pncp->driver->fill_rec(pncp->ncp, varid, recno);
 }
 
 /*----< ncmpi_rename_var() >-------------------------------------------------*/
-/* This is an independent subroutine */
+/* This is a collective subroutine */
 int
 ncmpi_rename_var(int         ncid,    /* IN: file ID */
                  int         varid,   /* IN: variable ID */
                  const char *newname) /* IN: name of variable */
 {
-    int err, nvars_def;
+    int err;
     PNC *pncp;
 
     /* check if ncid is valid */
@@ -469,12 +560,8 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
         goto err_check;
     }
 
-    /* inquire number of variables defined */
-    err = pncp->driver->inq(pncp->ncp, NULL, &nvars_def, NULL, NULL);
-    if (err != NC_NOERR) goto err_check;
-
     /* check whether variable ID is valid */
-    if (varid < 0 || varid >= nvars_def) {
+    if (varid < 0 || varid >= pncp->nvars) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
         goto err_check;
     }

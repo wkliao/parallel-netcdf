@@ -242,9 +242,12 @@ ncmpi_create(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode   = cmode;
-    pncp->driver = driver;
-    pncp->flag   = NC_MODE_DEF | NC_MODE_CREATE;
+    pncp->mode       = cmode;
+    pncp->driver     = driver;
+    pncp->ndims      = 0;
+    pncp->unlimdimid = -1;
+    pncp->nvars      = 0;
+    pncp->flag       = NC_MODE_DEF | NC_MODE_CREATE;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
 
@@ -402,9 +405,12 @@ ncmpi_open(MPI_Comm    comm,
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     strcpy(pncp->path, path);
-    pncp->mode   = omode;
-    pncp->driver = driver;
-    pncp->flag   = 0;
+    pncp->mode       = omode;
+    pncp->driver     = driver;
+    pncp->ndims      = 0;
+    pncp->unlimdimid = -1;
+    pncp->nvars      = 0;
+    pncp->flag       = 0;
     if (!fIsSet(omode, NC_WRITE)) pncp->flag |= NC_MODE_RDONLY;
     if (safe_mode) pncp->flag |= NC_MODE_SAFE;
     MPI_Comm_dup(comm, &pncp->comm);
@@ -437,6 +443,12 @@ ncmpi_open(MPI_Comm    comm,
         free(pncp);
         return err;
     }
+
+    /* inquire number of variables defined */
+    err = driver->inq(pncp->ncp, &pncp->ndims, &pncp->nvars, NULL,
+                      &pncp->unlimdimid);
+    if (err != NC_NOERR) return err;
+
     return status;
 }
 

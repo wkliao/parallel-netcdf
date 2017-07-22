@@ -333,9 +333,6 @@ ncmpio_inq_attid(void       *ncdp,
     ncap = NC_attrarray0(ncp, varid);
     if (ncap == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EBADNAME)
-
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
@@ -366,9 +363,6 @@ ncmpio_inq_att(void       *ncdp,
 
     ncap = NC_attrarray0(ncp, varid);
     if (ncap == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
-
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EBADNAME)
 
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
@@ -403,20 +397,9 @@ ncmpio_rename_att(void       *ncdp,
     NC_attrarray *ncap=NULL;
     NC_attr *attrp=NULL;
 
-    /* check whether file write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
     ncap = NC_attrarray0(ncp, varid);
     if (ncap == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
         goto err_check;
     }
 
@@ -435,23 +418,6 @@ ncmpio_rename_att(void       *ncdp,
     }
 
     attrp = ncap->value[indx];
-
-    if (newname == NULL || *newname == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(newname) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check whether new name is legal */
-    err = ncmpii_check_name(newname, ncp->format);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
 
     /* create a normalized character string */
     nnewname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)newname);
@@ -596,12 +562,6 @@ ncmpio_copy_att(void       *ncdp_in,
     NC_attrarray *ncap_out=NULL, *ncap_in;
     NC_attr *iattrp=NULL, *attrp=NULL;
 
-    /* check whether file write permission */
-    if (NC_readonly(ncp_out)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
     ncap_in = NC_attrarray0(ncp_in, varid_in);
     if (ncap_in == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
@@ -611,11 +571,6 @@ ncmpio_copy_att(void       *ncdp_in,
     ncap_out = NC_attrarray0(ncp_out, varid_out);
     if (ncap_out == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
         goto err_check;
     }
 
@@ -797,27 +752,10 @@ ncmpio_del_att(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_attrarray *ncap=NULL;
 
-    /* check whether file write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
-    /* must in define mode */
-    if (!NC_indef(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
     /* check NC_ENOTVAR */
     ncap = NC_attrarray0(ncp, varid);
     if (ncap == NULL) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
         goto err_check;
     }
 

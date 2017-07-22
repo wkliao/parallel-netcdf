@@ -25,7 +25,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
               MPI_Offset  size,    /* IN:  dimension size */
               int        *dimidp)  /* OUT: dimension ID */
 {
-    int err=NC_NOERR, ndims, xtendim;
+    int err=NC_NOERR;
     PNC *pncp;
 
     /* check if ncid is valid */
@@ -74,13 +74,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
         goto err_check;
     }
 
-    err = pncp->driver->inq(pncp->ncp, &ndims, NULL, NULL, &xtendim);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
-
-    if (size == NC_UNLIMITED && xtendim != -1) {
+    if (size == NC_UNLIMITED && pncp->unlimdimid != -1) {
         /* netcdf allows one unlimited dimension defined per file */
         DEBUG_ASSIGN_ERROR(err, NC_EUNLIMIT) /* already defined */
         goto err_check;
@@ -88,10 +82,10 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
 
     /* Note we no longer limit the number of dimensions, as CDF file formats
      * impose no such limit. Thus, the value of NC_MAX_DIMS has been changed
-     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signed int and so is
-     * ndims argument in ncmpi_inq_varndims()
+     * to NC_MAX_INT, as argument ndims in ncmpi_inq_varndims() is of type
+     * signed int.
      */
-    if (ndims == NC_MAX_DIMS) {
+    if (pncp->ndims == NC_MAX_DIMS) {
         DEBUG_ASSIGN_ERROR(err, NC_EMAXDIMS)
         goto err_check;
     }
@@ -159,7 +153,15 @@ err_check:
     if (err != NC_NOERR) return err;
     
     /* calling the subroutine that implements ncmpi_def_dim() */
-    return pncp->driver->def_dim(pncp->ncp, name, size, dimidp);
+    err = pncp->driver->def_dim(pncp->ncp, name, size, dimidp);
+    if (err != NC_NOERR) return err;
+
+    if (size == NC_UNLIMITED && pncp->unlimdimid == -1)
+        pncp->unlimdimid = *dimidp;
+
+    pncp->ndims++;
+
+    return NC_NOERR;
 }
 
 /*----< ncmpi_inq_dimid() >--------------------------------------------------*/
@@ -258,10 +260,9 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
         goto err_check;
     }
 
-    /* check NC_EBADDIM for whether ncid is valid */
-    err = pncp->driver->inq_dim(pncp->ncp, dimid, NULL, NULL);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+    /* check NC_EBADDIM for whether dimid is valid */
+    if (dimid < 0 || pncp->ndims == 0 || dimid >= pncp->ndims) {
+        DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
         goto err_check;
     }
 

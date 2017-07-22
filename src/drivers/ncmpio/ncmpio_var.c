@@ -529,9 +529,6 @@ ncmpio_inq_varid(void       *ncdp,
     char *nname=NULL; /* normalized name */
     NC *ncp=(NC*)ncdp;
 
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EBADNAME)
-
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)

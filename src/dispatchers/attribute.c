@@ -9,9 +9,12 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <pnetcdf.h>
 #include <dispatch.h>
+#include <pnc_debug.h>
+#include <common.h>
 
 /*----< ncmpi_inq_att() >----------------------------------------------------*/
 /* This is an independent subroutine. */
@@ -28,6 +31,13 @@ ncmpi_inq_att(int         ncid,
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+        DEBUG_RETURN_ERROR(NC_ENOTVAR)
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
+        DEBUG_RETURN_ERROR(NC_EBADNAME)
 
     /* calling the subroutine that implements ncmpi_inq_att() */
     return pncp->driver->inq_att(pncp->ncp, varid, name, xtypep, lenp);
@@ -70,6 +80,13 @@ ncmpi_inq_attid(int         ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+        DEBUG_RETURN_ERROR(NC_ENOTVAR)
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
+        DEBUG_RETURN_ERROR(NC_EBADNAME)
+
     /* calling the subroutine that implements ncmpi_inq_attid() */
     return pncp->driver->inq_attid(pncp->ncp, varid, name, attnump);
 }
@@ -88,6 +105,10 @@ ncmpi_inq_attname(int   ncid,
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+        DEBUG_RETURN_ERROR(NC_ENOTVAR)
 
     /* calling the subroutine that implements ncmpi_inq_attname() */
     return pncp->driver->inq_attname(pncp->ncp, varid, attnum, name);
@@ -118,6 +139,44 @@ ncmpi_copy_att(int         ncid_in,
     err = PNC_check_id(ncid_out, &pncp_out);
     if (err != NC_NOERR) return err;
 
+    if (pncp_out->flag & NC_MODE_RDONLY) { /* cannot be read-only */
+        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid_in != NC_GLOBAL &&
+        (varid_in < 0 || varid_in >= pncp_in->nvars)) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid_out != NC_GLOBAL &&
+        (varid_out < 0 || varid_out >= pncp_out->nvars)) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
+        goto err_check;
+    }
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+err_check:
+    if (pncp_out->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+
+        /* check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,
+                                  pncp_out->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
+
+    if (err != NC_NOERR) return err;
+
     /* calling the subroutine that implements ncmpi_copy_att() */
     return pncp_in->driver->copy_att(pncp_in->ncp,  varid_in, name,
                                      pncp_out->ncp, varid_out);
@@ -140,6 +199,52 @@ ncmpi_rename_att(int         ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    if (pncp->flag & NC_MODE_RDONLY) { /* cannot be read-only */
+        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars)) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
+        goto err_check;
+    }
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (newname == NULL || *newname == 0) {
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+    if (strlen(newname) > NC_MAX_NAME) { /* newname length */
+        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
+        goto err_check;
+    }
+
+    /* check if the newname string is legal for the netcdf format */
+    err = ncmpii_check_name(newname, pncp->format);
+    if (err != NC_NOERR) {
+        DEBUG_TRACE_ERROR
+        goto err_check;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+
+        /* check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
+
+    if (err != NC_NOERR) return err;
+
     /* calling the subroutine that implements ncmpi_rename_att() */
     return pncp->driver->rename_att(pncp->ncp, varid, name, newname);
 }
@@ -158,6 +263,38 @@ ncmpi_del_att(int         ncid,
 
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
+    if (err != NC_NOERR) return err;
+
+    if (pncp->flag & NC_MODE_RDONLY) { /* cannot be read-only */
+        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
+        goto err_check;
+    }
+
+    if (!(pncp->flag & NC_MODE_DEF)) { /* must be called in define mode */
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
+        goto err_check;
+    }
+
+    /* check whether variable ID is valid */
+    if (varid != NC_GLOBAL && (varid < 0 || varid >= pncp->nvars))
+        DEBUG_RETURN_ERROR(NC_ENOTVAR)
+
+    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME) {
+        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
+        goto err_check;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+
+        /* check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
+
     if (err != NC_NOERR) return err;
 
     /* calling the subroutine that implements ncmpi_del_att() */

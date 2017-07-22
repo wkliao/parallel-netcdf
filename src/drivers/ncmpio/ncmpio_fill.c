@@ -644,18 +644,6 @@ ncmpio_fill_var_rec(void      *ncdp,
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    /* check file's write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
-    /* must be called in data mode */
-    if (NC_indef(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EINDEFINE)
-        goto err_check;
-    }
-
     /* check whether variable ID is valid */
     err = ncmpio_NC_lookupvar(ncp, varid, &varp);
     if (err != NC_NOERR) {
@@ -666,11 +654,6 @@ ncmpio_fill_var_rec(void      *ncdp,
     /* error if this is not a record variable */
     if (!IS_RECVAR(varp)) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTRECVAR)
-        goto err_check;
-    }
-
-    if (NC_indep(ncp)) { /* must be called in collective data mode */
-        DEBUG_ASSIGN_ERROR(err, NC_EINDEP)
         goto err_check;
     }
 
@@ -797,18 +780,6 @@ ncmpio_def_var_fill(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    /* check whether file's write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
-    /* check if called in define mode */
-    if (!NC_indef(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
     /* check whether variable ID is valid */
     err = ncmpio_NC_lookupvar(ncp, varid, &varp);
     if (err != NC_NOERR) {
@@ -818,7 +789,13 @@ ncmpio_def_var_fill(void       *ncdp,
 
 err_check:
     if (ncp->safe_mode) {
-        int root_ids[3], my_fill_null, status, mpireturn;
+        int root_ids[3], my_fill_null, minE, mpireturn;
+
+        /* First, check error code so far across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, ncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
 
         /* check if varid, no_fill, fill_value, are consistent across all processes */
         my_fill_null = (fill_value == NULL) ? 1 : 0;;
@@ -847,11 +824,10 @@ err_check:
         }
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN, ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-
-        if (err == NC_NOERR) err = status;
+        if (err == NC_NOERR) err = minE;
     }
     if (err != NC_NOERR) return err;
 
