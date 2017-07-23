@@ -684,6 +684,7 @@ printf("filename2=%s filename3=%s\n",filename2, filename3);
                    sum_size);
     }
 
+ncmpi_inq_malloc_list();
     MPI_Allreduce(MPI_IN_PLACE, &nerrs, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if (rank == 0) {
         if (nerrs) printf(FAIL_STR,nerrs);

@@ -50,7 +50,24 @@ define(`ITYPE2MPI',  `ifelse(`$1', `text',      `MPI_CHAR',
                              `$1', `float',     `MPI_FLOAT',
                              `$1', `double',    `MPI_DOUBLE',
                              `$1', `longlong',  `MPI_LONG_LONG_INT',
-                             `$1', `ulonglong', `MPI_UNSIGNED_LONG_LONG')')dnl
+                             `$1', `ulonglong', `MPI_UNSIGNED_LONG_LONG',
+                             `MPI_DATATYPE_NULL')')dnl
+dnl
+dnl dnl dnl
+dnl
+define(`NCTYPE2MPI', `ifelse(`$1', `NC_CHAR',   `MPI_CHAR',
+                             `$1', `NC_BYTE',   `MPI_SIGNED_CHAR',
+                             `$1', `NC_UBYTE',  `MPI_UNSIGNED_CHAR',
+                             `$1', `NC_SHORT',  `MPI_SHORT',
+                             `$1', `NC_USHORT', `MPI_UNSIGNED_SHORT',
+                             `$1', `NC_INT',    `MPI_INT',
+                             `$1', `NC_UINT',   `MPI_UNSIGNED',
+                             `$1', `NC_LONG',   `MPI_LONG',
+                             `$1', `NC_FLOAT',  `MPI_FLOAT',
+                             `$1', `NC_DOUBLE', `MPI_DOUBLE',
+                             `$1', `NC_INT64',  `MPI_LONG_LONG_INT',
+                             `$1', `NC_UINT64', `MPI_UNSIGNED_LONG_LONG',
+                             `MPI_DATATYPE_NULL')')dnl
 dnl
 dnl dnl dnl
 dnl

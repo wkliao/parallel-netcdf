@@ -631,11 +631,8 @@ ncmpio_rename_var(void       *ncdp,
     NC_var *varp=NULL;
 
     /* check whether variable ID is valid */
-    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
+    /* sanity check for ncdp and varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     /* create a normalized character string */ 
     nnewname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)newname);

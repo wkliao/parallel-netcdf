@@ -507,6 +507,7 @@ ncmpio_i$1_var(void             *ncdp,
     NC_var     *varp=NULL;
     MPI_Offset *_start, *_count;
 
+#if 0
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
     /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
@@ -522,6 +523,11 @@ ncmpio_i$1_var(void             *ncdp,
                               ncp->numrecs, varp->shape, start, count,
                               stride, reqMode);
     if (err != NC_NOERR) return err;
+#endif
+
+    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
+     * varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     _start = (MPI_Offset*)start;
     _count = (MPI_Offset*)count;

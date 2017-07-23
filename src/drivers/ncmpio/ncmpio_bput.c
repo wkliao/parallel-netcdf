@@ -23,6 +23,7 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#include <assert.h>
 
 #include <mpi.h>
 
@@ -139,6 +140,7 @@ ncmpio_bput_var(void             *ncdp,
     NC_var     *varp=NULL;
     MPI_Offset *_start, *_count;
 
+#if 0
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
     /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
@@ -154,6 +156,11 @@ ncmpio_bput_var(void             *ncdp,
                               ncp->numrecs, varp->shape, start, count,
                               stride, reqMode);
     if (err != NC_NOERR) return err;
+#endif
+
+    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
+     * varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     /* buffer has not been attached yet */
     if (ncp->abuf == NULL) DEBUG_RETURN_ERROR(NC_ENULLABUF)

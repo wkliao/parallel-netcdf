@@ -25,193 +25,227 @@ include(`utils.m4')dnl
 
 define(`GOTO_CHECK',`{ DEBUG_ASSIGN_ERROR(err, $1) goto err_check; }')
 
-dnl CHECK_EINVALCOORDS(api_kind, start[i], count[i], shape[i])
-define(`CHECK_EINVALCOORDS',dnl
-`
+
+/*----< check_EINVALCOORDS() >-----------------------------------------------*/
+static
+int check_EINVALCOORDS(MPI_Offset start,
+                       MPI_Offset count,
+                       MPI_Offset shape)
+{
 #ifdef RELAX_COORD_BOUND
-        if ($2 < 0 || $2 > $4)
-            GOTO_CHECK(NC_EINVALCOORDS)
-        if ($2 == $4) {
-            ifelse(`$',`1',`/* for var1 APIs, count[0] is considered of 1 */
-            GOTO_CHECK(NC_EINVALCOORDS)',`
-            if (count != NULL && $3 > 0)
-                GOTO_CHECK(NC_EINVALCOORDS)')
-        }
+    if (start < 0 || start > shape)
+        DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
+    if (start == shape && count > 0)
+        DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
 #else
-        if ($2 < 0 || $2 >= $4)
-            GOTO_CHECK(NC_EINVALCOORDS)
-#endif')dnl
-dnl
+    if (start < 0 || start >= shape)
+        DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
+#endif
+    return NC_NOERR;
+}
 
-dnl CHECK_EEDGE(start[i], count[i], stride[i], shape[i])
-define(`CHECK_EEDGE',dnl
-`
-        ifelse(`$3',`',`/* vara APIs */
-        if ($2 > $4 || $1 + $2 > $4)
-            GOTO_CHECK(NC_EEDGE)',`
-        if (stride == NULL) { /* vars APIs but stride is NULL */
-            if ($2 > $4 || $1 + $2 > $4)
-                GOTO_CHECK(NC_EEDGE)
-        }
-        else { /* for vars/varm APIs */
-            if ($2 > 0 && $1 + ($2 - 1) * $3 >= $4)
-                GOTO_CHECK(NC_EEDGE)
-        }')')dnl
-dnl
 
-dnl CHECK_STRIDE
-define(`CHECK_STRIDE',dnl
-`
-    /* Check NC_ESTRIDE for non-positive values. We did not check
-     * stride[i] >= shape[i], as it is caught as NC_EEDGE error above */
-    if (stride != NULL) {
-        for (i=0; i<ndims; i++) {
-            if (stride[i] <= 0)
-                GOTO_CHECK(NC_ESTRIDE)
-        }
-    }')dnl
-dnl
+typedef enum {
+    API_GET,
+    API_PUT,
+    API_IGET,
+    API_IPUT,
+    API_BPUT 
+} IO_type;
 
-dnl SANITY_CHECK_ASM(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
-define(`SANITY_CHECK_ASM',dnl
-`
-    /* for API vara/vars/varm, count cannot be NULL, except for scalars */
-    if (count == NULL) GOTO_CHECK(NC_EEDGE)
-
-    firstDim = 0;
-    /* check NC_EINVALCOORDS for record dimension */
-    if (pncp->vars[varid].recdim >= 0) {
-        if (count[0] < 0)  /* no negative count[] */
-            GOTO_CHECK(NC_ENEGATIVECNT)
-
-        /* for record variable, [0] is the NC_UNLIMITED dimension */
-        /* read cannot go beyond current numrecs */
-        ifelse(`$1',`put',`',`$1',`iput',`',`$1',`bput',`',
-               `ifelse(`$2',`a',
-               `CHECK_EEDGE(start[0], count[0], `',        shape[0])',
-               `CHECK_EEDGE(start[0], count[0], stride[0], shape[0])')')
-
-        firstDim = 1; /* skip checking the record dimension */
+/*----< check_EEDGE() >------------------------------------------------------*/
+static
+int check_EEDGE(const MPI_Offset *start,
+                const MPI_Offset *count,
+                const MPI_Offset *stride,
+                const MPI_Offset *shape)
+{
+    if (*count > *shape || *start + *count > *shape)
+        DEBUG_RETURN_ERROR(NC_EEDGE);
+    if (stride == NULL) { /* vars APIs but stride is NULL */
+        if (*count > *shape || *start + *count > *shape)
+            DEBUG_RETURN_ERROR(NC_EEDGE)
     }
-
-    /* continue to check NC_EEDGE for the rest dimensions */
-    for (i=firstDim; i<ndims; i++) {
-        if (shape[i] < 0) GOTO_CHECK(NC_EEDGE)
-
-        if (count[i] < 0) /* no negative count[] */
-            GOTO_CHECK(NC_ENEGATIVECNT)
-
-        ifelse(`$2',`a',
-               `CHECK_EEDGE(start[i], count[i], `',        shape[i])',
-               `CHECK_EEDGE(start[i], count[i], stride[i], shape[i])')
+    else { /* for vars/varm APIs */
+        if (*count > 0 && *start + (*count - 1) * (*stride) >= *shape)
+            DEBUG_RETURN_ERROR(NC_EEDGE)
     }
+    return NC_NOERR;
+}
 
-    ifelse(`$2',`s',`CHECK_STRIDE', `$2',`m',`CHECK_STRIDE')
-')dnl
-dnl
-
-dnl SANITY_CHECK_1ASM(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
-define(`SANITY_CHECK_1ASM',dnl
-`
-{   /* only var1, vara, vars, and varm APIs will reach here */
-    int i, ndims, firstDim;
+/*----< check_start_count_stride() >-----------------------------------------*/
+static
+int check_start_count_stride(PNC              *pncp,
+                             int               varid,
+                             int               isRead,
+                             NC_api            api_kind, /* var1/vara/vars */
+                             const MPI_Offset *start,
+                             const MPI_Offset *count,
+                             const MPI_Offset *stride)
+{
+    /* only var1, vara, vars, and varm APIs will reach here */
+    int i, err, ndims, firstDim;
     MPI_Offset *shape=NULL;
 
     shape = pncp->vars[varid].shape;
-    /* if record variable, inquire the current record size */
+    /* if record variable, obtain the current size of record dimension */
     if (pncp->vars[varid].recdim >= 0) {
         err = pncp->driver->inq_dim(pncp->ncp, pncp->vars[varid].recdim, NULL,
                                     &shape[0]);
-        if (err != NC_NOERR) goto err_check;
+        if (err != NC_NOERR) return err;
     }
 
     /* Check NC_EINVALCOORDS error for argument start[]
      * for API var1/vara/vars/varm, start cannot be NULL, except for scalars
      * and negative start[] is illegal */
-    if (start == NULL || start[0] < 0) GOTO_CHECK(NC_EINVALCOORDS)
+    if (start == NULL || start[0] < 0) DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
 
     firstDim = 0;
     /* check NC_EINVALCOORDS for record dimension */
     if (pncp->vars[varid].recdim >= 0) {
         if (pncp->format < NC_FORMAT_CDF5 && start[0] > NC_MAX_UINT)
-            GOTO_CHECK(NC_EINVALCOORDS) /* CDF-1 and 2 */
+            DEBUG_RETURN_ERROR(NC_EINVALCOORDS) /* CDF-1 and 2 */
 
         /* for record variable, [0] is the NC_UNLIMITED dimension */
         /* read cannot go beyond current numrecs */
-        ifelse(`$1',`put',`',`$1',`iput',`',`$1',`bput',`',
-               `CHECK_EINVALCOORDS($3, start[0], count[0], shape[0])')
+        if (isRead) {
+            MPI_Offset len = (count == NULL) ? 1 : count[0];
+            err = check_EINVALCOORDS(start[0], len, shape[0]);
+            if (err != NC_NOERR) return err;
+        }
         firstDim = 1; /* done for checking the record dimension */
     }
 
     /* continue to check NC_EINVALCOORDS for the rest dimensions */
     ndims = pncp->vars[varid].ndims;
     for (i=firstDim; i<ndims; i++) {
-        CHECK_EINVALCOORDS($3, start[i], count[i], shape[i])
+        MPI_Offset len = (count == NULL) ? 1 : count[1];
+        err = check_EINVALCOORDS(start[i], len, shape[i]);
+        if (err != NC_NOERR) return err;
     }
 
-    /* Now check NC_EEDGE error for argument count[] */
-    ifelse(`$2',`', `/* var  APIs have no count argument */',
-           `$2',`1',`/* var1 APIs have no count argument */',
-           `SANITY_CHECK_ASM($1, $2, $3, $4)')
-}')dnl
-dnl
+    /* check NC_EEDGE error for argument count[] */
 
-dnl SANITY_CHECK(get/put/iget/iput/bput, `'/1/a/s/m, `'/itype, `'/_all)
-define(`SANITY_CHECK',dnl
-`
-    ifelse(`$1',`get',`',`$1',`iget',`',`/* check file write permission */
-    if (pncp->flag & NC_MODE_RDONLY) GOTO_CHECK(NC_EPERM)')
+    if (count == NULL) {
+        if (api_kind == API_VARA || api_kind == API_VARS ||
+            api_kind == API_VARM)
+            /* vara/vars/varm, count cannot be NULL */
+            DEBUG_RETURN_ERROR(NC_EEDGE)
+    }
+    else {
+        firstDim = 0;
+        /* check record dimension */
+        if (pncp->vars[varid].recdim >= 0) {
+            if (count[0] < 0)  /* no negative count[] */
+                DEBUG_RETURN_ERROR(NC_ENEGATIVECNT)
 
-    /* blocking get/put must be called in data mode */
-    ifelse(`$1',`put',`if (pncp->flag & NC_MODE_DEF) GOTO_CHECK(NC_EINDEFINE)',
-           `$1',`get',`if (pncp->flag & NC_MODE_DEF) GOTO_CHECK(NC_EINDEFINE)')
+            /* for record variable, [0] is the NC_UNLIMITED dimension */
+            /* read cannot go beyond current numrecs */
+            if (isRead) {
+                err = check_EEDGE(start, count, stride, shape);
+                if (err != NC_NOERR) return err;
+            }
+            firstDim = 1; /* skip checking the record dimension */
+        }
 
-    dnl for blocking APIs, check if in collective or independent mode */
-    ifelse(`$1',`put',`ifelse(`$4',`_all',`
-    /* check if in collective data mode */
-    if (pncp->flag & NC_MODE_INDEP) GOTO_CHECK(NC_EINDEP)',`
-    /* check if in independent data mode */
-    if (!(pncp->flag & NC_MODE_INDEP)) GOTO_CHECK(NC_ENOTINDEP)')',
-           `$1',`get',`ifelse(`$4',`_all',`
-    /* check if in collective data mode */
-    if (pncp->flag & NC_MODE_INDEP) GOTO_CHECK(NC_EINDEP)',`
-    /* check if in independent data mode */
-    if (!(pncp->flag & NC_MODE_INDEP)) GOTO_CHECK(NC_ENOTINDEP)')')
+        /* continue to check NC_EEDGE for the rest dimensions */
+        for (i=firstDim; i<ndims; i++) {
+            if (shape[i] < 0) DEBUG_RETURN_ERROR(NC_EEDGE)
+            if (count[i] < 0) /* no negative count[] */
+                DEBUG_RETURN_ERROR(NC_ENEGATIVECNT)
+            if (stride == NULL)
+                err = check_EEDGE(start+i, count+i, NULL, shape+i);
+            else
+                err = check_EEDGE(start+i, count+i, stride+i, shape+i);
+            if (err != NC_NOERR) return err;
+        }
 
-    /* variable NC_GLOBAL is illegal in this API */
-    if (varid == NC_GLOBAL) GOTO_CHECK(NC_EGLOBAL)
+        /* Check NC_ESTRIDE for non-positive values. We did not check
+         * stride[i] >= shape[i], as it is caught as NC_EEDGE error above */
+        if (stride != NULL) {
+            for (i=0; i<ndims; i++) {
+                if (stride[i] <= 0) DEBUG_RETURN_ERROR(NC_ESTRIDE)
+            }
+        }
+    }
+    return NC_NOERR;
+}
+
+/*----< sanity_check() >-----------------------------------------------------*/
+static
+int sanity_check(PNC          *pncp,
+                 int           varid,
+                 IO_type       io,       /* get/put/iget/iput/bput */
+                 MPI_Datatype  itype,    /* internal data type */
+                 int           isColl)   /* collective or indepdnent API */
+{
+    /* check file write permission for put APIs */
+    if (io == API_PUT || io == API_IPUT || io == API_BPUT)
+        if (pncp->flag & NC_MODE_RDONLY) DEBUG_RETURN_ERROR(NC_EPERM)
+
+    /* blocking get/put APIs must be called in data mode */
+    if (io == API_PUT || io == API_GET)
+        if (pncp->flag & NC_MODE_DEF) DEBUG_RETURN_ERROR(NC_EINDEFINE)
+
+    /* for blocking APIs, check if in collective or independent mode */
+    if (io == API_PUT || io == API_GET) {
+        if (isColl) { /* check if file is currently in collective data mode */
+            if (pncp->flag & NC_MODE_INDEP) DEBUG_RETURN_ERROR(NC_EINDEP)
+        }
+        else { /* check if file is currently in independent data mode */
+            if (!(pncp->flag & NC_MODE_INDEP)) DEBUG_RETURN_ERROR(NC_ENOTINDEP)
+        }
+    }
+
+    /* variable NC_GLOBAL is illegal in get/put APIs */
+    if (varid == NC_GLOBAL) DEBUG_RETURN_ERROR(NC_EGLOBAL)
 
     /* check whether variable ID is valid */
-    if (varid < 0 || varid >= pncp->nvars) GOTO_CHECK(NC_ENOTVAR)
+    if (varid < 0 || varid >= pncp->nvars) DEBUG_RETURN_ERROR(NC_ENOTVAR)
+
+    /* MPI_DATATYPE_NULL in this case represent a flexible API */
+    if (itype == MPI_DATATYPE_NULL) return NC_NOERR;
 
     /* check itype against xtype for NC_ECHAR */
-    ifelse(`$3', `', `', `$3', `text',
-    `if (pncp->vars[varid].xtype != NC_CHAR) GOTO_CHECK(NC_ECHAR)',
-    `if (pncp->vars[varid].xtype == NC_CHAR) GOTO_CHECK(NC_ECHAR)')
-
-    /* scalar variable */
-    if (pncp->vars[varid].ndims == 0) goto err_check;
-
-    ifelse(`$2',`', `/* done with var  as start/count/stride are NULL */',
-           `$2',`d',`/* done with vard as start/count/stride are NULL */',
-           `$2',`n',`/* done with varn: delay check */',
-           `SANITY_CHECK_1ASM($1, $2, $3, $4)')
-
-err_check:
-    ifelse(`$4', `_all', `if (pncp->flag & NC_MODE_SAFE) {
-        int minE, mpireturn;
-        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,
-                                  pncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        if (minE != NC_NOERR) return minE;
+    if (itype == MPI_CHAR) {
+        if (pncp->vars[varid].xtype != NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
     }
-    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
-             err == NC_ENOTINDEP) {
-        return err;  /* fatal error, cannot continue */
-    }',`if (err != NC_NOERR) return err;')
-')dnl
-dnl
+    else {
+        if (pncp->vars[varid].xtype == NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
+    }
+    return NC_NOERR;
+}
+
+/*----< allreduce_error() >--------------------------------------------------*/
+/* This subroutine is for safe mode to check errors across all processes */
+static
+int allreduce_error(PNC *pncp, int err)
+{
+    int minE, mpireturn;
+    TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+    if (mpireturn != MPI_SUCCESS)
+        return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+    return minE;
+}
+
+define(`IO_TYPE', `ifelse(`$1',  `get', `API_GET',
+                          `$1',  `put', `API_PUT',
+                          `$1', `iget', `API_IGET',
+                          `$1', `iput', `API_IPUT',
+                          `$1', `bput', `API_BPUT')')dnl
+
+define(`IS_COLL', `ifelse(`$1',`_all',`1',`0')')dnl
+define(`IS_READ', `ifelse(`$1',`get',`1',`$1',`iget',`1',`0')')dnl
+define(`IndexArgs', `ifelse(`$1', `',  `NULL, NULL, NULL',
+                            `$1', `1', `start, NULL, NULL',
+                            `$1', `a', `start, count, NULL',
+                            `$1', `s', `start, count, stride',
+                            `$1', `m', `start, count, stride')')dnl
+define(`MIndexArgs',`ifelse(`$1', `',  `NULL, NULL, NULL',
+                            `$1', `1', `starts[i], NULL, NULL',
+                            `$1', `a', `starts[i], counts[i], NULL',
+                            `$1', `s', `starts[i], counts[i], strides[i]',
+                            `$1', `m', `starts[i], counts[i], strides[i]')')dnl
 
 dnl
 define(`APINAME',`ifelse(`$3',`',`ncmpi_$1_var$2$4',`ncmpi_$1_var$2_$3$4')')dnl
@@ -228,7 +262,8 @@ APINAME($1,$2,$3,$4)(int ncid,
                      ArgKind($2)
                      BufArgs($1,$3))
 {
-    int err1st=NC_NOERR, err, reqMode;
+    int status, err, reqMode=0;
+    NC_api api_kind;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -239,29 +274,53 @@ APINAME($1,$2,$3,$4)(int ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    SANITY_CHECK($1, $2, $3, $4)
+    err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
+    
+    api_kind = API_KIND($2);
+    ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
+    else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
+    ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
 
-    reqMode = NC_REQ_BLK |
-              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
-              ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
+    if (err == NC_NOERR && pncp->vars[varid].ndims > 0)
+        err = check_start_count_stride(pncp, varid, IS_READ($1), api_kind,
+                                       IndexArgs($2));')
 
-    ifelse(`$4',`_all',`/* if error, participate collective call */
-    if (err != NC_NOERR) reqMode |= NC_REQ_ZERO;')
+    ifelse(`$3',`',`ifelse(`$4',`',`if (bufcount == 0) return NC_NOERR;')')
 
-    err1st = err;
+    ifelse(`$4',`',
+    `/* for independent API, return now if error encountered */
+    if (err != NC_NOERR) return err;',`
+    /* In safe mode, check errors across all processes */
+    if (pncp->flag & NC_MODE_SAFE) {
+        err = allreduce_error(pncp, err);
+        if (err != NC_NOERR) return err;
+    }
+    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
+             err == NC_ENOTINDEP) /* cannot continue if fatal errors */
+        return err;
+    else if (err != NC_NOERR) /* other errors, participate collective call */
+        reqMode |= NC_REQ_ZERO;')
+
+    reqMode |= ifelse(`$1', `get',`NC_REQ_BLK | NC_REQ_RD',
+                      `$1', `put',`NC_REQ_BLK | NC_REQ_WR',
+                      `$1',`iget',`NC_REQ_NBI | NC_REQ_RD',
+                      `$1',`iput',`NC_REQ_NBI | NC_REQ_WR',
+                      `$1',`bput',`NC_REQ_NBB | NC_REQ_WR') |
+               ifelse(`$3',`',`NC_REQ_FLEX', `NC_REQ_HL') |
+               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* call the subroutine that implements APINAME($1,$2,$3,$4)() */
-    err = pncp->driver->`$1'_var(pncp->ncp,
-                                  varid,
-                                  ArgStartCountStrideMap($2),
-                                  buf,
-                                  ifelse(`$3',`',`bufcount, buftype',
-                                                 `-1, ITYPE2MPI($3)'),
-                                  API_KIND($2),
-                                  reqMode);
+    status = pncp->driver->`$1'_var(pncp->ncp,
+                                    varid,
+                                    ArgStartCountStrideMap($2),
+                                    buf,
+                                    ifelse(`$3',`',`bufcount, buftype',
+                                                   `-1, ITYPE2MPI($3)'),
+                                    api_kind,
+                                    reqMode);
 
-    return (err1st != NC_NOERR) ? err1st : err;
+    return (err != NC_NOERR) ? err : status; /* first error encountered */
 }
 ')dnl
 dnl
@@ -307,7 +366,7 @@ NAPINAME($1,$2,$3)(int                ncid,
                    MPI_Offset* const *counts,
                    BufArgs($1,$2))
 {
-    int err, reqMode;
+    int i, err, status, reqMode=0;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -318,21 +377,56 @@ NAPINAME($1,$2,$3)(int                ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    reqMode = NC_REQ_BLK |
-              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-              ifelse(`$2',`',`NC_REQ_FLEX',`NC_REQ_HL') |
-              ifelse(`$3',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($2), IS_COLL($3));
+
+    if (num > 0 && starts == NULL) DEBUG_ASSIGN_ERROR(err, NC_ENULLSTART)
+
+    if (err == NC_NOERR && pncp->vars[varid].ndims > 0) {
+        NC_api api = (counts == NULL) ? API_VAR1 : API_VARA;
+        for (i=0; i<num; i++) {
+            MPI_Offset *len = (counts == NULL) ? NULL : counts[i];
+            err = check_start_count_stride(pncp, varid, IS_READ($1),
+                                           api, starts[i], len, NULL);
+            if (err != NC_NOERR) break;
+        }
+    }
+
+    ifelse(`$3',`',`if (num == 0) return NC_NOERR;')
+
+    ifelse(`$3',`',
+    `/* for independent API, return now if error encountered */
+    if (err != NC_NOERR) return err;',`
+    /* In safe mode, check errors across all processes */
+    if (pncp->flag & NC_MODE_SAFE) {
+        err = allreduce_error(pncp, err);
+        if (err != NC_NOERR) return err;
+    }
+    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
+             err == NC_ENOTINDEP) /* cannot continue if fatal errors */
+        return err;
+    else if (err != NC_NOERR) /* other errors, participate collective call */
+        reqMode |= NC_REQ_ZERO;')
+
+    reqMode |= ifelse(`$1', `get',`NC_REQ_BLK | NC_REQ_RD',
+                      `$1', `put',`NC_REQ_BLK | NC_REQ_WR',
+                      `$1',`iget',`NC_REQ_NBI | NC_REQ_RD',
+                      `$1',`iput',`NC_REQ_NBI | NC_REQ_WR',
+                      `$1',`bput',`NC_REQ_NBB | NC_REQ_WR') |
+               ifelse(`$2',`',`NC_REQ_FLEX', `NC_REQ_HL') |
+               ifelse(`$3',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements NAPINAME($1,$2,$3)() */
-    return pncp->driver->`$1'_varn(pncp->ncp,
-                                   varid,
-                                   num,
-                                   starts,
-                                   counts,
-                                   buf,
-                                   ifelse(`$2',`',`bufcount, buftype',
-                                                  `-1, ITYPE2MPI($2)'),
-                                   reqMode);
+    status = pncp->driver->`$1'_varn(pncp->ncp,
+                                     varid,
+                                     num,
+                                     starts,
+                                     counts,
+                                     buf,
+                                     ifelse(`$2',`',`bufcount, buftype',
+                                                    `-1, ITYPE2MPI($2)'),
+                                     reqMode);
+
+    return (err != NC_NOERR) ? err : status; /* first error encountered */
 }
 ')dnl
 dnl
@@ -380,7 +474,8 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
                          `ifelse($1,`get',`FUNC2ITYPE($3) **bufs',
                                           `FUNC2ITYPE($3)* const *bufs')'))
 {
-    int i, reqMode, status=NC_NOERR, err, *reqs;
+    int i, reqMode=0, status=NC_NOERR, err, *reqs;
+    NC_api api_kind;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -391,30 +486,69 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    ifelse(`$4',`',`if (nvars == 0) return NC_NOERR;')
+
+    api_kind = API_KIND($2);
+    ifelse(`$2',`m',`if (imaps == NULL && strides != NULL) api_kind = API_VARS;
+    else if (imaps == NULL && strides == NULL) api_kind = API_VARA;')
+    ifelse(`$2',`s',`if (strides == NULL) api_kind = API_VARA;')
+
+    for (i=0; i<nvars; i++) {
+        err = sanity_check(pncp, varids[i], IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
+        if (err != NC_NOERR) break;
+
+        ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
+        if (pncp->vars[varids[i]].ndims > 0) {
+            err = check_start_count_stride(pncp, varids[i], IS_READ($1),
+                                           api_kind, MIndexArgs($2));
+            if (err != NC_NOERR) break;
+        }')
+    }
+
+    ifelse(`$4',`',
+    `/* for independent API, return now if error encountered */
+    if (err != NC_NOERR) return err;',`
+    /* In safe mode, check errors across all processes */
+    if (pncp->flag & NC_MODE_SAFE) {
+        err = allreduce_error(pncp, err);
+        if (err != NC_NOERR) return err;
+    }
+    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
+             err == NC_ENOTINDEP) /* cannot continue if fatal errors */
+        return err;
+    else if (err != NC_NOERR) /* other errors, participate collective call */
+        reqMode |= NC_REQ_ZERO;')
+
     reqMode = NC_REQ_NBI |
               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
-    reqs = (int*) malloc((size_t)nvars * SIZEOF_INT);
-    for (i=0; i<nvars; i++) {
-        /* call the nonblocking subroutines */
-        err = pncp->driver->i`$1'_var(pncp->ncp,
-                                      varids[i],
-                                      MArgStartCountStrideMap($2),
-                                      bufs[i],
-                                      ifelse(`$3',`',`bufcounts[i], buftypes[i]',
-                                                     `-1, ITYPE2MPI($3)'),
-                                      &reqs[i],
-                                      API_KIND($2),
-                                      reqMode);
+    status = err;
+    if (reqMode & NC_REQ_ZERO) {
+        err = pncp->driver->wait(pncp->ncp, 0, NULL, NULL, reqMode);
         if (status == NC_NOERR) status = err;
     }
-
-    err = pncp->driver->wait(pncp->ncp, nvars, reqs, NULL, reqMode);
-    if (status == NC_NOERR) status = err;
-    free(reqs);
-
+    else {
+        reqs = (int*) NCI_Malloc((size_t)nvars * SIZEOF_INT);
+        for (i=0; i<nvars; i++) {
+            /* call the nonblocking subroutines */
+            err = pncp->driver->i`$1'_var(pncp->ncp,
+                                          varids[i],
+                                          MArgStartCountStrideMap($2),
+                                          bufs[i],
+                                          ifelse(`$3',`',`bufcounts[i], buftypes[i]',
+                                                         `-1, ITYPE2MPI($3)'),
+                                          &reqs[i],
+                                          api_kind,
+                                          reqMode);
+            if (err != NC_NOERR) break;
+        }
+        if (status == NC_NOERR) status = err;
+        err = pncp->driver->wait(pncp->ncp, i, reqs, NULL, reqMode);
+        if (status == NC_NOERR) status = err;
+        NCI_Free(reqs);
+    }
     return status;
 }
 ')dnl
@@ -446,6 +580,7 @@ IAPINAME($1,$2,$3)(int ncid,
                    int *reqid)
 {   
     int err, reqMode;
+    NC_api api_kind;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -455,6 +590,32 @@ IAPINAME($1,$2,$3)(int ncid,
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (reqid != NULL) *reqid = NC_REQ_NULL;
+
+    err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($3), 0);
+    if (err != NC_NOERR) return err;
+
+    ifelse(`$1',`bput',`/* check if buffer has been attached */
+    MPI_Offset buf_size;
+    err = pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, &buf_size);
+    if (err != NC_NOERR) return err;')
+
+    api_kind = API_KIND($2);
+    ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
+    else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
+    ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
+
+    ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
+    if (pncp->vars[varid].ndims > 0) {
+        err = check_start_count_stride(pncp, varid, IS_READ($1), api_kind,
+                                       IndexArgs($2));
+        if (err != NC_NOERR) return err;
+    }')
+
+    ifelse(`$3',`',`if (bufcount == 0) return NC_NOERR;')
 
     reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
                      `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
@@ -469,7 +630,7 @@ IAPINAME($1,$2,$3)(int ncid,
                                   ifelse(`$3',`',`bufcount, buftype',
                                                  `-1, ITYPE2MPI($3)'),
                                   reqid,
-                                  API_KIND($2),
+                                  api_kind,
                                   reqMode);
 }
 ')dnl
@@ -520,7 +681,7 @@ INAPINAME($1,$2)(int                ncid,
                  BufArgs(substr($1,1),$2),
                  int               *reqid)
 {
-    int err, reqMode;
+    int i, err, reqMode;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -530,6 +691,34 @@ INAPINAME($1,$2)(int                ncid,
      */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (reqid != NULL) *reqid = NC_REQ_NULL;
+
+    err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($2), 0);
+    if (err != NC_NOERR) return err;
+
+    if (num == 0) return NC_NOERR;
+
+    ifelse(`$1',`bput',`/* check if buffer has been attached */
+    MPI_Offset buf_size;
+    err = pncp->driver->inq_misc(pncp->ncp, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, &buf_size);
+    if (err != NC_NOERR) return err;')
+
+    if (num > 0 && starts == NULL) DEBUG_RETURN_ERROR(NC_ENULLSTART)
+
+    if (pncp->vars[varid].ndims > 0) {
+        NC_api api = (counts == NULL) ? API_VAR1 : API_VARA;
+        for (i=0; i<num; i++) {
+            MPI_Offset *len = (counts == NULL) ? NULL : counts[i];
+            err = check_start_count_stride(pncp, varid, IS_READ($1),
+                                           api, starts[i], len, NULL);
+            if (err != NC_NOERR) return err;
+        }
+    }
+
+    ifelse(`$2',`',`if (bufcount == 0) return NC_NOERR;')
 
     reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
                      `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
@@ -571,7 +760,7 @@ ncmpi_$1_vard$2(int           ncid,
                 MPI_Offset    bufcount,
                 MPI_Datatype  buftype)   /* data type of the buffer */
 {
-    int err, reqMode;
+    int err, status, reqMode=0;
     PNC *pncp;
 
     /* check if ncid is valid.
@@ -582,18 +771,37 @@ ncmpi_$1_vard$2(int           ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    reqMode = NC_REQ_BLK | NC_REQ_FLEX |
-              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-              ifelse(`$2',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    err = sanity_check(pncp, varid, IO_TYPE($1), MPI_DATATYPE_NULL, IS_COLL($2));
+
+    ifelse(`$2',`',
+    `/* for independent API, return now if error encountered or zero request */
+    if (err != NC_NOERR) return err;
+    if (bufcount == 0) return NC_NOERR;',
+    `/* In safe mode, check errors across all processes */
+    if (pncp->flag & NC_MODE_SAFE) {
+        err = allreduce_error(pncp, err);
+        if (err != NC_NOERR) return err;
+    }
+    else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
+             err == NC_ENOTINDEP) /* cannot continue if fatal errors */
+        return err;
+    else if (err != NC_NOERR) /* other errors, participate collective call */
+        reqMode |= NC_REQ_ZERO;')
+
+    reqMode |= NC_REQ_BLK | NC_REQ_FLEX |
+               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+               ifelse(`$2',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     /* calling the subroutine that implements ncmpi_$1_vard$2() */
-    return pncp->driver->$1_vard(pncp->ncp,
-                                 varid,
-                                 filetype,
-                                 buf,
-                                 bufcount,
-                                 buftype,
-                                 reqMode);
+    status = pncp->driver->$1_vard(pncp->ncp,
+                                   varid,
+                                   filetype,
+                                   buf,
+                                   bufcount,
+                                   buftype,
+                                   reqMode);
+
+    return (err != NC_NOERR) ? err : status;
 }
 ')
 dnl

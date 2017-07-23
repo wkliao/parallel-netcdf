@@ -645,11 +645,8 @@ ncmpio_fill_var_rec(void      *ncdp,
     NC_var *varp=NULL;
 
     /* check whether variable ID is valid */
-    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
+    /* sanity check for ncdp and varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     /* error if this is not a record variable */
     if (!IS_RECVAR(varp)) {
@@ -780,24 +777,13 @@ ncmpio_def_var_fill(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
-    /* check whether variable ID is valid */
-    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
-        goto err_check;
-    }
+    /* sanity check for ncdp and varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
-err_check:
     if (ncp->safe_mode) {
         int root_ids[3], my_fill_null, minE, mpireturn;
 
-        /* First, check error code so far across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (minE != NC_NOERR) return minE;
-
-        /* check if varid, no_fill, fill_value, are consistent across all processes */
+        /* check if varid, no_fill, fill_value, are consistent */
         my_fill_null = (fill_value == NULL) ? 1 : 0;;
         root_ids[0] = varid;
         root_ids[1] = no_fill;
@@ -814,7 +800,8 @@ err_check:
             double root_fill_value; /* max nc_type space: 8 bytes */
             if (fill_value != NULL)
                 memcpy(&root_fill_value, fill_value, (size_t)varp->xsz);
-            TRACE_COMM(MPI_Bcast)(&root_fill_value, varp->xsz, MPI_BYTE, 0, ncp->comm);
+            TRACE_COMM(MPI_Bcast)(&root_fill_value, varp->xsz, MPI_BYTE, 0,
+                                  ncp->comm);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
             if (err == NC_NOERR && fill_value != NULL &&

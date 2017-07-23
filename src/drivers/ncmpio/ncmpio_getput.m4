@@ -545,7 +545,7 @@ ncmpio_$1_var(void             *ncdp,
               int               reqMode)
 
 {
-    int         err, status;
+    int         status;
     NC         *ncp=(NC*)ncdp;
     NC_var     *varp=NULL;
     MPI_Offset *_start, *_count;
@@ -594,9 +594,9 @@ ncmpio_$1_var(void             *ncdp,
     }
 #endif
 
-    /* obtain NC_var object pointer, varp */
-    err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-    assert(err == NC_NOERR); /* validation check already done in dispatcher */
+    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
+     * varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     if (fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
         /* this collective API has a zero-length request */

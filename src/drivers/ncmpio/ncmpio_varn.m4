@@ -261,10 +261,11 @@ ncmpio_$1_varn(void              *ncdp,
                MPI_Datatype       buftype,
                int                reqMode)
 {
-    int     err, status;
     NC     *ncp=(NC*)ncdp;
     NC_var *varp=NULL;
 
+#if 0
+    int err, status;
     /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
      * NC_ECHAR, NC_EINVAL */
     status = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
@@ -307,6 +308,14 @@ ncmpio_$1_varn(void              *ncdp,
         /* return the error code from sanity check */
         return status;
     }
+#endif
+    if (fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
+        /* this collective API has a zero-length request */
+        return ncmpio_getput_zero_req(ncp, reqMode);
+
+    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
+     * varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     return getput_varn(ncp, varp, num, starts, counts, (void*)buf, bufcount,
                        buftype, reqMode);
