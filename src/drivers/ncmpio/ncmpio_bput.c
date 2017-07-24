@@ -158,12 +158,12 @@ ncmpio_bput_var(void             *ncdp,
     if (err != NC_NOERR) return err;
 #endif
 
+    /* buffer has not been attached yet */
+    if (ncp->abuf == NULL) DEBUG_RETURN_ERROR(NC_ENULLABUF)
+
     /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
      * varid has been done in dispatchers */
     varp = ncp->vars.value[varid];
-
-    /* buffer has not been attached yet */
-    if (ncp->abuf == NULL) DEBUG_RETURN_ERROR(NC_ENULLABUF)
 
     /* for var1 and var cases */
     _start = (MPI_Offset*)start;

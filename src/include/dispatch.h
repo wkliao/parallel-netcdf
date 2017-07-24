@@ -116,7 +116,9 @@ struct PNC_var {
 };
 typedef struct PNC_var PNC_var;
 
-/* Common Shared Structure for all Dispatched Objects */
+/* one dispatcher object per file: containing info independent from drivers,
+ * and can be used for sanity checks, operations need not involve drivers
+ */
 struct PNC {
     int                mode;        /* file _open/_create mode */
     int                flag;        /* define/data/collective/indep mode */
@@ -124,7 +126,7 @@ struct PNC {
     char              *path;        /* path name */
     MPI_Comm           comm;        /* MPI communicator */
     int                ndims;       /* number of dimensions defined */
-int                unlimdimid;  /* dim ID of NC_UNLIMITED */
+    int                unlimdimid;  /* dim ID of NC_UNLIMITED */
     int                nvars;       /* number of variables */
     struct PNC_var    *vars;        /* array of variable objects */
     void              *ncp;         /* pointer to driver internal object */

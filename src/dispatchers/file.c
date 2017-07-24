@@ -256,8 +256,7 @@ ncmpi_create(MPI_Comm    comm,
     combine_env_hints(info, &combined_info);
 
     /* calling the create subroutine */
-    err = driver->create(comm, path, cmode, *ncidp, combined_info,
-                             &pncp->ncp);
+    err = driver->create(comm, path, cmode, *ncidp, combined_info, &pncp->ncp);
     if (status == NC_NOERR) status = err;
     if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
 
@@ -421,8 +420,7 @@ ncmpi_open(MPI_Comm    comm,
     combine_env_hints(info, &combined_info);
 
     /* calling the open subroutine */
-    err = driver->open(comm, path, omode, *ncidp, combined_info,
-                           &pncp->ncp);
+    err = driver->open(comm, path, omode, *ncidp, combined_info, &pncp->ncp);
     if (status == NC_NOERR) status = err;
     if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
 
@@ -483,7 +481,7 @@ ncmpi_open(MPI_Comm    comm,
             for (j=0; j<ndims; j++) {
                 /* obtain size of dimension j */
                 err = driver->inq_dim(pncp->ncp, dimids[j], NULL,
-                                        pncp->vars[i].shape+j);
+                                      pncp->vars[i].shape+j);
                 if (err != NC_NOERR) return err;
             }
             NCI_Free(dimids);

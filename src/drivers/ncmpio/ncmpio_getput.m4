@@ -594,13 +594,13 @@ ncmpio_$1_var(void             *ncdp,
     }
 #endif
 
-    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
-    varp = ncp->vars.value[varid];
-
     if (fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
         /* this collective API has a zero-length request */
         return ncmpio_getput_zero_req(ncp, reqMode);
+
+    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
+     * varid has been done in dispatchers */
+    varp = ncp->vars.value[varid];
 
     _start = (MPI_Offset*)start;
     _count = (MPI_Offset*)count;
