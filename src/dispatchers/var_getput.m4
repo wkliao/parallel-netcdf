@@ -422,7 +422,8 @@ NAPINAME($1,$2,$3)(int                ncid,
                                                     `-1, ITYPE2MPI($2)'),
                                      reqMode);
 
-    return (err != NC_NOERR) ? err : status; /* first error encountered */
+    ifelse(`$3',`',`return status;',`
+    return (err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')dnl
 dnl
@@ -795,7 +796,8 @@ ncmpi_$1_vard$2(int           ncid,
                                    buftype,
                                    reqMode);
 
-    return (err != NC_NOERR) ? err : status;
+    ifelse(`$2',`',`return status;',`
+    return (err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')
 dnl
