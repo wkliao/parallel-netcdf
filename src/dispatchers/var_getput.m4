@@ -119,7 +119,7 @@ int check_start_count_stride(PNC              *pncp,
     /* continue to check NC_EINVALCOORDS for the rest dimensions */
     ndims = pncp->vars[varid].ndims;
     for (i=firstDim; i<ndims; i++) {
-        MPI_Offset len = (count == NULL) ? 1 : count[1];
+        MPI_Offset len = (count == NULL) ? 1 : count[i];
         err = check_EINVALCOORDS(start[i], len, shape[i]);
         if (err != NC_NOERR) return err;
     }
@@ -241,11 +241,6 @@ define(`IndexArgs', `ifelse(`$1', `',  `NULL, NULL, NULL',
                             `$1', `a', `start, count, NULL',
                             `$1', `s', `start, count, stride',
                             `$1', `m', `start, count, stride')')dnl
-define(`MIndexArgs',`ifelse(`$1', `',  `NULL, NULL, NULL',
-                            `$1', `1', `starts[i], NULL, NULL',
-                            `$1', `a', `starts[i], counts[i], NULL',
-                            `$1', `s', `starts[i], counts[i], strides[i]',
-                            `$1', `m', `starts[i], counts[i], strides[i]')')dnl
 
 dnl
 define(`APINAME',`ifelse(`$3',`',`ncmpi_$1_var$2$4',`ncmpi_$1_var$2_$3$4')')dnl
@@ -320,7 +315,8 @@ APINAME($1,$2,$3,$4)(int ncid,
                                     api_kind,
                                     reqMode);
 
-    return (err != NC_NOERR) ? err : status; /* first error encountered */
+    ifelse(`$4',`',`return status;',`
+    return (err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')dnl
 dnl
@@ -437,16 +433,13 @@ foreach(`putget', (put, get),
                           `VARN(putget,iType,collindep)'
 )')')
 
+define(`MStartCount',`ifelse(`$1', `',  `NULL, NULL',
+                             `$1', `1', `starts[i], NULL',
+                             `$1', `a', `starts[i], counts[i]',
+                             `$1', `s', `starts[i], counts[i]',
+                             `$1', `m', `starts[i], counts[i]')')dnl
 dnl
 define(`MAPINAME',`ifelse(`$3',`',`ncmpi_m$1_var$2$4',`ncmpi_m$1_var$2_$3$4')')dnl
-dnl
-define(`MArgStartCountStrideMap', `ifelse(
-       `$1', `',  `NULL,      NULL,      NULL,       NULL',
-       `$1', `1', `starts[i], NULL,      NULL,       NULL',
-       `$1', `a', `starts[i], counts[i], NULL,       NULL',
-       `$1', `s', `starts[i], counts[i], strides[i], NULL',
-       `$1', `m', `starts[i], counts[i], strides[i], imaps[i]')')dnl
-dnl
 dnl MVAR(put/get, `'/1/a/s/m, `'/iType, `'/_all)
 dnl
 define(`MVAR',dnl
@@ -457,22 +450,22 @@ int
 MAPINAME($1,$2,$3,$4)(int                ncid,
                       int                nvars,
                       int               *varids,
-                      ifelse(`$2', `1', `MPI_Offset* const *starts,',
-                             `$2', `a', `MPI_Offset* const *starts,
-                                         MPI_Offset* const *counts,',
-                             `$2', `s', `MPI_Offset* const *starts,
-                                         MPI_Offset* const *counts,
-                                         MPI_Offset* const *strides,',
-                             `$2', `m', `MPI_Offset* const *starts,
-                                         MPI_Offset* const *counts,
-                                         MPI_Offset* const *strides,
-                                         MPI_Offset* const *imaps,')
-                      ifelse(`$3', `',
-                         `ifelse($1,`get',`void **bufs,',`void* const *bufs,')
-                         const MPI_Offset *bufcounts,
-                         const MPI_Datatype *buftypes',
-                         `ifelse($1,`get',`FUNC2ITYPE($3) **bufs',
-                                          `FUNC2ITYPE($3)* const *bufs')'))
+   ifelse(`$2', `1', `MPI_Offset* const *starts,',
+          `$2', `a', `MPI_Offset* const *starts,
+                      MPI_Offset* const *counts,',
+          `$2', `s', `MPI_Offset* const *starts,
+                      MPI_Offset* const *counts,
+                      MPI_Offset* const *strides,',
+          `$2', `m', `MPI_Offset* const *starts,
+                      MPI_Offset* const *counts,
+                      MPI_Offset* const *strides,
+                      MPI_Offset* const *imaps,')
+   ifelse(`$3', `',
+    `ifelse($1,`get',`void **bufs,',`void* const *bufs,')
+                      const MPI_Offset *bufcounts,
+                      const MPI_Datatype *buftypes',
+    `ifelse($1,`get',`FUNC2ITYPE($3) **bufs',
+                      `FUNC2ITYPE($3)* const *bufs')'))
 {
     int i, reqMode=0, status=NC_NOERR, err, *reqs;
     NC_api api_kind;
@@ -497,13 +490,21 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
         err = sanity_check(pncp, varids[i], IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
         if (err != NC_NOERR) break;
 
-        ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
+        ifelse(`$2',`',`',`/* checks start, count, stride for non-scalars */
         if (pncp->vars[varids[i]].ndims > 0) {
+            MPI_Offset *stride=NULL;
+            ifelse(`$2',`m',`if (strides != NULL) stride = strides[i];',
+                   `$2',`s',`if (strides != NULL) stride = strides[i];')
             err = check_start_count_stride(pncp, varids[i], IS_READ($1),
-                                           api_kind, MIndexArgs($2));
+                                           api_kind, MStartCount($2), stride);
             if (err != NC_NOERR) break;
         }')
     }
+
+    reqMode |= NC_REQ_NBI |
+               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
+               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
+               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
     ifelse(`$4',`',
     `/* for independent API, return now if error encountered */
@@ -516,40 +517,33 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     else if (err == NC_EPERM || err == NC_EINDEFINE || err == NC_EINDEP ||
              err == NC_ENOTINDEP) /* cannot continue if fatal errors */
         return err;
-    else if (err != NC_NOERR) /* other errors, participate collective call */
-        reqMode |= NC_REQ_ZERO;')
+    else if (err != NC_NOERR) { /* other errors, participate collective call */
+        status = pncp->driver->wait(pncp->ncp, 0, NULL, NULL, reqMode);
+        return err;
+    }')
 
-    reqMode = NC_REQ_NBI |
-              ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
-              ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    reqs = (int*) NCI_Malloc((size_t)nvars * SIZEOF_INT);
+    for (i=0; i<nvars; i++) {
+        /* call the nonblocking subroutines */
+        MPI_Offset *stride=NULL, *imap=NULL;
+        ifelse(`$2',`m',`if (imaps != NULL) imap = imaps[i];
+        if (strides != NULL) stride = strides[i];')
+        ifelse(`$2',`s',`if (strides != NULL) stride = strides[i];')
+        err = pncp->driver->i`$1'_var(pncp->ncp,
+                                      varids[i],
+                                      MStartCount($2), stride, imap,
+                                      bufs[i],
+                                      ifelse(`$3',`',`bufcounts[i],buftypes[i]',
+                                                     `-1, ITYPE2MPI($3)'),
+                                      &reqs[i],
+                                      api_kind,
+                                      reqMode);
+        if (err != NC_NOERR) break;
+    }
+    status = pncp->driver->wait(pncp->ncp, i, reqs, NULL, reqMode);
+    NCI_Free(reqs);
 
-    status = err;
-    if (reqMode & NC_REQ_ZERO) {
-        err = pncp->driver->wait(pncp->ncp, 0, NULL, NULL, reqMode);
-        if (status == NC_NOERR) status = err;
-    }
-    else {
-        reqs = (int*) NCI_Malloc((size_t)nvars * SIZEOF_INT);
-        for (i=0; i<nvars; i++) {
-            /* call the nonblocking subroutines */
-            err = pncp->driver->i`$1'_var(pncp->ncp,
-                                          varids[i],
-                                          MArgStartCountStrideMap($2),
-                                          bufs[i],
-                                          ifelse(`$3',`',`bufcounts[i], buftypes[i]',
-                                                         `-1, ITYPE2MPI($3)'),
-                                          &reqs[i],
-                                          api_kind,
-                                          reqMode);
-            if (err != NC_NOERR) break;
-        }
-        if (status == NC_NOERR) status = err;
-        err = pncp->driver->wait(pncp->ncp, i, reqs, NULL, reqMode);
-        if (status == NC_NOERR) status = err;
-        NCI_Free(reqs);
-    }
-    return status;
+    return (err != NC_NOERR) ? err : status;
 }
 ')dnl
 dnl
