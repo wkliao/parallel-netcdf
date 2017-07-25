@@ -32,26 +32,47 @@ dnl
 #include "ncx.h"
 
 /*
- *  Datatype Mapping:
+ * The NetCDF CDF formats define external NC data types and describe their
+ * intents of use, also shown below.
  *
- *  NETCDF    <--> MPI                    Description
- *   NC_BYTE       MPI_SIGNED_CHAR        signed 1-byte integer
- *   NC_CHAR       MPI_CHAR               char, text (cannot convert to other types)
- *   NC_SHORT      MPI_SHORT              signed 2-byte integer
- *   NC_INT        MPI_INT                signed 4-byte integer
- *   NC_FLOAT      MPI_FLOAT              single precision floating point
- *   NC_DOUBLE     MPI_DOUBLE             double precision floating point
- *   NC_UBYTE      MPI_UNSIGNED_CHAR      unsigned 1-byte int
- *   NC_USHORT     MPI_UNSIGNED_SHORT     unsigned 2-byte int
- *   NC_UINT       MPI_UNSIGNED           unsigned 4-byte int
- *   NC_INT64      MPI_LONG_LONG_INT      signed 8-byte int
- *   NC_UINT64     MPI_UNSIGNED_LONG_LONG unsigned 8-byte int
+ *   external type   No. Bits   Intent of use
+ *   -------------   --------   ---------------------------------
+ *   NC_CHAR          8         text data (only non-numerical type in NetCDF)
+ *   NC_BYTE          8         1-byte integer
+ *   NC_SHORT        16         2-byte signed integer
+ *   NC_INT          32         4-byte signed integer
+ *   NC_FLOAT        32         4-byte floating point number
+ *   NC_DOUBLE       64         8-byte real number in double precision
+ *   NC_UBYTE         8         unsigned 1-byte integer
+ *   NC_USHORT       16         unsigned 2-byte integer
+ *   NC_UINT         32         unsigned 4-byte integer
+ *   NC_INT64        64         signed 8-byte integer
+ *   NC_UINT64       64         unsigned 8-byte integer
  *
- *  Assume: MPI_Datatype and nc_type are both enumerable types
- *          (this might not conform with MPI, as MPI_Datatype is intended to be
- *           an opaque data type.)
  *
- *  In OpenMPI, this assumption will fail
+ * Datatype Mapping between in-memory types and MPI datatypes:
+ *
+ *   internal type   example API              MPI datatype
+ *   -------------   ----------------------   -----------------
+ *   text            ncmpi_put_var_text       MPI_CHAR
+ *   schar           ncmpi_put_var_schar      MPI_SIGNED_CHAR
+ *   uchar           ncmpi_put_var_uchar      MPI_UNSIGNED_CHAR
+ *   short           ncmpi_put_var_short      MPI_SHORT
+ *   ushort          ncmpi_put_var_ushort     MPI_UNSIGNED_SHORT
+ *   int             ncmpi_put_var_int        MPI_INT
+ *   uint            ncmpi_put_var_uint       MPI_UNSIGNED
+ *   long            ncmpi_put_var_long       MPI_LONG
+ *   float           ncmpi_put_var_float      MPI_FLOAT
+ *   double          ncmpi_put_var_double     MPI_DOUBLE
+ *   longlong        ncmpi_put_var_longlong   MPI_LONG_LONG_INT
+ *   ulonglong       ncmpi_put_var_ulonglong  MPI_UNSIGNED_LONG_LONG
+ *
+ *
+ * Note NC_CHAR is the only non-numerical data type available in NetCDF realm.
+ * All other external types are considered numerical, which are illegal to
+ * be converted to and from a variable defined in NC_CHAR type. The only legal
+ * APIs to read/write a variable of NC_CHAR type are "_text" APIs.
+ *
  */
 
 /*----< ncmpio_nc2mpitype() >------------------------------------------------*/
@@ -59,8 +80,8 @@ inline MPI_Datatype
 ncmpio_nc2mpitype(nc_type xtype)
 {
     switch(xtype){
-        case NC_BYTE :   return MPI_SIGNED_CHAR;
         case NC_CHAR :   return MPI_CHAR;
+        case NC_BYTE :   return MPI_SIGNED_CHAR;
         case NC_SHORT :  return MPI_SHORT;
         case NC_INT :    return MPI_INT;
         case NC_FLOAT :  return MPI_FLOAT;
