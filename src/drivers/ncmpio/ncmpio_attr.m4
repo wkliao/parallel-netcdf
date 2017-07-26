@@ -523,7 +523,7 @@ ncmpio_copy_att(void       *ncdp_in,
     err = NC_lookupattr(ncap_in, nname, &iattrp);
     if (err != NC_NOERR) {
         assert(iattrp == NULL);
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -990,14 +990,14 @@ ncmpio_put_att_$1(void       *ncdp,
     /* check if the attribute name is legal (check for NC_EBADNAME) */
     err = ncmpii_check_name(name, ncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
     ifelse(`$1',`text', ,`/* check if xtype is valid (check for NC_EBADTYPE) */
     err = ncmpio_cktype(ncp->format, xtype);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }')
 
@@ -1028,7 +1028,7 @@ ncmpio_put_att_$1(void       *ncdp,
         NC_var *varp;
         err = ncmpio_NC_lookupvar(ncp, varid, &varp);
         if (err != NC_NOERR) {
-            DEBUG_TRACE_ERROR
+            DEBUG_TRACE_ERROR(err)
             goto err_check;
         }
 

@@ -52,7 +52,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
     /* check if the name string is legal for netcdf format */
     err = ncmpii_check_name(name, pncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -606,7 +606,7 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
     /* check whether new name is legal */
     err = ncmpii_check_name(newname, pncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 

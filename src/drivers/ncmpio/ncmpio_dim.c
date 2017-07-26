@@ -261,7 +261,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
     /* check if the name string is legal for the netcdf format */
     err = ncmpii_check_name(name, ncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -282,7 +282,7 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
             err = NC_EDIMSIZE;
     }
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -519,7 +519,7 @@ ncmpio_rename_dim(void       *ncdp,
     /* check whether newname is legal */
     err = ncmpii_check_name(newname, ncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 #endif
@@ -558,7 +558,7 @@ ncmpio_rename_dim(void       *ncdp,
     err = ncmpio_update_name_lookup_table(ncp->dims.nameT, dimid,
                              ncp->dims.value[dimid]->name, nnewname);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 #endif

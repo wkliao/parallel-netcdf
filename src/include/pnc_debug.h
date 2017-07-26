@@ -60,7 +60,7 @@
     }                                                                   \
     status = err;                                                       \
 }
-#define DEBUG_TRACE_ERROR {                                             \
+#define DEBUG_TRACE_ERROR(err) {                                        \
     char *_env_str = getenv("PNETCDF_VERBOSE_DEBUG_MODE");              \
     if (_env_str != NULL && *_env_str != '0') {                         \
         int _rank;                                                      \

@@ -269,7 +269,7 @@ ncmpi_rename_att(int         ncid,
     /* check if the newname string is legal for the netcdf format */
     err = ncmpii_check_name(newname, pncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 

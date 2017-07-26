@@ -50,7 +50,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
     /* check if the name string is legal for the netcdf format */
     err = ncmpii_check_name(name, pncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -70,7 +70,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
             err = NC_EDIMSIZE;
     }
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 
@@ -258,7 +258,7 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
     /* check if the newname string is legal for the netcdf format */
     err = ncmpii_check_name(newname, pncp->format);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 

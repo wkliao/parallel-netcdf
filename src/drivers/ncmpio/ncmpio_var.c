@@ -653,7 +653,7 @@ ncmpio_rename_var(void       *ncdp,
     err = ncmpio_update_name_lookup_table(ncp->vars.nameT, varid,
                         ncp->vars.value[varid]->name, nnewname);
     if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR
+        DEBUG_TRACE_ERROR(err)
         goto err_check;
     }
 #endif
