@@ -312,6 +312,11 @@ mpi_io:
     }
     if (filetype != MPI_BYTE) MPI_Type_free(&filetype);
 
+#ifdef _USE_MPI_GET_COUNT
+    /* explicitly initialize mpistatus object to 0, see comments below */
+    memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
+
     if (fIsSet(reqMode, NC_REQ_WR)) {
         if (fIsSet(reqMode, NC_REQ_INDEP)) {
             TRACE_IO(MPI_File_write_at)(fh, offset, xbuf, (int)nbytes,
@@ -323,9 +328,6 @@ mpi_io:
                     err = (err == NC_EFILE) ? NC_EWRITE : err;
                     DEBUG_ASSIGN_ERROR(status, err)
                 }
-            }
-            else {
-                ncp->put_size += nbytes;
             }
         }
         else {  /* reqMode == NC_REQ_COLL */
@@ -339,9 +341,15 @@ mpi_io:
                     DEBUG_ASSIGN_ERROR(status, err)
                 }
             }
-            else {
-                ncp->put_size += nbytes;
-            }
+        }
+        if (mpireturn == MPI_SUCCESS) {
+#ifdef _USE_MPI_GET_COUNT
+            int put_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
+            ncp->put_size += put_size;
+#else
+            ncp->put_size += nbytes;
+#endif
         }
     }
     else {  /* read request */
@@ -356,9 +364,6 @@ mpi_io:
                     DEBUG_ASSIGN_ERROR(status, err)
                 }
             }
-            else {
-                ncp->get_size += nbytes;
-            }
         }
         else {  /* reqMode == NC_REQ_COLL */
             TRACE_IO(MPI_File_read_at_all)(fh, offset, xbuf, (int)nbytes,
@@ -371,9 +376,15 @@ mpi_io:
                     DEBUG_ASSIGN_ERROR(status, err)
                 }
             }
-            else {
-                ncp->get_size += nbytes;
-            }
+        }
+        if (mpireturn == MPI_SUCCESS) {
+#ifdef _USE_MPI_GET_COUNT
+            int get_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
+            ncp->get_size += get_size;
+#else
+            ncp->get_size += nbytes;
+#endif
         }
     }
 

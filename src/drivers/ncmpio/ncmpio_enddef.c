@@ -79,8 +79,10 @@ move_file_block(NC         *ncp,
             nbytes -= chunk_size*nprocs;
         }
 
+#ifdef _USE_MPI_GET_COUNT
         /* explicitly initialize mpistatus object to 0, see comments below */
         memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
 
         /* read the original data @ from+nbytes+rank*chunk_size */
         TRACE_IO(MPI_File_read_at_all)(ncp->collective_fh,
@@ -94,11 +96,16 @@ move_file_block(NC         *ncp,
             /* for zero-length read, MPI_Get_count may report incorrect result
              * for some MPICH version, due to the uninitialized MPI_Status
              * object passed to MPI-IO calls. Thus we initialize it above to
-             * work around. Otherwise we can just use:
-            ncp->get_size += bufcount;
+             * work around. See MPICH ticket:
+             * https://trac.mpich.org/projects/mpich/ticket/2332
              */
+#ifdef _USE_MPI_GET_COUNT
             MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
             ncp->get_size += get_size;
+#else
+            ncp->get_size += bufcount;
+            get_size       = bufcount;
+#endif
         }
 
         /* MPI_Barrier(ncp->comm); */
@@ -124,6 +131,10 @@ move_file_block(NC         *ncp,
          * bufcount for write. Note that the latter will write the variables
          * that have not been written before. Below uses the former option.
          */
+#ifdef _USE_MPI_GET_COUNT
+        /* explicitly initialize mpistatus object to 0, see comments below */
+        memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
         TRACE_IO(MPI_File_write_at_all)(ncp->collective_fh,
                                         to+nbytes+rank*chunk_size,
                                         buf, get_size /* bufcount */,
@@ -136,12 +147,15 @@ move_file_block(NC         *ncp,
             /* for zero-length read, MPI_Get_count may report incorrect result
              * for some MPICH version, due to the uninitialized MPI_Status
              * object passed to MPI-IO calls. Thus we initialize it above to
-             * work around. Otherwise we can just use:
-            ncp->put_size += bufcount;
+             * work around.
              */
+#ifdef _USE_MPI_GET_COUNT
             int put_size;
             MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
             ncp->put_size += put_size;
+#else
+            ncp->put_size += get_size; /* or bufcount */
+#endif
         }
         TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN, ncp->comm);
         status = min_st;
@@ -549,6 +563,10 @@ write_NC(NC *ncp)
         if (ncp->xsz != (int)ncp->xsz)
             DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
 
+#ifdef _USE_MPI_GET_COUNT
+        /* explicitly initialize mpistatus object to 0, see comments below */
+        memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
         TRACE_IO(MPI_File_write_at)(ncp->collective_fh, 0, buf,
                                     (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
@@ -557,7 +575,13 @@ write_NC(NC *ncp)
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(status, NC_EWRITE)
         }
         else {
+#ifdef _USE_MPI_GET_COUNT
+            int put_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
+            ncp->put_size += put_size;
+#else
             ncp->put_size += ncp->xsz;
+#endif
         }
     }
 

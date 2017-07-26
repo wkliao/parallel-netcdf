@@ -369,9 +369,13 @@ hdr_fetch(bufferinfo *gbp) {
             if (err == NC_EFILE) DEBUG_ASSIGN_ERROR(err, NC_EREAD)
         }
         else {
+#ifdef _USE_MPI_GET_COUNT
             int get_size; /* actual read amount can be smaller */
             MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
             gbp->get_size += get_size;
+#else
+            gbp->get_size += gbp->size;
+#endif
         }
     }
     /* we might have to backtrack */

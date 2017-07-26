@@ -534,6 +534,11 @@ int ncmpio_write_header(NC *ncp)
             NCI_Free(buf);
             DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
         }
+
+#ifdef _USE_MPI_GET_COUNT
+        /* explicitly initialize mpistatus object to 0, see comments below */
+        memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
         TRACE_IO(MPI_File_write_at)(fh, 0, buf, (int)ncp->xsz, MPI_BYTE, &mpistatus);
         if (mpireturn != MPI_SUCCESS) {
             err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
@@ -543,7 +548,13 @@ int ncmpio_write_header(NC *ncp)
             }
         }
         else {
+#ifdef _USE_MPI_GET_COUNT
+            int put_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
+            ncp->put_size += put_size;
+#else
             ncp->put_size += ncp->xsz;
+#endif
         }
         NCI_Free(buf);
     }

@@ -240,22 +240,32 @@ err_check:
         if (status == NC_NOERR) status = err;
     }
 
+#ifdef _USE_MPI_GET_COUNT
+    /* explicitly initialize mpistatus object to 0, see comments below */
+    memset(&mpistatus, 0, sizeof(MPI_Status));
+#endif
+
     if (fIsSet(reqMode, NC_REQ_WR)) {
         if (fIsSet(reqMode, NC_REQ_COLL)) {
             TRACE_IO(MPI_File_write_at_all)(fh, offset, cbuf, (int)bufcount,
                                             buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at_all");
-            else
-                ncp->put_size += bufcount * buftype_size;
         }
         else { /* independent API */
             TRACE_IO(MPI_File_write_at)(fh, offset, cbuf, (int)bufcount,
                                         buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_error_mpi2nc(mpireturn, "MPI_File_write_at");
-            else
-                ncp->put_size += bufcount * buftype_size;
+        }
+        if (mpireturn == MPI_SUCCESS) {
+#ifdef _USE_MPI_GET_COUNT
+            int put_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &put_size);
+            ncp->put_size += put_size;
+#else
+            ncp->put_size += bufcount * buftype_size;
+#endif
         }
     }
     else {  /* read request */
@@ -264,16 +274,21 @@ err_check:
                                            buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at_all");
-            else
-                ncp->get_size += bufcount * buftype_size;
         }
         else { /* independent API */
             TRACE_IO(MPI_File_read_at)(fh, offset, cbuf, (int)bufcount,
                                        buftype, &mpistatus);
             if (mpireturn != MPI_SUCCESS)
                 return ncmpii_error_mpi2nc(mpireturn, "MPI_File_read_at");
-            else
-                ncp->get_size += bufcount * buftype_size;
+        }
+        if (mpireturn == MPI_SUCCESS) {
+#ifdef _USE_MPI_GET_COUNT
+            int get_size;
+            MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
+            ncp->get_size += get_size;
+#else
+            ncp->get_size += bufcount * buftype_size;
+#endif
         }
     }
 
