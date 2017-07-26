@@ -440,77 +440,17 @@ ncmpio_rename_att(void       *ncdp,
 
 err_check:
     if (ncp->safe_mode) {
-        int root_name_len, root_varid, status, mpireturn;
-        char *root_name;
+        int minE, mpireturn;
 
-        /* First check error code so far across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        /* check error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nnewname != NULL) NCI_Free(nnewname);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (status != NC_NOERR) {
+        if (minE != NC_NOERR) {
             if (nnewname != NULL) NCI_Free(nnewname);
-            return status;
-        }
-
-        /* check if name is consistent among all processes */
-        assert(name != NULL);
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = NULL_CHAR;
-        if (name != NULL) strcpy(root_name, name);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
-        NCI_Free(root_name);
-
-        /* check if newname is consistent among all processes */
-        assert(newname != NULL);
-        root_name_len = 1;
-        if (newname != NULL) root_name_len += strlen(newname);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = NULL_CHAR;
-        if (newname != NULL) strcpy(root_name, newname);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, newname))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
-        NCI_Free(root_name);
-
-        /* check if varid is consistent across all processes */
-        root_varid = varid;
-        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        if (err == NC_NOERR && root_varid != varid)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nnewname != NULL) NCI_Free(nnewname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nnewname != NULL) NCI_Free(nnewname);
-            return status;
+            return minE;
         }
     }
 
@@ -624,68 +564,18 @@ ncmpio_copy_att(void       *ncdp_in,
 
 err_check:
     if (ncp_out->safe_mode) {
-        int root_ids[2], root_name_len, status, mpireturn;
-        char *root_name;
+        int minE, mpireturn;
 
-        /* first check the error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,
+        /* check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,
                                   ncp_out->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nname != NULL) NCI_Free(nname);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         }
-        if (status != NC_NOERR) {
+        if (minE != NC_NOERR) {
             if (nname != NULL) NCI_Free(nname);
-            return status;
-        }
-
-        /* check if name is consistent among all processes */
-        assert(name != NULL);
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp_out->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-        }
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = NULL_CHAR;
-        if (name != NULL) strcpy(root_name, name);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,
-                              ncp_out->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
-        NCI_Free(root_name);
-
-        /* check if varid_in, varid_out, are consistent across all
-         * processes */
-        root_ids[0] = varid_in;
-        root_ids[1] = varid_out;
-        TRACE_COMM(MPI_Bcast)(&root_ids, 2, MPI_INT, 0, ncp_out->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && (root_ids[0] != varid_in ||
-            root_ids[1] != varid_out))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,
-                                  ncp_out->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nname != NULL) NCI_Free(nname);
-            return status;
+            return minE;
         }
     }
 
@@ -774,49 +664,13 @@ ncmpio_del_att(void       *ncdp,
 
 err_check:
     if (ncp->safe_mode) {
-        int root_varid, root_name_len, status, mpireturn;
-        char *root_name;
-
-        /* first check the error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (status != NC_NOERR) return status;
-
-        /* check if name is consistent among all processes */
-        assert(name != NULL);
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-        }
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = NULL_CHAR;
-        if (name != NULL) strcpy(root_name, name);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
-        NCI_Free(root_name);
-
-        /* check if varid is consistent across all processes */
-        root_varid = varid;
-        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        if (err == NC_NOERR && root_varid != varid)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
+        int minE, mpireturn;
 
         /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,ncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (status != NC_NOERR) return status;
+        if (minE != NC_NOERR) return minE;
     }
 
     if (err != NC_NOERR) return err;

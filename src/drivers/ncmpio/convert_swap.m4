@@ -52,26 +52,27 @@ dnl
  *
  * Datatype Mapping between in-memory types and MPI datatypes:
  *
- *   internal type   example API              MPI datatype
- *   -------------   ----------------------   -----------------
- *   text            ncmpi_put_var_text       MPI_CHAR
- *   schar           ncmpi_put_var_schar      MPI_SIGNED_CHAR
- *   uchar           ncmpi_put_var_uchar      MPI_UNSIGNED_CHAR
- *   short           ncmpi_put_var_short      MPI_SHORT
- *   ushort          ncmpi_put_var_ushort     MPI_UNSIGNED_SHORT
- *   int             ncmpi_put_var_int        MPI_INT
- *   uint            ncmpi_put_var_uint       MPI_UNSIGNED
- *   long            ncmpi_put_var_long       MPI_LONG
- *   float           ncmpi_put_var_float      MPI_FLOAT
- *   double          ncmpi_put_var_double     MPI_DOUBLE
- *   longlong        ncmpi_put_var_longlong   MPI_LONG_LONG_INT
- *   ulonglong       ncmpi_put_var_ulonglong  MPI_UNSIGNED_LONG_LONG
+ *   internal type of
+ *   I/O buffer argument   example API              MPI datatype
+ *   -------------------   ----------------------   -----------------
+ *   char*                 ncmpi_put_var_text       MPI_CHAR
+ *   signed char*          ncmpi_put_var_schar      MPI_SIGNED_CHAR
+ *   unsigned char*        ncmpi_put_var_uchar      MPI_UNSIGNED_CHAR
+ *   short*                ncmpi_put_var_short      MPI_SHORT
+ *   unsigned short*       ncmpi_put_var_ushort     MPI_UNSIGNED_SHORT
+ *   int*                  ncmpi_put_var_int        MPI_INT
+ *   unsigned int*         ncmpi_put_var_uint       MPI_UNSIGNED
+ *   long*                 ncmpi_put_var_long       MPI_LONG
+ *   float*                ncmpi_put_var_float      MPI_FLOAT
+ *   double*               ncmpi_put_var_double     MPI_DOUBLE
+ *   long long*            ncmpi_put_var_longlong   MPI_LONG_LONG_INT
+ *   unsigned long long*   ncmpi_put_var_ulonglong  MPI_UNSIGNED_LONG_LONG
  *
  *
  * Note NC_CHAR is the only non-numerical data type available in NetCDF realm.
- * All other external types are considered numerical, which are illegal to
- * be converted to and from a variable defined in NC_CHAR type. The only legal
- * APIs to read/write a variable of NC_CHAR type are "_text" APIs.
+ * All other external types are considered numerical, which are illegal to be
+ * converted (type-casted) to and from a variable defined in NC_CHAR type. The
+ * only legal APIs to read/write a variable of type NC_CHAR are "_text" APIs.
  *
  */
 

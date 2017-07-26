@@ -540,7 +540,10 @@ ncmpi_fill_var_rec(int        ncid,
         goto err_check;
     }
 
-/* TODO check whether varid is a record variable */
+    if (pncp->vars[varid].recdim == -1) { /* not a record variable */
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTRECVAR)
+        goto err_check;
+    }
 
     if (pncp->flag & NC_MODE_INDEP) { /* must be called in collective mode */
         DEBUG_ASSIGN_ERROR(err, NC_EINDEP)
