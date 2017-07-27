@@ -72,7 +72,7 @@
 #else
 #define DEBUG_RETURN_ERROR(err) return err;
 #define DEBUG_ASSIGN_ERROR(status, err) status = err;
-#define DEBUG_TRACE_ERROR
+#define DEBUG_TRACE_ERROR(err)
 #endif
 
 #endif /* _PNC_DEBUG_H */
