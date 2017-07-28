@@ -129,7 +129,7 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
 
     assert(ncap != NULL);
 
-    if (ncap->nalloc == 0) return;
+    if (ncap->ndefined == 0) return;
 
     assert(ncap->value != NULL);
 
@@ -141,7 +141,6 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
 
     NCI_Free(ncap->value);
     ncap->value    = NULL;
-    ncap->nalloc   = 0;
     ncap->ndefined = 0;
 }
 
@@ -154,17 +153,16 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
     assert(ref != NULL);
     assert(ncap != NULL);
 
-    if (ref->nalloc == 0) {
-        ncap->nalloc   = 0;
+    if (ref->ndefined == 0) {
         ncap->ndefined = 0;
         ncap->value    = NULL;
         return NC_NOERR;
     }
 
-    if (ref->nalloc > 0) {
-        ncap->value = (NC_attr **) NCI_Calloc(ref->nalloc, sizeof(NC_attr*));
+    if (ref->ndefined > 0) {
+        size_t alloc_size = _RNDUP(ref->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_attr **) NCI_Calloc(alloc_size, sizeof(NC_attr*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = ref->nalloc;
     }
 
     ncap->ndefined = 0;
@@ -187,31 +185,20 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 static int
 incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
 {
-    NC_attr **vp;
-
     assert(ncap != NULL);
 
-    if (ncap->nalloc == 0) {
-        assert(ncap->ndefined == 0);
-        vp = (NC_attr **) NCI_Malloc(sizeof(NC_attr*) * NC_ARRAY_GROWBY);
-        if(vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    if (ncap->ndefined % NC_ARRAY_GROWBY == 0) {
+        NC_attr **vp;
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+
+        vp = (NC_attr **) NCI_Realloc(ncap->value, alloc_size*sizeof(NC_attr*));
+        if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
-        ncap->nalloc = NC_ARRAY_GROWBY;
-    }
-    else if (ncap->ndefined + 1 > ncap->nalloc) {
-        vp = (NC_attr **) NCI_Realloc(ncap->value,
-                          (ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_attr*));
-        if(vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-        ncap->value = vp;
-        ncap->nalloc += NC_ARRAY_GROWBY;
     }
 
-    if (newelemp != NULL) {
-        ncap->value[ncap->ndefined] = newelemp;
-        ncap->ndefined++;
-    }
+    if (newelemp != NULL) ncap->value[ncap->ndefined++] = newelemp;
+
     return NC_NOERR;
 }
 

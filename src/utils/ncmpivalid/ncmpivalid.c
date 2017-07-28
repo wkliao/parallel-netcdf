@@ -403,9 +403,9 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
         }
 
         /* check each dimension */
-        ncap->value = (NC_dim **) malloc(ncap->ndefined * sizeof(NC_dim *));
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+        ncap->value = (NC_dim **) calloc(alloc_size, sizeof(NC_dim *));
         if (ncap->value == NULL) DEBUG_RETURN(NC_ENOMEM)
-        ncap->nalloc = ncap->ndefined;
 
         for (dim=0; dim<ncap->ndefined; dim++) {
             status = val_get_NC_dim(fd, gbp, &ncap->value[dim]);
@@ -660,9 +660,9 @@ val_get_NC_attrarray(int fd, bufferinfo *gbp, NC_attrarray *ncap)
             DEBUG_RETURN(NC_ENOTNC)
         }
 
-        ncap->value = (NC_attr **) malloc(ncap->ndefined * sizeof(NC_attr *));
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+        ncap->value = (NC_attr **) calloc(alloc_size, sizeof(NC_attr *));
         if (ncap->value == NULL) DEBUG_RETURN(NC_ENOMEM)
-        ncap->nalloc = ncap->ndefined; 
 
         for (att=0; att<ncap->ndefined; att++) {
             status = val_get_NC_attr(fd, gbp, &ncap->value[att]);
@@ -873,9 +873,9 @@ val_get_NC_vararray(int fd, bufferinfo *gbp, NC_vararray *ncap)
             DEBUG_RETURN(NC_ENOTNC)
         }
  
-        ncap->value = (NC_var **) malloc(ncap->ndefined * sizeof(NC_var *));
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+        ncap->value = (NC_var **) calloc(alloc_size, sizeof(NC_var *));
         if (ncap->value == NULL) DEBUG_RETURN(NC_ENOMEM) 
-        ncap->nalloc = ncap->ndefined;
 
         for (var=0; var<ncap->ndefined; var++) {
             status = val_get_NC_var(fd, gbp, &ncap->value[var]);

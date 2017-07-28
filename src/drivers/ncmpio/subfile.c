@@ -251,8 +251,6 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
 
     /* TODO: ignore UNLIMITED dims */
     /* NOTE: the following "for loop" should be before NC_begins() */
-    /* NOTE: ncp->vars.nalloc shouldn't be used for loop bound
-       because it will incremented by 4, not by 1 */
     PNC *pncp;
     status = PNC_check_id(ncp->ncid_sf, &pncp);
     TEST_HANDLE_ERR(status)

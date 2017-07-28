@@ -200,7 +200,7 @@ ncmpio_create(MPI_Comm     comm,
     fClr(ncp->flags, NC_MODE_RDONLY); /* create automatically enter write mode */
     fSet(ncp->flags, NC_MODE_CREATE);
     fSet(ncp->flags, NC_MODE_DEF);    /* create automatically enter define mode */
-    fClr(ncp->flags, NC_MODE_FILL);   /* PnetCDF default fill mode is no fill */
+    fClr(ncp->flags, NC_MODE_FILL);   /* PnetCDF default mode is no fill */
 
     ncp->ncid         = ncid;
     ncp->safe_mode    = 0;

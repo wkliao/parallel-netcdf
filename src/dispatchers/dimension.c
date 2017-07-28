@@ -100,7 +100,7 @@ ncmpi_def_dim(int         ncid,    /* IN:  file ID */
 
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
-        int root_nameLen, rank, minE, mpireturn;
+        int root_name_len, minE, mpireturn;
         char *root_name=NULL;
         MPI_Offset root_size;
 
@@ -111,28 +111,23 @@ err_check:
         if (minE != NC_NOERR)
             return minE;
 
-        MPI_Comm_rank(pncp->comm, &rank);
-
         /* check if name is consistent among all processes */
         assert(name != NULL);
-        root_nameLen = 1;
-        if (rank == 0 && name != NULL) root_nameLen += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
+        root_name_len = strlen(name) + 1;
+        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_nameLen");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
-        if (rank == 0)
-            root_name = (char*)name;
-        else
-            root_name = (char*) NCI_Malloc((size_t)root_nameLen);
-        TRACE_COMM(MPI_Bcast)(root_name, root_nameLen, MPI_CHAR, 0, pncp->comm);
+        root_name = (char*) NCI_Malloc((size_t)root_name_len);
+        strcpy(root_name, name);
+        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
-            if (rank > 0) NCI_Free(root_name);
+            NCI_Free(root_name);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
         }
-        if (err == NC_NOERR && rank > 0 && strcmp(root_name, name))
+        if (err == NC_NOERR && strcmp(root_name, name))
             DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
-        if (rank > 0) NCI_Free(root_name);
+        NCI_Free(root_name);
 
         /* check if sizes are consistent across all processes */
         root_size = size;
@@ -282,7 +277,7 @@ ncmpi_rename_dim(int         ncid,    /* IN: file ID */
 
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
-        int root_nameLen, root_dimid, minE, mpireturn;
+        int root_name_len, root_dimid, minE, mpireturn;
         char *root_name=NULL;
 
         /* check the error so far across processes */
@@ -293,16 +288,14 @@ err_check:
 
         /* check if name is consistent among all processes */
         assert(newname != NULL);
-        root_nameLen = 1;
-        if (newname != NULL) root_nameLen += strlen(newname);
-        TRACE_COMM(MPI_Bcast)(&root_nameLen, 1, MPI_INT, 0, pncp->comm);
+        root_name_len = strlen(newname) + 1;
+        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_nameLen");
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
-        root_name = (char*) NCI_Malloc((size_t)root_nameLen);
-        root_name[0] = '\0';
-        if (newname != NULL) strcpy(root_name, newname);
-        TRACE_COMM(MPI_Bcast)(root_name, root_nameLen, MPI_CHAR, 0, pncp->comm);
+        root_name = (char*) NCI_Malloc((size_t)root_name_len);
+        strcpy(root_name, newname);
+        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");

@@ -658,6 +658,7 @@ hdr_get_NC_dimarray(bufferinfo  *gbp,
      *                <non-negative INT64>        // CDF-5
      */
     int i, status;
+    size_t alloc_size;
     NC_tag tag = NC_UNSPECIFIED;
     MPI_Offset ndefined;
 
@@ -681,8 +682,8 @@ hdr_get_NC_dimarray(bufferinfo  *gbp,
         ndefined = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) return status;
-    if (ndefined != (int)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-    ncap->ndefined = (int)ndefined;
+    if (ndefined != (size_t)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+    ncap->ndefined = (size_t)ndefined;
     /* TODO: we should allow ndefined > 2^32, considering change the data type
      * of ndefined from int to MPI_Offset */
 
@@ -703,16 +704,16 @@ hdr_get_NC_dimarray(bufferinfo  *gbp,
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
 
-        ncap->value = (NC_dim**) NCI_Malloc((size_t)ndefined * sizeof(NC_dim*));
+        alloc_size = _RNDUP(ncap->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_dim**) NCI_Malloc(alloc_size * sizeof(NC_dim*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (size_t)ndefined;
-        /* TODO: we should allow nalloc > 2^32, considering change the data
-         * type of nalloc from size_t to MPI_Offset */
+        /* TODO: we should allow ndefined > 2^32, considering change the data
+         * type of ndefined from size_t to MPI_Offset */
 
         for (i=0; i<ndefined; i++) {
             status = hdr_get_NC_dim(gbp, ncap->value + i);
             if (status != NC_NOERR) { /* error: fail to get the next dim */
-                ncap->ndefined = i;
+                ncap->ndefined = i; /* update to no. successful defined */
                 ncmpio_free_NC_dimarray(ncap);
                 return status;
             }
@@ -869,6 +870,7 @@ hdr_get_NC_attrarray(bufferinfo   *gbp,
      *                <non-negative INT64>        // CDF-5
      */
     int i, status;
+    size_t alloc_size;
     NC_tag tag = NC_UNSPECIFIED;
     MPI_Offset ndefined;
 
@@ -892,8 +894,8 @@ hdr_get_NC_attrarray(bufferinfo   *gbp,
         ndefined = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) return status;
-    if (ndefined != (int)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-    ncap->ndefined = (int)ndefined;
+    if (ndefined != (size_t)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+    ncap->ndefined = (size_t)ndefined;
 
     if (ndefined == 0) {
         if (tag != NC_ATTRIBUTE && tag != NC_UNSPECIFIED) {
@@ -910,15 +912,15 @@ hdr_get_NC_attrarray(bufferinfo   *gbp,
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
 
-        ncap->value = (NC_attr**)NCI_Malloc((size_t)ndefined *sizeof(NC_attr*));
+        alloc_size = _RNDUP(ncap->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_attr**)NCI_Malloc(alloc_size * sizeof(NC_attr*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (size_t)ndefined;
 
         /* get [attr ...] */
         for (i=0; i<ndefined; i++) {
             status = hdr_get_NC_attr(gbp, ncap->value + i);
             if (status != NC_NOERR) { /* Error: fail to get the next att */
-                ncap->ndefined = i;
+                ncap->ndefined = i; /* update to no. successful defined */
                 ncmpio_free_NC_attrarray(ncap);
                 return status;
             }
@@ -1097,6 +1099,7 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
      *               <non-negative INT64>        // CDF-5
      */
     int i, status;
+    size_t alloc_size;
     NC_tag tag = NC_UNSPECIFIED;
     MPI_Offset ndefined;
 
@@ -1120,8 +1123,8 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
         ndefined = (MPI_Offset)tmp;
     }
     if (status != NC_NOERR) return status;
-    if (ndefined != (int)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
-    ncap->ndefined = (int)ndefined;
+    if (ndefined != (size_t)ndefined) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+    ncap->ndefined = (size_t)ndefined;
     /* TODO: we should allow ndefined > 2^32, considering change the data type
      * of ndefined from int to MPI_Offset */
 
@@ -1140,16 +1143,16 @@ hdr_get_NC_vararray(bufferinfo  *gbp,
             DEBUG_RETURN_ERROR(NC_EINVAL)
         }
 
-        ncap->value = (NC_var**) NCI_Malloc((size_t)ndefined * sizeof(NC_var*));
+        alloc_size = _RNDUP(ncap->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_var**) NCI_Malloc(alloc_size * sizeof(NC_var*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = (size_t)ndefined;
 
         /* get [var ...] */
         for (i=0; i<ndefined; i++) {
             status = hdr_get_NC_var(gbp, ncap->value + i);
             ncap->value[i]->varid = i;
             if (status != NC_NOERR) { /* Error: fail to get the next var */
-                ncap->ndefined = i;
+                ncap->ndefined = i; /* update to no. successful defined */
                 ncmpio_free_NC_vararray(ncap);
                 return status;
             }

@@ -39,7 +39,7 @@
 /* XXX: this seems really low.  do we end up spending a ton of time mallocing?
  * could we reduce that by increasing this to something 21st century? */
 #ifndef NC_ARRAY_GROWBY
-#define NC_ARRAY_GROWBY 4
+#define NC_ARRAY_GROWBY 64
 #endif
 
 /* ncmpi_create/ncmpi_open set up header to be 'chunksize' big and to grow
@@ -127,7 +127,6 @@ typedef struct {
  * is up to 2^31-1. Thus, the member ndefined below should be of type int.
  */
 typedef struct NC_dimarray {
-    size_t         nalloc;        /* number allocated >= ndefined */
     size_t         ndefined;      /* number of defined dimensions */
     int            unlimited_id;  /* -1 for not defined, otherwise >= 0 */
     NC_dim       **value;
@@ -163,7 +162,6 @@ typedef struct {
 } NC_attr;
 
 typedef struct NC_attrarray {
-    size_t    nalloc;    /* number allocated >= ndefined */
     size_t    ndefined;  /* number of defined attributes */
     NC_attr **value;
 } NC_attrarray;
@@ -210,7 +208,6 @@ typedef struct {
 
 /* note: we only allow less than 2^31-1 variables defined in a file */
 typedef struct NC_vararray {
-    size_t         nalloc;      /* number allocated >= ndefined */
     size_t         ndefined;    /* number of defined variables */
     int            num_rec_vars;/* number of defined record variables */
     NC_var       **value;

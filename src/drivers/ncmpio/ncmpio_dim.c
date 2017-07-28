@@ -119,7 +119,7 @@ ncmpio_free_NC_dimarray(NC_dimarray *ncap)
     int i;
 
     assert(ncap != NULL);
-    if (ncap->nalloc == 0) return;
+    if (ncap->ndefined == 0) return;
 
     assert(ncap->value != NULL);
     for (i=0; i<ncap->ndefined; i++) {
@@ -129,7 +129,6 @@ ncmpio_free_NC_dimarray(NC_dimarray *ncap)
 
     NCI_Free(ncap->value);
     ncap->value    = NULL;
-    ncap->nalloc   = 0;
     ncap->ndefined = 0;
 
     /* free space allocated for dim name lookup table */
@@ -145,18 +144,17 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
     assert(ref != NULL);
     assert(ncap != NULL);
 
-    if (ref->nalloc == 0) {
-        ncap->nalloc   = 0;
+    if (ref->ndefined == 0) {
         ncap->ndefined = 0;
         ncap->value    = NULL;
         return NC_NOERR;
     }
 
     /* allocate array of NC_dim objects */
-    if (ref->nalloc > 0) {
-        ncap->value = (NC_dim**) NCI_Calloc(ref->nalloc, sizeof(NC_dim*));
+    if (ref->ndefined > 0) {
+        size_t alloc_size = _RNDUP(ref->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_dim**) NCI_Calloc(alloc_size, sizeof(NC_dim*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = ref->nalloc;
     }
 
     /* duplicate each NC_dim objects */
@@ -185,32 +183,20 @@ static int
 incr_NC_dimarray(NC_dimarray *ncap,
                  NC_dim      *newdimp)
 {
-    NC_dim **vp;
-
     assert(ncap != NULL);
 
-    if (ncap->nalloc == 0) {
-        assert(ncap->ndefined == 0);
-        vp = (NC_dim **) NCI_Malloc(NC_ARRAY_GROWBY * sizeof(NC_dim*));
+    if (ncap->ndefined % NC_ARRAY_GROWBY == 0) {
+        NC_dim **vp;
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+
+        vp = (NC_dim **) NCI_Realloc(ncap->value, alloc_size*sizeof(NC_dim*));
         if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
-        ncap->nalloc = NC_ARRAY_GROWBY;
     }
-    else if (ncap->ndefined + 1 > ncap->nalloc) {
-        vp = (NC_dim **) NCI_Realloc(ncap->value,
-                         (ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_dim*));
-        if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-        ncap->value = vp;
-        ncap->nalloc += NC_ARRAY_GROWBY;
-    }
-    /* else here means some space still available */
+    if (newdimp != NULL) ncap->value[ncap->ndefined++] = newdimp;
 
-    if (newdimp != NULL) {
-        ncap->value[ncap->ndefined] = newdimp;
-        ncap->ndefined++;
-    }
     return NC_NOERR;
 }
 

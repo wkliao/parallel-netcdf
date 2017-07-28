@@ -127,7 +127,7 @@ ncmpio_free_NC_vararray(NC_vararray *ncap)
     int i;
 
     assert(ncap != NULL);
-    if (ncap->nalloc == 0) return;
+    if (ncap->ndefined == 0) return;
 
     assert(ncap->value != NULL);
     for (i=0; i<ncap->ndefined; i++) {
@@ -137,7 +137,6 @@ ncmpio_free_NC_vararray(NC_vararray *ncap)
 
     NCI_Free(ncap->value);
     ncap->value    = NULL;
-    ncap->nalloc   = 0;
     ncap->ndefined = 0;
 
 #ifndef SEARCH_NAME_LINEARLY
@@ -156,17 +155,16 @@ ncmpio_dup_NC_vararray(NC_vararray       *ncap,
     assert(ref != NULL);
     assert(ncap != NULL);
 
-    if (ref->nalloc == 0) {
-        ncap->nalloc = 0;
+    if (ref->ndefined == 0) {
         ncap->ndefined = 0;
         ncap->value = NULL;
         return NC_NOERR;
     }
 
-    if (ref->nalloc > 0) {
-        ncap->value = (NC_var **) NCI_Calloc(ref->nalloc, sizeof(NC_var*));
+    if (ref->ndefined > 0) {
+        size_t alloc_size = _RNDUP(ref->ndefined, NC_ARRAY_GROWBY);
+        ncap->value = (NC_var **) NCI_Calloc(alloc_size, sizeof(NC_var*));
         if (ncap->value == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-        ncap->nalloc = ref->nalloc;
     }
 
     /* duplicate one NC_var object at a time */
@@ -199,32 +197,19 @@ static int
 incr_NC_vararray(NC_vararray *ncap,
                  NC_var      *newvarp)
 {
-    NC_var **vp;
-
     assert(ncap != NULL);
-    assert(newvarp != NULL);
 
-    if (ncap->nalloc == 0) { /* no variable has been allocated yet */
-        assert(ncap->ndefined == 0);
-        vp = (NC_var **) NCI_Malloc(NC_ARRAY_GROWBY * sizeof(NC_var *));
+    if (ncap->ndefined % NC_ARRAY_GROWBY == 0) {
+        NC_var **vp;
+        size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
+
+        vp = (NC_var **) NCI_Realloc(ncap->value, alloc_size*sizeof(NC_var*));
         if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
         ncap->value = vp;
-        ncap->nalloc = NC_ARRAY_GROWBY;
-    }
-    else if (ncap->ndefined + 1 > ncap->nalloc) {
-        vp = (NC_var **) NCI_Realloc(ncap->value,
-                         (ncap->nalloc + NC_ARRAY_GROWBY) * sizeof(NC_var*));
-        if (vp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-        ncap->value = vp;
-        ncap->nalloc += NC_ARRAY_GROWBY;
     }
 
-    if (newvarp != NULL) {
-        ncap->value[ncap->ndefined] = newvarp;
-        ncap->ndefined++;
-    }
+    if (newvarp != NULL) ncap->value[ncap->ndefined++] = newvarp;
 
     return NC_NOERR;
 }

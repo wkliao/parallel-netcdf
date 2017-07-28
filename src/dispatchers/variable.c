@@ -122,15 +122,14 @@ err_check:
         if (minE != NC_NOERR) return minE;
 
         /* check if name is consistent among all processes */
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
+        assert(name != NULL);
+        root_name_len = strlen(name) + 1;
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = '\0';
-        if (name != NULL) strcpy(root_name, name);
+        strcpy(root_name, name);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
@@ -622,7 +621,7 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
         int root_name_len, root_varid, minE, mpireturn;
-        char *root_name;
+        char *root_name=NULL;
 
         /* First check error code so far across processes */
         TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
@@ -632,15 +631,13 @@ err_check:
 
         /* check if newname is consistent among all processes */
         assert(newname != NULL);
-        root_name_len = 1;
-        if (newname != NULL) root_name_len += strlen(newname);
+        root_name_len = strlen(newname) + 1;
         TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, pncp->comm);
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = '\0';
-        if (newname != NULL) strcpy(root_name, newname);
+        strcpy(root_name, newname);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);

@@ -23,6 +23,9 @@ dnl
 #include <common.h>
 
 /*----< sanity_check_get() >-------------------------------------------------*/
+/* This is an independent subroutine. Sanity check for attribute get APIs is
+ * simpler, as attribute get APIs are independent subroutines.
+ */
 static int
 sanity_check_get(PNC        *pncp,
                  int         varid,
@@ -40,6 +43,7 @@ sanity_check_get(PNC        *pncp,
 }
 
 /*----< sanity_check_put() >-------------------------------------------------*/
+/* This is a collective subroutine. */
 static int
 sanity_check_put(PNC        *pncp,
                  int         varid,
@@ -102,6 +106,7 @@ check_EBADTYPE_ECHAR(PNC *pncp, MPI_Datatype itype, nc_type xtype)
 }
 
 /*----< check_consistency_put() >--------------------------------------------*/
+/* This is a collective subroutine and to be called in safe mode. */
 static int
 check_consistency_put(MPI_Comm      comm,
                       int           varid,
@@ -113,25 +118,24 @@ check_consistency_put(MPI_Comm      comm,
                       int           err)
 {
     int root_name_len, root_varid, minE, mpireturn;
-    char *root_name;
+    char *root_name=NULL;
     nc_type root_xtype;
     MPI_Offset root_nelems;
 
-    /* first check the error code across processes */
+    /* first check the error code, err, across processes */
     TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, comm);
     if (mpireturn != MPI_SUCCESS)
         return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
     if (minE != NC_NOERR) return minE;
 
-    /* check if name is consistent among all processes */
+    /* check if attribute name is consistent among all processes */
     assert(name != NULL);
-    root_name_len = strlen(name);
+    root_name_len = strlen(name) + 1;
     TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, comm);
     if (mpireturn != MPI_SUCCESS)
         return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
     root_name = (char*) NCI_Malloc((size_t)root_name_len);
-    root_name[0] = '\0';
     strcpy(root_name, name);
     TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, comm);
     if (mpireturn != MPI_SUCCESS) {
@@ -166,8 +170,8 @@ check_consistency_put(MPI_Comm      comm,
     if (err == NC_NOERR && root_nelems != nelems)
         DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_LEN)
 
+    /* check if buf contents is consistent across all processes */
     if (root_nelems > 0) { /* non-scalar attribute */
-        /* check if buf contents is consistent across all processes */
         /* note xsz is aligned, thus must use the exact size of buf */
         int itype_size, rank, buf_size;
         void *root_buf;
@@ -214,7 +218,8 @@ define(`GETPUT_ATT',dnl
  *
  * If attribute name has already existed, it means to overwrite the attribute.
  * In this case, if the new attribute is larger than the old one, this API
- * must be called when the file is in define mode.
+ * must be called when the file is in define mode. (This check should be done
+ * at the driver.)
  *
  * Note from netCDF user guide:
  * Attributes are always single values or one-dimensional arrays. This works
@@ -224,12 +229,12 @@ ifelse(`$2',`',` * The user buffer data type matches the external type defined i
 `$2',`text',` * This API never returns NC_ERANGE error, as text is not convertible to numerical types',` *')
  */
 int
-APINAME($1,$2)(int             ncid,
-               int             varid,
-               const char     *name,
+APINAME($1,$2)(int         ncid,
+               int         varid,
+               const char *name,
                ifelse(`$1',`put',`ifelse(`$2',`text',,`nc_type xtype,')
                MPI_Offset  nelems,   /* number of elements in buf */')
-               ifelse(`$1',`put',`const') ifelse(`$2',`','void`, FUNC2ITYPE($2)) *buf)
+               ifelse(`$1',`put',`const') ifelse(`$2',`','void`,FUNC2ITYPE($2)) *buf)
 {
     int err=NC_NOERR;
     PNC *pncp;
@@ -246,6 +251,7 @@ ifelse(`$2',`',`
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+    /* sanity check for arguments */
     ifelse(`$1',`get',
     `err = sanity_check_get(pncp, varid, name);
     if (err != NC_NOERR) return err;',
@@ -255,8 +261,8 @@ ifelse(`$2',`',`
     if (err == NC_NOERR) err = check_EBADTYPE_ECHAR(pncp, itype, xtype);')
 
     if (pncp->flag & NC_MODE_SAFE) /* put APIs are collective */
-        err = check_consistency_put(pncp->comm, varid, name, xtype,
-                                    nelems, buf, itype, err);
+        err = check_consistency_put(pncp->comm, varid, name, xtype, nelems,
+                                    buf, itype, err);
     if (err != NC_NOERR) return err;')
 
     /* calling the subroutine that implements APINAME($1,$2)() */
