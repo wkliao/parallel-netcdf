@@ -129,17 +129,16 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
 
     assert(ncap != NULL);
 
-    if (ncap->ndefined == 0) return;
-
-    assert(ncap->value != NULL);
-
     for (i=0; i<ncap->ndefined; i++) {
         if (ncap->value[i]->xvalue != NULL) NCI_Free(ncap->value[i]->xvalue);
         NCI_Free(ncap->value[i]->name);
         NCI_Free(ncap->value[i]);
     }
 
-    NCI_Free(ncap->value);
+    /* attributes can be deleted, thus ncap->value can be allocated but
+     * ncap->ndefined == 0 */
+    if (ncap->value != NULL) NCI_Free(ncap->value);
+
     ncap->value    = NULL;
     ncap->ndefined = 0;
 }
