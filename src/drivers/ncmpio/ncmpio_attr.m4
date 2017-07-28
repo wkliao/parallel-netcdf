@@ -137,9 +137,10 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
 
     /* attributes can be deleted, thus ncap->value can be allocated but
      * ncap->ndefined == 0 */
-    if (ncap->value != NULL) NCI_Free(ncap->value);
-
-    ncap->value    = NULL;
+    if (ncap->value != NULL) {
+        NCI_Free(ncap->value);
+        ncap->value = NULL;
+    }
     ncap->ndefined = 0;
 }
 
