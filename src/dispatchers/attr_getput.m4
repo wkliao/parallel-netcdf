@@ -15,6 +15,7 @@ dnl
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <pnetcdf.h>
 #include <dispatch.h>
@@ -123,15 +124,15 @@ check_consistency_put(MPI_Comm      comm,
     if (minE != NC_NOERR) return minE;
 
     /* check if name is consistent among all processes */
-    root_name_len = 1;
-    if (name != NULL) root_name_len += strlen(name);
+    assert(name != NULL);
+    root_name_len = strlen(name);
     TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, comm);
     if (mpireturn != MPI_SUCCESS)
         return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
     root_name = (char*) NCI_Malloc((size_t)root_name_len);
     root_name[0] = '\0';
-    if (name != NULL) strcpy(root_name, name);
+    strcpy(root_name, name);
     TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, comm);
     if (mpireturn != MPI_SUCCESS) {
         NCI_Free(root_name);

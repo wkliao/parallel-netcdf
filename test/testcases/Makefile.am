@@ -64,16 +64,15 @@ TESTPROGRAMS = ncmpi_vars_null_stride \
                tst_dimsizes \
                redef1
 
-M4_SRCS  = put_all_kinds.m4
+M4_SRCS  = put_all_kinds.m4 erange_fill.m4
 
 TESTPROGRAMS += put_all_kinds
-BUILT_SOURCES = put_all_kinds.c
+nodist_put_all_kinds_SOURCES = put_all_kinds.c
+nodist_erange_fill_SOURCES = erange_fill.c
 
 if ENABLE_ERANGE_FILL
-   M4_SRCS += erange_fill.m4
    M4FLAGS += -DERANGE_FILL
    TESTPROGRAMS += erange_fill
-   BUILT_SOURCES += erange_fill.c
 endif
 
 M4FLAGS += -I${top_srcdir}/m4
