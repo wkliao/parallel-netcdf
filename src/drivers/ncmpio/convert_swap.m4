@@ -76,26 +76,6 @@ dnl
  *
  */
 
-/*----< ncmpio_nc2mpitype() >------------------------------------------------*/
-inline MPI_Datatype
-ncmpio_nc2mpitype(nc_type xtype)
-{
-    switch(xtype){
-        case NC_CHAR :   return MPI_CHAR;
-        case NC_BYTE :   return MPI_SIGNED_CHAR;
-        case NC_SHORT :  return MPI_SHORT;
-        case NC_INT :    return MPI_INT;
-        case NC_FLOAT :  return MPI_FLOAT;
-        case NC_DOUBLE : return MPI_DOUBLE;
-        case NC_UBYTE :  return MPI_UNSIGNED_CHAR;
-        case NC_USHORT : return MPI_UNSIGNED_SHORT;
-        case NC_UINT :   return MPI_UNSIGNED;
-        case NC_INT64 :  return MPI_LONG_LONG_INT;
-        case NC_UINT64 : return MPI_UNSIGNED_LONG_LONG;
-        default:         return MPI_DATATYPE_NULL;
-    }
-}
-
 /*----< ncmpio_need_convert() >----------------------------------------------*/
 /* netCDF specification makes a special case for type conversion between
  * uchar and NC_BYTE: do not check for range error. See

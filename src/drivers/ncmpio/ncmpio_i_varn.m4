@@ -89,7 +89,7 @@ igetput_varn(NC                *ncp,
          * in file - no data conversion will be done. Also, it means buf is
          * contiguous. buftype will no longer be used.
          */
-        ptype = ncmpio_nc2mpitype(varp->type);
+        ptype = ncmpii_nc2mpitype(varp->type);
         MPI_Type_size(ptype, &el_size); /* buffer element size */
     }
     else if (bufcount == -1) { /* buftype is an MPI primitive data type */

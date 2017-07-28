@@ -22,6 +22,7 @@
 #include "nc.h"
 #include "ncx.h"
 
+#if 0
 /*----< ncmpio_sanity_check() >----------------------------------------------*/
 /* check the following errors and in that precedence.
  * NC_EBADID, NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
@@ -89,6 +90,7 @@ int ncmpio_sanity_check(NC                *ncp,
     }
     return NC_NOERR;
 }
+#endif
 
 /*----< ncmpio_set_pnetcdf_hints() >-----------------------------------------*/
 /* this is where the I/O hints designated to pnetcdf are extracted */
@@ -189,7 +191,7 @@ ncmpio_last_offset(NC               *ncp,
                    const MPI_Offset  counts[],   /* [varp->ndims] */
                    const MPI_Offset  strides[],  /* [varp->ndims] */
                    const int         reqMode,
-                   MPI_Offset       *offset_ptr) /* return file offset */
+                   MPI_Offset       *offset_ptr) /* OUT: file offset */
 {
     MPI_Offset offset, *end_off=NULL;
     int status, i, ndims;

@@ -92,10 +92,10 @@ extern int
 ncmpio_del_att(void *ncdp, int varid, const char *name);
 
 extern int
-ncmpio_get_att(void *ncdp, int varid, const char *name, void *value, nc_type itype);
+ncmpio_get_att(void *ncdp, int varid, const char *name, void *value, MPI_Datatype itype);
 
 extern int
-ncmpio_put_att(void *ncdp, int varid, const char *name, nc_type xtype, MPI_Offset nelems, const void *value, nc_type itype);
+ncmpio_put_att(void *ncdp, int varid, const char *name, nc_type xtype, MPI_Offset nelems, const void *value, MPI_Datatype itype);
 
 extern int
 ncmpio_def_var(void *ncdp, const char *name, nc_type type, int ndims, const int *dimids, int *varidp);

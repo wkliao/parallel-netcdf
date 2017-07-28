@@ -8,6 +8,7 @@
 #define _COMMON_H
 
 #include <mpi.h>
+#include <pnetcdf.h>
 
 /*
  * Macros for dealing with flag bits.
@@ -88,4 +89,6 @@ ncmpii_start_count_stride_check(int format, int api, int ndims, int numrecs,
 extern int
 ncmpii_check_name(const char *name, int file_ver);
 
+extern MPI_Datatype
+ncmpii_nc2mpitype(nc_type type);
 #endif

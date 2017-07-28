@@ -435,9 +435,6 @@ ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
                            int *el_size, int *buftype_is_contig);
 
 /* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
-extern MPI_Datatype
-ncmpio_nc2mpitype(nc_type type);
-
 extern int
 ncmpio_need_convert(int format, nc_type nctype, MPI_Datatype mpitype);
 
@@ -580,10 +577,6 @@ extern int
 ncmpio_close_files(NC *ncp, int doUnlink);
 
 /* Begin defined in ncmpio_utils.c ------------------------------------------*/
-extern int
-ncmpio_sanity_check(NC *ncp, int varid, MPI_Offset bufcount,
-                    MPI_Datatype buftype, int reqMode, NC_var **varp);
-
 extern void
 ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
 

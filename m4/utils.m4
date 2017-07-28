@@ -37,6 +37,21 @@ define(`SIZEOFITYPE', `ifelse(`$1', `text',      `SIZEOF_CHAR',
                               `$1', `longlong',  `SIZEOF_LONG_LONG',
                               `$1', `ulonglong', `SIZEOF_UNSIGNED_LONG_LONG')')dnl
 dnl
+dnl size of external NC data type is defined in CDF format specifications
+dnl
+define(`SIZEOFXTYPE', `ifelse(`$1', `NC_CHAR',   `1',
+                              `$1', `NC_BYTE',   `1',
+                              `$1', `NC_UBYTE',  `1',
+                              `$1', `NC_SHORT',  `2',
+                              `$1', `NC_USHORT', `2',
+                              `$1', `NC_INT',    `4',
+                              `$1', `NC_UINT',   `4',
+                              `$1', `NC_LONG',   `4',
+                              `$1', `NC_FLOAT',  `4',
+                              `$1', `NC_DOUBLE', `8',
+                              `$1', `NC_INT64',  `8',
+                              `$1', `NC_UINT64', `8')')dnl
+dnl
 dnl dnl dnl
 dnl
 define(`ITYPE2MPI',  `ifelse(`$1', `text',      `MPI_CHAR',

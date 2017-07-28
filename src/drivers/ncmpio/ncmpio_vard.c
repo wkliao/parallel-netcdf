@@ -120,7 +120,7 @@ getput_vard(NC               *ncp,
     if (err != NC_NOERR) goto err_check;
 
     /* element type of filetype must be the same as variable's type */
-    if (ptype != ncmpio_nc2mpitype(varp->type)) {
+    if (ptype != ncmpii_nc2mpitype(varp->type)) {
         DEBUG_ASSIGN_ERROR(err, NC_ETYPE_MISMATCH)
         goto err_check;
     }
@@ -136,7 +136,7 @@ getput_vard(NC               *ncp,
          * defined in the file - no data conversion will be done.
          */
         /* set buftype to the variable's data type */
-        buftype = ncmpio_nc2mpitype(varp->type);
+        buftype = ncmpii_nc2mpitype(varp->type);
         MPI_Type_size(buftype, &buftype_size);
         bufcount = filetype_size / buftype_size;
         buftype_is_contig = 1;

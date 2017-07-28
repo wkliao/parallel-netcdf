@@ -103,7 +103,7 @@ getput_varn(NC                *ncp,
             }
         }
         /* assign buftype match with the variable's data type */
-        buftype = ncmpio_nc2mpitype(varp->type);
+        buftype = ncmpii_nc2mpitype(varp->type);
     }
 
     cbuf = buf;

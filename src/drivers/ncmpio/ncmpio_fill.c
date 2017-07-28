@@ -830,7 +830,7 @@ ncmpio_def_var_fill(void       *ncdp,
 
         /* create/overwrite attribute _FillValue */
         err = ncmpio_put_att(ncdp, varid, _FillValue, varp->type,
-                             1, fill_value, varp->type);
+                             1, fill_value, ncmpii_nc2mpitype(varp->type));
         if (err != NC_NOERR) return err;
     }
 

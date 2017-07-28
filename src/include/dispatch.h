@@ -70,8 +70,8 @@ struct PNC_driver {
     int (*copy_att)(void*,int,const char*,void*,int);
     int (*rename_att)(void*,int,const char*,const char*);
     int (*del_att)(void*,int,const char*);
-    int (*get_att)(void*,int,const char*,void*,nc_type);
-    int (*put_att)(void*,int,const char*,nc_type,MPI_Offset,const void*,nc_type);
+    int (*get_att)(void*,int,const char*,void*,MPI_Datatype);
+    int (*put_att)(void*,int,const char*,nc_type,MPI_Offset,const void*,MPI_Datatype);
 
     /* APIs read/write variables */
     int (*def_var)(void*,const char*,nc_type,int,const int*,int*);

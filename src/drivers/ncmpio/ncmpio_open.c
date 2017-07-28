@@ -167,18 +167,18 @@ ncmpio_open(MPI_Comm     comm,
     if (ncp->subfile_mode) {
         /* check subfiling attribute */
         err = ncmpio_get_att(ncp, NC_GLOBAL, "num_subfiles", &ncp->num_subfiles,
-                             NC_INT);
+                             MPI_INT);
         if (err == NC_NOERR && ncp->num_subfiles > 1) {
             /* ignore error NC_ENOTATT if this attribute is not defined */
             for (i=0; i<ncp->vars.ndefined; i++) {
                 err = ncmpio_get_att(ncp, i, "num_subfiles",
-                                     &ncp->vars.value[i]->num_subfiles, NC_INT);
+                                     &ncp->vars.value[i]->num_subfiles, MPI_INT);
                 if (err == NC_ENOTATT) continue;
                 if (err != NC_NOERR) return err;
 
                 if (ncp->vars.value[i]->num_subfiles > 1) {
                     err = ncmpio_get_att(ncp, i, "ndims_org",
-                                         &ncp->vars.value[i]->ndims_org,NC_INT);
+                                         &ncp->vars.value[i]->ndims_org,MPI_INT);
                     if (err != NC_NOERR) return err;
                 }
             }
