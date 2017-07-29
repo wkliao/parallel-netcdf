@@ -108,7 +108,7 @@ fill_var_buf(const NC_var *varp,
     if (indx >= 0) {
         /* User defined fill value */
         NC_attr *attrp = varp->attrs.value[indx];
-        if (attrp->type != varp->type || attrp->nelems != 1)
+        if (attrp->xtype != varp->xtype || attrp->nelems != 1)
             DEBUG_RETURN_ERROR(NC_EBADTYPE)
 
         /* Use the user defined value */
@@ -120,7 +120,7 @@ fill_var_buf(const NC_var *varp,
     }
     else { /* use the default */
         void *xvalue;
-        switch(varp->type) {
+        switch(varp->xtype) {
             case NC_CHAR   : xvalue = &FILL_CHAR[0];   break;
             case NC_BYTE   : xvalue = &FILL_BYTE[0];   break;
             case NC_SHORT  : xvalue = &FILL_SHORT[0];  break;
@@ -829,8 +829,8 @@ ncmpio_def_var_fill(void       *ncdp,
     if (fill_value != NULL && !varp->no_fill) {
 
         /* create/overwrite attribute _FillValue */
-        err = ncmpio_put_att(ncdp, varid, _FillValue, varp->type,
-                             1, fill_value, ncmpii_nc2mpitype(varp->type));
+        err = ncmpio_put_att(ncdp, varid, _FillValue, varp->xtype,
+                             1, fill_value, ncmpii_nc2mpitype(varp->xtype));
         if (err != NC_NOERR) return err;
     }
 
@@ -859,7 +859,7 @@ ncmpio_inq_var_fill(NC_var *varp,
          * it is not defined for the variable. Default fill values are used.
          * See fill_NC_var() in putget.m4.
          */
-        err = ncmpio_inq_default_fill_value(varp->type, fill_value);
+        err = ncmpio_inq_default_fill_value(varp->xtype, fill_value);
         return err;
     }
 
@@ -867,7 +867,7 @@ ncmpio_inq_var_fill(NC_var *varp,
     xp = ncap->value[i]->xvalue;
 
     /* value stored in xvalue is in external representation, may need byte-swap */
-    switch(varp->type) {
+    switch(varp->xtype) {
         case NC_CHAR:   return ncmpix_getn_text               (&xp, 1,               (char*)fill_value);
         case NC_BYTE:   return ncmpix_getn_NC_BYTE_schar      (&xp, 1,        (signed char*)fill_value);
         case NC_UBYTE:  return ncmpix_getn_NC_UBYTE_uchar     (&xp, 1,      (unsigned char*)fill_value);

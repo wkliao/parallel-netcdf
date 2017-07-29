@@ -1000,7 +1000,7 @@ ncmpio_calc_datatype_elems(NC_var           *varp,
          * defined in the file - no data conversion will be done.
          */
         *bnelems = *bufcount = fnelems;
-        *ptype = buftype = ncmpii_nc2mpitype(varp->type);
+        *ptype = buftype = ncmpii_nc2mpitype(varp->xtype);
         *el_size = varp->xsz;
         *buftype_is_contig = 1;
         /* nbytes is the amount in bytes of this request to file */

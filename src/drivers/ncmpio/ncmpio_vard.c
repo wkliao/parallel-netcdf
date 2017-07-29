@@ -36,7 +36,7 @@
 /* for write case, buf needs to swapped back if swapped previously */
 #define FINAL_CLEAN_UP {                                                 \
     if (is_buf_swapped) /* byte-swap back to buf's original contents */  \
-        ncmpio_in_swapn(buf, bnelems, ncmpio_xlen_nc_type(varp->type));  \
+        ncmpio_in_swapn(buf, bnelems, varp->xsz);                        \
                                                                          \
     if (cbuf != NULL && cbuf != buf) NCI_Free(cbuf);                     \
 }
@@ -120,7 +120,7 @@ getput_vard(NC               *ncp,
     if (err != NC_NOERR) goto err_check;
 
     /* element type of filetype must be the same as variable's type */
-    if (ptype != ncmpii_nc2mpitype(varp->type)) {
+    if (ptype != ncmpii_nc2mpitype(varp->xtype)) {
         DEBUG_ASSIGN_ERROR(err, NC_ETYPE_MISMATCH)
         goto err_check;
     }
@@ -136,7 +136,7 @@ getput_vard(NC               *ncp,
          * defined in the file - no data conversion will be done.
          */
         /* set buftype to the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpii_nc2mpitype(varp->xtype);
         MPI_Type_size(buftype, &buftype_size);
         bufcount = filetype_size / buftype_size;
         buftype_is_contig = 1;
@@ -150,7 +150,7 @@ getput_vard(NC               *ncp,
                                   &isderived, &buftype_is_contig);
         if (err != NC_NOERR) goto err_check;
 
-        err = NCMPII_ECHAR(varp->type, ptype);
+        err = NCMPII_ECHAR(varp->xtype, ptype);
         if (err != NC_NOERR) goto err_check;
 
         if (btnelems != (int)btnelems) {
@@ -184,7 +184,7 @@ getput_vard(NC               *ncp,
     }
 
     /* Check if we need byte swap cbuf in-place or (into cbuf) */
-    need_swap = ncmpio_need_swap(varp->type, ptype);
+    need_swap = ncmpio_need_swap(varp->xtype, ptype);
     if (need_swap) {
         if (fIsSet(reqMode, NC_REQ_WR)) {
 #ifdef DISABLE_IN_PLACE_SWAP
@@ -198,7 +198,7 @@ getput_vard(NC               *ncp,
                 memcpy(cbuf, buf, (size_t)filetype_size);
             }
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, varp->xsz);
             is_buf_swapped = (cbuf == buf) ? 1 : 0;
             /* is_buf_swapped indicates if the contents of the original user
              * buffer, buf, have been changed, i.e. byte swapped. */
@@ -300,7 +300,7 @@ err_check:
     if (fIsSet(reqMode, NC_REQ_RD)) {
         if (need_swap)
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
+            ncmpio_in_swapn(cbuf, bnelems, varp->xsz);
 
         if (!buftype_is_contig && bnelems > 0) {
             /* unpack cbuf, a contiguous buffer, to buf using buftype */

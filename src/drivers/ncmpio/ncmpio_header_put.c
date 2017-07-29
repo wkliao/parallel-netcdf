@@ -164,13 +164,14 @@ hdr_put_NC_attrV(bufferinfo    *pbp,
      * doubles = [DOUBLE ...]
      * padding = <0, 1, 2, or 3 bytes to next 4-byte boundary>
      */
+    int xsz;
     MPI_Offset padding, sz;
 
-    /* ncmpio_xlen_nc_type() returns the element size (unaligned) of attrp->type
-       attrp->xsz is the aligned total size of attribute values
+    /* ncmpii_xlen_nc_type() returns the element size (unaligned) of
+     * attrp->xtype attrp->xsz is the aligned total size of attribute values
      */
-    sz = ncmpio_xlen_nc_type(attrp->type);
-    sz *= attrp->nelems;
+    ncmpii_xlen_nc_type(attrp->xtype, &xsz);
+    sz = attrp->nelems * xsz;
     padding = attrp->xsz - sz;
 
     if (sz != (size_t) sz) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
@@ -206,7 +207,7 @@ hdr_put_NC_attr(bufferinfo    *pbp,
     if (status != NC_NOERR) return status;
 
     /* copy nc_type */
-    status = ncmpix_put_uint32((void**)(&pbp->pos), (uint)attrp->type);
+    status = ncmpix_put_uint32((void**)(&pbp->pos), (uint)attrp->xtype);
     if (status != NC_NOERR) return status;
 
     /* copy nelems */
@@ -328,7 +329,7 @@ hdr_put_NC_var(bufferinfo   *pbp,
     if (status != NC_NOERR) return status;
 
     /* copy nc_type */
-    status = ncmpix_put_uint32((void**)(&pbp->pos), (uint)varp->type);
+    status = ncmpix_put_uint32((void**)(&pbp->pos), (uint)varp->xtype);
     if (status != NC_NOERR) return status;
 
     /* copy vsize */

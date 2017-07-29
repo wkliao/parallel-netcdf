@@ -62,19 +62,19 @@ static int x_sizeof_NON_NEG;
 /*----< ncmpio_xlen_nc_type() >----------------------------------------------*/
 /* return the length of external NC data type */
 static int
-xlen_nc_type(nc_type type) {
-    switch(type) {
+xlen_nc_type(nc_type xtype) {
+    switch(xtype) {
         case NC_BYTE:
         case NC_CHAR:
-        case NC_UBYTE:  return X_SIZEOF_CHAR;
-        case NC_SHORT:  return X_SIZEOF_SHORT;
-        case NC_USHORT: return X_SIZEOF_USHORT;
-        case NC_INT:    return X_SIZEOF_INT;
-        case NC_UINT:   return X_SIZEOF_UINT;
-        case NC_FLOAT:  return X_SIZEOF_FLOAT;
-        case NC_DOUBLE: return X_SIZEOF_DOUBLE;
-        case NC_INT64:  return X_SIZEOF_INT64;
-        case NC_UINT64: return X_SIZEOF_UINT64;
+        case NC_UBYTE:  return 1;
+        case NC_SHORT:
+        case NC_USHORT: return 2;
+        case NC_INT:
+        case NC_UINT:
+        case NC_FLOAT:  return 4;
+        case NC_DOUBLE:
+        case NC_INT64:
+        case NC_UINT64: return 8;
         default: DEBUG_RETURN(NC_EBADTYPE)
     }
     return NC_NOERR;
@@ -209,16 +209,16 @@ val_check_buffer(int         fd,
 static int
 val_get_NC_tag(int fd, bufferinfo *gbp, NC_tag *tagp)
 {
-    unsigned int type = 0;
+    unsigned int tag = 0;
     int status = val_check_buffer(fd, gbp, x_sizeof_NON_NEG);
     if (status != NC_NOERR) {
-        printf("NC component type is expected for ");
+        printf("NC component tag is expected for ");
         return status;
     }
 
-    status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
+    status = ncmpix_get_uint32((const void**)(&gbp->pos), &tag);
     if (status != NC_NOERR) return status;
-    *tagp = (NC_tag) type;
+    *tagp = (NC_tag) tag;
     return NC_NOERR;
 }
 
@@ -422,33 +422,33 @@ val_get_NC_dimarray(int fd, bufferinfo *gbp, NC_dimarray *ncap)
 }
 
 static int
-val_get_nc_type(int fd, bufferinfo *gbp, nc_type *typep) {
+val_get_nc_type(int fd, bufferinfo *gbp, nc_type *xtypep) {
     /* nc_type is 4-byte integer */
-    unsigned int type = 0;
+    unsigned int xtype = 0;
     int status = val_check_buffer(fd, gbp, 4);
     if (status != NC_NOERR) return status;
 
     /* get a 4-byte integer */
-    status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
+    status = ncmpix_get_uint32((const void**)(&gbp->pos), &xtype);
     if (status != NC_NOERR) return status;
 
-  if (   type != NC_BYTE
-      && type != NC_UBYTE
-      && type != NC_CHAR
-      && type != NC_SHORT
-      && type != NC_USHORT
-      && type != NC_INT
-      && type != NC_UINT
-      && type != NC_FLOAT
-      && type != NC_DOUBLE
-      && type != NC_INT64
-      && type != NC_UINT64) {
-    printf("Error @ [0x%8.8Lx]: \n\tUnknown data type for the values of ",
+  if (   xtype != NC_BYTE
+      && xtype != NC_UBYTE
+      && xtype != NC_CHAR
+      && xtype != NC_SHORT
+      && xtype != NC_USHORT
+      && xtype != NC_INT
+      && xtype != NC_UINT
+      && xtype != NC_FLOAT
+      && xtype != NC_DOUBLE
+      && xtype != NC_INT64
+      && xtype != NC_UINT64) {
+    printf("Error @ [0x%8.8Lx]: \n\tUnknown data xtype for the values of ",
 	   (long long unsigned) (((size_t) gbp->pos - (size_t) gbp->base) + gbp->offset - gbp->size - X_SIZEOF_INT));
     DEBUG_RETURN(NC_EINVAL) 
   }
  
-  *typep = (nc_type) type;
+  *xtypep = (nc_type) xtype;
 
   return NC_NOERR;
 }
@@ -464,7 +464,7 @@ val_get_NC_attrV(int fd, bufferinfo *gbp, NC_attr *attrp) {
     MPI_Offset nvalues, padding, bufremain, attcount;
     MPI_Aint pos_addr, base_addr;
 
-    nvalues = attrp->nelems * xlen_nc_type(attrp->type);
+    nvalues = attrp->nelems * xlen_nc_type(attrp->xtype);
     padding = attrp->xsz - nvalues;
 #ifdef HAVE_MPI_GET_ADDRESS
     MPI_Get_address(gbp->pos,  &pos_addr);
@@ -507,10 +507,10 @@ val_get_NC_attrV(int fd, bufferinfo *gbp, NC_attr *attrp) {
 }
 
 static MPI_Offset
-x_len_NC_attrV(nc_type    type,
+x_len_NC_attrV(nc_type    xtype,
                MPI_Offset nelems)
 {
-    switch(type) {
+    switch(xtype) {
         case NC_BYTE:
         case NC_CHAR:
         case NC_UBYTE:  return _RNDUP(nelems, 4);
@@ -522,21 +522,21 @@ x_len_NC_attrV(nc_type    type,
         case NC_DOUBLE: return (nelems * 8);
         case NC_INT64:  return (nelems * 8);
         case NC_UINT64: return (nelems * 8);
-        default: fprintf(stderr, "Error: bad type(%d) in %s\n",type,__func__);
+        default: fprintf(stderr, "Error: bad xtype(%d) in %s\n",xtype,__func__);
     }
     return 0;
 }
 
 static int
 new_NC_attr(char        *name,
-            nc_type      type,
+            nc_type      xtype,
             MPI_Offset   nelems,
             NC_attr    **attrp)
 {
     *attrp = (NC_attr*) NCI_Malloc(sizeof(NC_attr));
     if (*attrp == NULL ) DEBUG_RETURN(NC_ENOMEM)
 
-    (*attrp)->type     = type;
+    (*attrp)->xtype    = xtype;
     (*attrp)->xsz      = 0;
     (*attrp)->nelems   = nelems;
     (*attrp)->xvalue   = NULL;
@@ -544,7 +544,7 @@ new_NC_attr(char        *name,
     (*attrp)->name_len = strlen(name);
 
     if (nelems > 0) {
-        MPI_Offset xsz = x_len_NC_attrV(type, nelems);
+        MPI_Offset xsz = x_len_NC_attrV(xtype, nelems);
         (*attrp)->xsz    = xsz;
         (*attrp)->xvalue = NCI_Malloc((size_t)xsz);
         if ((*attrp)->xvalue == NULL) {
@@ -560,7 +560,7 @@ static int
 val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
   char *name=NULL;
   int status;
-  nc_type type; 
+  nc_type xtype; 
   MPI_Offset nelems;
   NC_attr *attrp;
 
@@ -570,7 +570,7 @@ val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
       return status;
   }
 
-  status = val_get_nc_type(fd, gbp, &type);
+  status = val_get_nc_type(fd, gbp, &xtype);
   if(status != NC_NOERR) {
     printf("\"%s\" - ", name);
     if (name != NULL) free(name);
@@ -584,7 +584,7 @@ val_get_NC_attr(int fd, bufferinfo *gbp, NC_attr **attrpp) {
     return status;
   }
 
-  status = new_NC_attr(name, type, nelems, &attrp);
+  status = new_NC_attr(name, xtype, nelems, &attrp);
   if(status != NC_NOERR) {
     if (name != NULL) free(name);
     return status;
@@ -777,7 +777,7 @@ val_get_NC_var(int fd, bufferinfo *gbp, NC_var **varpp)
         return status;
     }
 
-    status = val_get_nc_type(fd, gbp, &varp->type);
+    status = val_get_nc_type(fd, gbp, &varp->xtype);
     if (status != NC_NOERR) {
         printf("\"%s\" - ", name);
         ncmpio_free_NC_var(varp);

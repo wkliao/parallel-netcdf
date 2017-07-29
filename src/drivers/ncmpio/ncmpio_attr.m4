@@ -50,10 +50,10 @@ include(`utils.m4')dnl
  * external representation (as the values of an attribute)?
  */
 inline static MPI_Offset
-x_len_NC_attrV(nc_type    type,
+x_len_NC_attrV(nc_type    xtype,
                MPI_Offset nelems)
 {
-    switch(type) {
+    switch(xtype) {
         case NC_BYTE:
         case NC_CHAR:
         case NC_UBYTE:  return ncmpix_len_char(nelems);
@@ -65,7 +65,7 @@ x_len_NC_attrV(nc_type    type,
         case NC_DOUBLE: return ncmpix_len_double(nelems);
         case NC_INT64:  return ncmpix_len_int64(nelems);
         case NC_UINT64: return ncmpix_len_uint64(nelems);
-        default: fprintf(stderr, "Error: bad type(%d) in %s\n",type,__func__);
+        default: fprintf(stderr, "Error: bad type(%d) in %s\n",xtype,__func__);
     }
     return 0;
 }
@@ -77,14 +77,14 @@ x_len_NC_attrV(nc_type    type,
  */
 int
 ncmpio_new_NC_attr(char        *name,
-                   nc_type      type,
+                   nc_type      xtype,
                    MPI_Offset   nelems,
                    NC_attr    **attrp)
 {
     *attrp = (NC_attr*) NCI_Malloc(sizeof(NC_attr));
     if (*attrp == NULL ) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
-    (*attrp)->type     = type;
+    (*attrp)->xtype    = xtype;
     (*attrp)->xsz      = 0;
     (*attrp)->nelems   = nelems;
     (*attrp)->xvalue   = NULL;
@@ -92,7 +92,7 @@ ncmpio_new_NC_attr(char        *name,
     (*attrp)->name_len = strlen(name);
 
     if (nelems > 0) {
-        MPI_Offset xsz = x_len_NC_attrV(type, nelems);
+        MPI_Offset xsz = x_len_NC_attrV(xtype, nelems);
         (*attrp)->xsz    = xsz;
         (*attrp)->xvalue = NCI_Malloc((size_t)xsz);
         if ((*attrp)->xvalue == NULL) {
@@ -115,7 +115,7 @@ dup_NC_attr(const NC_attr *rattrp, NC_attr **attrp)
     if (name == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
     strcpy(name, rattrp->name);
 
-    return ncmpio_new_NC_attr(name, rattrp->type, rattrp->nelems, attrp);
+    return ncmpio_new_NC_attr(name, rattrp->xtype, rattrp->nelems, attrp);
 }
 
 /* attrarray */
@@ -358,7 +358,7 @@ ncmpio_inq_att(void       *ncdp,
     NCI_Free(nname);
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
-    if (datatypep != NULL) *datatypep = attrp->type;
+    if (datatypep != NULL) *datatypep = attrp->xtype;
 
     if (lenp != NULL) *lenp = attrp->nelems;
 
@@ -589,11 +589,11 @@ err_check:
             if (attrp->xvalue == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
         }
         attrp->xsz    = iattrp->xsz;
-        attrp->type   = iattrp->type;
+        attrp->xtype  = iattrp->xtype;
         attrp->nelems = iattrp->nelems;
     }
     else { /* attribute does not exit in ncdp_out */
-        err = ncmpio_new_NC_attr(nname, iattrp->type, iattrp->nelems, &attrp);
+        err = ncmpio_new_NC_attr(nname, iattrp->xtype, iattrp->nelems, &attrp);
         if (err != NC_NOERR) return err;
 
         err = incr_NC_attrarray(ncap_out, attrp);
@@ -715,7 +715,7 @@ ncmpio_get_att_text(void       *ncdp,
     if (attrp->nelems == 0) return NC_NOERR;
 
     /* No character conversions are allowed. */
-    if (attrp->type != NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
+    if (attrp->xtype != NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
 
     if (buf == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
@@ -771,13 +771,13 @@ ncmpio_get_att_$1(void           *ncdp,
     nelems = attrp->nelems;
 
     /* No character conversions are allowed. */
-    if (attrp->type == NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
+    if (attrp->xtype == NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
 
     if (buf == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
     xp = attrp->xvalue;
 
-    switch(attrp->type) {
+    switch(attrp->xtype) {
         /* possible error returned n this switch block is NC_ERANGE */
         case NC_BYTE:
             ifelse(`$1',`uchar',
@@ -808,8 +808,8 @@ ncmpio_get_att_$1(void           *ncdp,
             return NC_ECHAR; /* NC_ECHAR already checked earlier */
         default:
             /* this error is unlikely, but an internal error if happened */
-            fprintf(stderr, "Error: bad attrp->type(%d) in %s\n",
-                    attrp->type,__func__);
+            fprintf(stderr, "Error: bad attrp->xtype(%d) in %s\n",
+                    attrp->xtype,__func__);
             return NC_EBADTYPE;
     }
 }
@@ -1045,7 +1045,7 @@ ncmpio_put_att_$1(void       *ncdp,
         }
 
         /* Fill value must be of the same data type */
-        if (xtype != varp->type) {
+        if (xtype != varp->xtype) {
             DEBUG_ASSIGN_ERROR(err, NC_EBADTYPE)
             goto err_check;
         }
@@ -1248,7 +1248,7 @@ err_check:
             if (attrp->xvalue == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
         }
         attrp->xsz    = xsz;
-        attrp->type   = xtype;
+        attrp->xtype  = xtype;
         attrp->nelems = nelems;
     }
     else { /* attribute does not exit in ncid */

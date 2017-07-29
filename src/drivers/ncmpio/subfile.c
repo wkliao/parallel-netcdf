@@ -423,7 +423,7 @@ int ncmpio_subfile_partition(NC *ncp, int *ncidp)
 
             /* define a var with new dim */
             status = ncmpio_def_var(ncp_sf, (*vpp[i]).name,
-                                    vpp[i]->type, var_ndims, dimids, &varid);
+                                    vpp[i]->xtype, var_ndims, dimids, &varid);
             TEST_HANDLE_ERR(status)
 
             /* add an attribute about each dim's range in subfile */
@@ -739,7 +739,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
         buf_offset[i] = 0;
 
 #ifdef SUBFILE_DEBUG
-    if (myrank == 0) printf("varname=%s: etype=0x%x, etype_size=%d\n", varp->name, varp->type, varp->xsz);
+    if (myrank == 0) printf("varname=%s: etype=0x%x, etype_size=%d\n", varp->name, varp->xtype, varp->xsz);
 #endif
 
     /* find the ptype (primitive MPI data type) from buftype
@@ -765,7 +765,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
             bufcount *= count[i];
         }
         /* assign buftype match with the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpii_nc2mpitype(varp->xtype);
     }
 
     status = ncmpii_dtype_decode(buftype, &ptype, &el_size, &bnelems,

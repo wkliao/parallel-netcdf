@@ -176,7 +176,7 @@ ncmpio_cancel(void *ncdp,
                 /* if user buffer is in-place byte-swapped, swap it back */
                 ncmpio_in_swapn(put_list[i].buf,
                                 put_list[i].bnelems * put_list[i].num_recs,
-                                ncmpio_xlen_nc_type(put_list[i].varp->type));
+                                put_list[i].varp->xsz);
 
             if (put_list[i].tmpBuf != NULL && put_list[i].abuf_index == -1)
                 NCI_Free(put_list[i].tmpBuf);
@@ -252,7 +252,7 @@ ncmpio_cancel(void *ncdp,
                             /* if user buffer is in-place byte-swapped, swap it back */
                             ncmpio_in_swapn(put_list[j].buf,
                                    put_list[j].bnelems * put_list[j].num_recs,
-                                   ncmpio_xlen_nc_type(put_list[j].varp->type));
+                                   put_list[j].varp->xsz);
 
                         if (put_list[j].tmpBuf != NULL &&
                             put_list[j].abuf_index == -1)
@@ -823,7 +823,7 @@ req_commit(NC  *ncp,
         if (put_list[i].num_recs > 0 && put_list[i].need_swap_back_buf)
             ncmpio_in_swapn(put_list[i].buf,
                             put_list[i].bnelems * put_list[i].num_recs,
-                            ncmpio_xlen_nc_type(put_list[i].varp->type));
+                            put_list[i].varp->xsz);
     }
     for (i=0; i<num_w_reqs; i++) {
         /* free space allocated for the request objects
@@ -867,7 +867,7 @@ req_commit(NC  *ncp,
         if (insize != (int)insize && status == NC_NOERR)
             DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
 
-        if (ncmpio_need_convert(ncp->format, varp->type, get_list[i].ptype)) {
+        if (ncmpio_need_convert(ncp->format, varp->xtype, get_list[i].ptype)) {
             /* need type conversion from the external type to user buffer
                type */
             if (get_list[i].imaptype != MPI_DATATYPE_NULL ||
@@ -877,7 +877,7 @@ req_commit(NC  *ncp,
                 cbuf = get_list[i].buf;
 
             /* type convert + byte swap from xbuf to cbuf */
-            DATATYPE_GET_CONVERT(ncp->format, varp->type, get_list[i].xbuf,
+            DATATYPE_GET_CONVERT(ncp->format, varp->xtype, get_list[i].xbuf,
                                  cbuf, bnelems, get_list[i].ptype, err)
 
             /* keep the first error */
@@ -885,9 +885,8 @@ req_commit(NC  *ncp,
                 *get_list[i].status = err;
             if (status == NC_NOERR) status = err;
         } else {
-            if (ncmpio_need_swap(varp->type, get_list[i].ptype))
-                ncmpio_in_swapn(get_list[i].xbuf, bnelems,
-                                ncmpio_xlen_nc_type(varp->type));
+            if (ncmpio_need_swap(varp->xtype, get_list[i].ptype))
+                ncmpio_in_swapn(get_list[i].xbuf, bnelems, varp->xsz);
             cbuf = get_list[i].xbuf;
         }
 

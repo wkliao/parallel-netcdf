@@ -94,7 +94,7 @@ dup_NC_var(const NC_var *rvarp)
     varp = ncmpio_new_NC_var(name, rvarp->ndims);
     if (varp == NULL ) return NULL;
 
-    varp->type = rvarp->type;
+    varp->xtype = rvarp->xtype;
 
     /* copy dimids[] */
     if (rvarp->ndims != 0 && rvarp->dimids != NULL)
@@ -296,33 +296,6 @@ NC_findvar(const NC_vararray  *ncap,
 }
 #endif
 
-/*----< ncx_szof() >---------------------------------------------------------*/
-/* For a netcdf type, return the size of one element in the external
- * representation. Note that arrays get rounded up to X_ALIGN boundaries.
- */
-static int
-ncx_szof(nc_type type)
-{
-    switch(type){
-        case NC_BYTE:   return X_SIZEOF_BYTE;
-        case NC_CHAR:   return X_SIZEOF_CHAR;
-        case NC_SHORT:  return X_SIZEOF_SHORT;
-        case NC_INT:    return X_SIZEOF_INT;
-        case NC_FLOAT:  return X_SIZEOF_FLOAT;
-        case NC_DOUBLE: return X_SIZEOF_DOUBLE;
-        case NC_UBYTE:  return X_SIZEOF_UBYTE;
-        case NC_USHORT: return X_SIZEOF_USHORT;
-        case NC_UINT:   return X_SIZEOF_UINT;
-        case NC_INT64:  return X_SIZEOF_INT64;
-        case NC_UINT64: return X_SIZEOF_UINT64;
-        default:
-             fprintf(stderr,"ncx_szof invalid type %d\n", type);
-             assert(0);
-    }
-    /* default */
-    return 0;
-}
-
 /*----< ncmpio_NC_var_shape64() >--------------------------------------------*/
 /* set varp->xsz, varp->shape and varp->len of a variable */
 int
@@ -331,9 +304,6 @@ ncmpio_NC_var_shape64(NC_var            *varp,
 {
     int i;
     MPI_Offset product = 1;
-
-    /* set the size of 1 element */
-    varp->xsz = ncx_szof(varp->type);
 
     if (varp->ndims == 0) goto out;
 
@@ -416,7 +386,7 @@ ncmpio_NC_lookupvar(NC      *ncp,
 int
 ncmpio_def_var(void       *ncdp,
                const char *name,
-               nc_type     type,
+               nc_type     xtype,
                int         ndims,
                const int  *dimids,
                int        *varidp)
@@ -462,7 +432,9 @@ err_check:
         NCI_Free(nname);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
-    varp->type = type;
+    /* sanity check for xtype has been done at dispatchers */
+    varp->xtype = xtype;
+    ncmpii_xlen_nc_type(xtype, &varp->xsz);
 
     /* copy dimids[] */
     if (ndims != 0 && dimids != NULL)
@@ -564,7 +536,7 @@ ncmpio_inq_var(void       *ncdp,
         strcpy(name, varp->name);
 
     if (xtypep != NULL)
-        *xtypep = varp->type;
+        *xtypep = varp->xtype;
 
     if (ndimsp != NULL) {
 #ifdef ENABLE_SUBFILING

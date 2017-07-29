@@ -189,8 +189,8 @@ ncmpio_igetput_varm(NC               *ncp,
         DEBUG_RETURN_ERROR(NC_EINSUFFBUF)
 
     /* check if type conversion and Endianness byte swap is needed */
-    need_convert = ncmpio_need_convert(ncp->format, varp->type, ptype);
-    need_swap    = ncmpio_need_swap(varp->type, ptype);
+    need_convert = ncmpio_need_convert(ncp->format, varp->xtype, ptype);
+    need_swap    = ncmpio_need_swap(varp->xtype, ptype);
 
     if (imap != NULL) {
         /* check whether this is a true varm call, if yes, imaptype will be a
@@ -309,7 +309,7 @@ ncmpio_igetput_varm(NC               *ncp,
             ncmpio_inq_var_fill(varp, fillp);
 
             /* datatype conversion + byte-swap from cbuf to xbuf */
-            DATATYPE_PUT_CONVERT(ncp->format, varp->type, xbuf, cbuf, bnelems,
+            DATATYPE_PUT_CONVERT(ncp->format, varp->xtype, xbuf, cbuf, bnelems,
                                  ptype, fillp, status)
             NCI_Free(fillp);
 
@@ -348,7 +348,7 @@ ncmpio_igetput_varm(NC               *ncp,
                     memcpy(xbuf, buf, (size_t)nbytes);
                 }
                 /* perform array in-place byte swap on xbuf */
-                ncmpio_in_swapn(xbuf, bnelems, ncmpio_xlen_nc_type(varp->type));
+                ncmpio_in_swapn(xbuf, bnelems, varp->xsz);
 
                 if (xbuf == buf) need_swap_back_buf = 1;
                 /* user buf needs to be swapped back to its original contents */

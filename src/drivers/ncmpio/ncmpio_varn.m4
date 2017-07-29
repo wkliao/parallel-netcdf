@@ -103,7 +103,7 @@ getput_varn(NC                *ncp,
             }
         }
         /* assign buftype match with the variable's data type */
-        buftype = ncmpii_nc2mpitype(varp->type);
+        buftype = ncmpii_nc2mpitype(varp->xtype);
     }
 
     cbuf = buf;
@@ -143,11 +143,11 @@ getput_varn(NC                *ncp,
     }
     else {
         /* this subroutine is called from a high-level API */
-        status = NCMPII_ECHAR(varp->type, buftype);
+        status = NCMPII_ECHAR(varp->xtype, buftype);
         if (status != NC_NOERR) goto err_check;
 
         ptype = buftype;
-        el_size = ncmpio_xlen_nc_type(varp->type);
+        el_size = varp->xsz;
     }
 
     /* We allow counts == NULL and treat this the same as all 1s */

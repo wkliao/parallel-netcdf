@@ -155,7 +155,7 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref);
 typedef struct {
     MPI_Offset nelems;   /* number of attribute elements */
     MPI_Offset xsz;      /* amount of space at xvalue (4-byte aligned) */
-    nc_type    type;     /* external NC data type of the attribute */
+    nc_type    xtype;    /* external NC data type of the attribute */
     size_t     name_len; /* strlen(name) for faster string compare */
     char      *name;     /* name of the attributes */
     void      *xvalue;   /* the actual data, in external representation */
@@ -168,7 +168,7 @@ typedef struct NC_attrarray {
 
 /* Begin defined in attr.c --------------------------------------------------*/
 extern int
-ncmpio_new_NC_attr(char *name, nc_type type, MPI_Offset nelems, NC_attr **attrp);
+ncmpio_new_NC_attr(char *name, nc_type xtype, MPI_Offset nelems, NC_attr **attrp);
 
 extern int
 ncmpio_NC_findattr(const NC_attrarray *ncap, const char *uname);
@@ -185,7 +185,7 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref);
 typedef struct {
     int           varid;   /* variable ID */
     int           xsz;     /* byte size of 1 array element */
-    nc_type       type;    /* variable's data type */
+    nc_type       xtype;   /* variable's external NC data type */
     int           no_fill; /* whether fill mode is disabled */
     size_t        name_len;/* strlen(name) for faster string compare */
     char         *name;    /* name of the variable */
@@ -374,7 +374,7 @@ extern NC *
 ncmpio_dup_NC(const NC *ref);
 
 extern int
-ncmpio_cktype(int cdf_ver, nc_type datatype);
+ncmpio_cktype(int cdf_ver, nc_type xtype);
 
 extern int
 ncmpio_NC_check_vlens(NC *ncp);
@@ -433,10 +433,10 @@ ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
 
 /* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
 extern int
-ncmpio_need_convert(int format, nc_type nctype, MPI_Datatype mpitype);
+ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype mpitype);
 
 extern int
-ncmpio_need_swap(nc_type nctype,MPI_Datatype mpitype);
+ncmpio_need_swap(nc_type xtype, MPI_Datatype mpitype);
 
 extern void
 ncmpio_in_swapn(void *buf, MPI_Offset nelems, int esize);
@@ -576,9 +576,6 @@ ncmpio_close_files(NC *ncp, int doUnlink);
 /* Begin defined in ncmpio_utils.c ------------------------------------------*/
 extern void
 ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info);
-
-extern int
-ncmpio_xlen_nc_type(nc_type type);
 
 extern int
 ncmpio_NC_check_name(const char *name, int file_ver);

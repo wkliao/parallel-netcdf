@@ -466,33 +466,33 @@ hdr_get_NC_tag(bufferinfo *gbp,
 /*----< hdr_get_nc_type() >---------------------------------------------------*/
 inline static int
 hdr_get_nc_type(bufferinfo *gbp,
-                nc_type    *typep)
+                nc_type    *xtypep)
 {
     /* nc_type is 4-byte integer, X_SIZEOF_INT */
     int status;
-    uint type;
+    uint xtype;
 
     status = hdr_check_buffer(gbp, X_SIZEOF_INT);
     if (status != NC_NOERR) return status;
 
-    status = ncmpix_get_uint32((const void**)(&gbp->pos), &type);
+    status = ncmpix_get_uint32((const void**)(&gbp->pos), &xtype);
     if (status != NC_NOERR) return status;
 
-    if (type != NC_CHAR    &&
-        type != NC_BYTE    &&
-        type != NC_UBYTE   &&
-        type != NC_SHORT   &&
-        type != NC_USHORT  &&
-        type != NC_INT     &&
-        type != NC_UINT    &&
-        type != NC_FLOAT   &&
-        type != NC_DOUBLE  &&
-        type != NC_INT64   &&
-        type != NC_UINT64
+    if (xtype != NC_CHAR    &&
+        xtype != NC_BYTE    &&
+        xtype != NC_UBYTE   &&
+        xtype != NC_SHORT   &&
+        xtype != NC_USHORT  &&
+        xtype != NC_INT     &&
+        xtype != NC_UINT    &&
+        xtype != NC_FLOAT   &&
+        xtype != NC_DOUBLE  &&
+        xtype != NC_INT64   &&
+        xtype != NC_UINT64
        )
         DEBUG_RETURN_ERROR(NC_EBADTYPE)
 
-    *typep = (nc_type) type;
+    *xtypep = (nc_type) xtype;
     return NC_NOERR;
 }
 
@@ -742,11 +742,13 @@ hdr_get_NC_attrV(bufferinfo *gbp,
      * doubles = [DOUBLE ...]
      * padding = <0, 1, 2, or 3 bytes to next 4-byte boundary>
      */
+    int xsz;
     void *value = attrp->xvalue;
     MPI_Offset nbytes, padding, bufremain, attcount;
     MPI_Aint pos_addr, base_addr;
 
-    nbytes = attrp->nelems * ncmpio_xlen_nc_type(attrp->type);
+    ncmpii_xlen_nc_type(attrp->xtype, &xsz);
+    nbytes = attrp->nelems * xsz;
     padding = attrp->xsz - nbytes;
 #ifdef HAVE_MPI_GET_ADDRESS
     MPI_Get_address(gbp->pos,  &pos_addr);
@@ -1015,11 +1017,12 @@ hdr_get_NC_var(bufferinfo  *gbp,
     }
 
     /* get nc_type */
-    status = hdr_get_nc_type(gbp, &varp->type);
+    status = hdr_get_nc_type(gbp, &varp->xtype);
     if (status != NC_NOERR) {
         ncmpio_free_NC_var(varp);
         return status;
     }
+    ncmpii_xlen_nc_type(varp->xtype, &varp->xsz);
 
     /* get vsize */
     if (gbp->version < 5) {
