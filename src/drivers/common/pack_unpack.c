@@ -59,7 +59,7 @@ ncmpii_pack(int                ndims,
     }
     else { /* called from a flexible API */
         int el_size, isDerived, isContig;
-        MPI_Offset num_ptypes;
+        MPI_Offset num_ptypes=0;
 
         buf_size *= bufcount;
 
