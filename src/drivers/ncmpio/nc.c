@@ -70,22 +70,6 @@ ncmpio_dup_NC(const NC *ref)
     return ncp;
 }
 
-/*----< ncmpio_cktype() >----------------------------------------------------*/
-/*  Verify that this is a user nc_type */
-int
-ncmpio_cktype(int cdf_ver, nc_type type)
-{
-    /* the max data type supported by CDF-5 is NC_UINT64 */
-    if (type <= 0 || type > NC_UINT64)
-        DEBUG_RETURN_ERROR(NC_EBADTYPE)
-
-    /* For CDF-1 and CDF-2 files, only classic types are allowed. */
-    if (cdf_ver < 5 && type > NC_DOUBLE)
-        DEBUG_RETURN_ERROR(NC_ESTRICTCDF2)
-
-    return NC_NOERR;
-}
-
 /*----< NC_check_vlen() >----------------------------------------------------*/
 /* Check whether variable size is less than or equal to vlen_max,
  * without overflowing in arithmetic calculations.  If OK, return 1,
