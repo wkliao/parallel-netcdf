@@ -6,12 +6,6 @@
 #ifndef _SUBFILE_H
 #define _SUBFILE_H
 
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#include <stdio.h>
-#include <string.h>
-
 #include "nc.h"
 
 /* structure for storing access info of this process's request
@@ -27,13 +21,6 @@ typedef struct {
 #define FLOOR(x) ( (x - (int)x)==0 ? (int)x : (int)x-1 )
 #define ROUND(x) ( x >= 0 ? (int)(x+0.5) : (int)(x-0.5) )
 #define ABS(a) (((a) < 0) ? -(a) : (a))
-
-#define TEST_HANDLE_ERR(status)                                        \
-    if ((status) != NC_NOERR) {                                        \
-        printf("Error at file %s line %d (%s)\n", __FILE__, __LINE__,  \
-               ncmpi_strerror((status)) );                             \
-        return status;                                                 \
-    }
 
 extern int ncmpio_subfile_open(NC *ncp, int *ncidp);
 
