@@ -74,16 +74,16 @@ dnl
    from the user, by packing it to logic contig memory datastream view.
 
    for put_varm:
-     1. pack buf to lbuf based on buftype
+     1. pack user's buf to lbuf based on buftype
      2. create imap_type based on imap
      3. pack lbuf to cbuf based on imap_type
      4. type convert and byte swap cbuf to xbuf
      5. write from xbuf
-     6. byte swap the buf, if it is swapped
-     7. free up temp buffers
+     6. byte swap user's buf, if it is swapped
+     7. free up temp buffers (lbuf, cbuf, xbuf if != buf)
 
    for get_varm:
-     1. allocate lbuf
+     1. if buftype != NULL, allocate lbuf
      2. create imap_type based on imap
      3. allocate cbuf
      4. allocate xbuf
@@ -91,6 +91,7 @@ dnl
      6. type convert and byte swap xbuf to cbuf
      7. unpack cbuf to lbuf based on imap_type
      8. unpack lbuf to buf based on buftype
+     9. free up temp buffers (lbuf, cbuf, xbuf if != buf)
 */
 
 static int
@@ -130,6 +131,21 @@ getput_varm(NC               *ncp,
     }
 #endif
 
+    if (reqMode & NC_REQ_WR) {
+        /* If called from a true varm API or a flexible API, pack user buf
+         * into a contiguous cbuf (need to be freed later). Otherwise, obtain
+         * ptype (MPI primitive datatype in buftype), and bnelems (number of
+         * ptypes in buftype * bufcount)
+         */
+        err = ncmpii_pack(varp->ndims, count, imap, buf, bufcount, buftype,
+                          &bnelems, &ptype, &cbuf);
+        if (err != NC_NOERR) goto err_check;
+
+        /* nbytes is the number of bytes (in external data representation) to
+         * be used in MPI write to the file */
+        nbytes = bnelems * varp->xsz;
+    }
+else {
     /* calculate the followings:
      * ptype: element data type (MPI primitive type) in buftype
      * bufcount: If it is -1, then this is called from a high-level API and in
@@ -148,13 +164,18 @@ getput_varm(NC               *ncp,
     if (err == NC_EIOMISMATCH) DEBUG_ASSIGN_ERROR(warning, err) 
     else if (err != NC_NOERR) goto err_check;
 
+    if (bufcount != (int)bufcount) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
+        goto err_check;
+    }
+
     /* because nbytes will be used as the argument "count" in MPI-IO
      * read/write calls and the argument "count" is of type int */
     if (nbytes != (int)nbytes) {
         DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
         goto err_check;
     }
-
+}
     if (nbytes == 0) /* this process has nothing to read/write */
         goto err_check;
 
@@ -171,8 +192,6 @@ getput_varm(NC               *ncp,
     err = ncmpio_filetype_create_vars(ncp, varp, start, count, stride, reqMode,
                                       NULL, &offset, &filetype, NULL);
     if (err != NC_NOERR) goto err_check;
-
-    if (bufcount != (int)bufcount) DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
 
 err_check:
     /* If reqMode is NC_REQ_COLL and an error occurs, we'll still conduct a
@@ -196,10 +215,12 @@ err_check:
     /* Check if this is a vars call or a true varm call.
      * Construct a derived datatype, imaptype, if a true varm call
      */
+if (fIsSet(reqMode, NC_REQ_RD)) {
     err = ncmpii_create_imaptype(varp->ndims, count, imap, ptype, &imaptype);
     if (status == NC_NOERR) status = err;
-
+}
     if (fIsSet(reqMode, NC_REQ_WR)) { /* pack request to xbuf */
+#if 0
         int position;
         MPI_Offset outsize=bnelems*el_size;
         /* assert(bnelems > 0); */
@@ -231,7 +252,7 @@ err_check:
 
         /* lbuf is no longer needed */
         if (lbuf != buf && lbuf != cbuf) NCI_Free(lbuf);
-
+#endif
         /* Step 3: pack cbuf to xbuf. The contents of xbuf will be in the
          * external representation, ready to be written to file.
          */

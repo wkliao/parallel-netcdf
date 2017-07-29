@@ -90,5 +90,20 @@ extern int
 ncmpii_check_name(const char *name, int file_ver);
 
 extern MPI_Datatype
-ncmpii_nc2mpitype(nc_type type);
+ncmpii_nc2mpitype(nc_type xtype);
+
+extern int
+ncmpii_xlen_nc_type(nc_type xtype, int *size);
+
+extern int
+ncmpii_buftype_decode(int ndims, nc_type xtype, const MPI_Offset *count,
+                      MPI_Datatype buftype, MPI_Datatype *ptype,
+                      MPI_Offset *bufcount, MPI_Offset *bnelems,
+                      MPI_Offset *nbytes, int *el_size,
+                      int *buftype_is_contig);
+
+extern int
+ncmpii_pack(int ndims, const MPI_Offset *count, const MPI_Offset *imap,
+            void *buf, MPI_Offset bufcount, MPI_Datatype buftype,
+            MPI_Offset *bnelems, MPI_Datatype *ptype, void **cbuf);
 #endif

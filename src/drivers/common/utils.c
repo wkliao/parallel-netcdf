@@ -39,3 +39,22 @@ ncmpii_nc2mpitype(nc_type xtype)
     }
 }
 
+/*----< ncmpii_xlen_nc_type() >----------------------------------------------*/
+/* return the length of external NC data type */
+int
+ncmpii_xlen_nc_type(nc_type xtype, int *size) {
+    switch(xtype) {
+        case NC_BYTE:
+        case NC_CHAR:
+        case NC_UBYTE:  *size = 1; return NC_NOERR;
+        case NC_SHORT:
+        case NC_USHORT: *size = 2; return NC_NOERR;
+        case NC_INT:
+        case NC_UINT:
+        case NC_FLOAT:  *size = 4; return NC_NOERR;
+        case NC_DOUBLE:
+        case NC_INT64:
+        case NC_UINT64: *size = 8; return NC_NOERR;
+        default: DEBUG_RETURN_ERROR(NC_EBADTYPE);
+    }
+}
