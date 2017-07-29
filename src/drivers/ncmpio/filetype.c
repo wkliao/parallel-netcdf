@@ -24,80 +24,85 @@
 
 #if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET
 /*----< check_recsize_too_big() >--------------------------------------------*/
+/* Because recsize (sum of single record of all record variables) will be used
+ * to as the "offset stride" when constructing the file view, we must ensure
+ * there is no integer overflow. Note records of all variables are interleaved,
+ * for example record i of all record variables followed by record i+1 of all
+ * record variables, the stride across two records of a variable can be too
+ * large for a 4-byte integer to represent.
+ */
 inline static int
-check_recsize_too_big(NC *ncp)
+check_recsize_too_big(MPI_Offset recsize)
 {
     int ret = NC_NOERR;
-    /* assertion: because recsize will be used to set up the file
-     * view, we must ensure there is no overflow when specifying
-     * how big a stride there is between items (think interleaved
-     * records).
-     *
-     * note: 'recsize' is the sum of the record size of all record
-     * variables in this dataset */
-    if (ncp->recsize != (MPI_Aint)ncp->recsize) {
+
+    if (recsize != (MPI_Aint)recsize) {
         fprintf(stderr, "Type overflow: unable to read/write multiple records in this dataset\non this platform. Please either access records of this record variable\none-at-a-time or run on a 64 bit platform\n");
         DEBUG_ASSIGN_ERROR(ret, NC_ESMALL)
     }
     /* the assert here might be harsh, but without it, users will get corrupt
      * data. Now, we just skip this request to avoid this assertion. */
-    /* assert (ncp->recsize == (MPI_Aint)ncp->recsize); */
+    /* assert (recsize == (MPI_Aint)recsize); */
     return ret;
 }
 #endif
 
 /*----< is_request_contiguous() >-------------------------------------------*/
+/* check if a request, represented by start[] and count[], is contiguous in
+ * file.
+ */
 static int
-is_request_contiguous(NC               *ncp,
-                      NC_var           *varp,
-                      const MPI_Offset  starts[],
-                      const MPI_Offset  counts[])
+is_request_contiguous(int               isRecVar,
+                      int               numRecVars,
+                      int               ndims,
+                      const MPI_Offset *shape,
+                      const MPI_Offset *start,
+                      const MPI_Offset *count)
 {
-    /* determine whether the get/put request to this variable using
-       starts[] and counts[] is contiguous in file */
-    int i, j, most_sig_dim, ndims=varp->ndims;
+    int i, j, most_sig_dim;
 
-    /* this variable is a scalar */
-    if (ndims == 0) return 1;
+    if (ndims == 0) return 1; /* this variable is a scalar */
 
     for (i=0; i<ndims; i++)
-         if (counts[i] == 0) /* zero length request */
+         if (count[i] == 0) /* zero length request */
              return 1;
 
-    most_sig_dim = 0; /* record dimension */
+    /* most-significant dim. record dimension */
+    most_sig_dim = 0;
 
-    if (IS_RECVAR(varp)) {
+    if (isRecVar) {
         /* if there are more than one record variable, then the record
-           dimensions, counts[0] must == 1. For now, we assume there
+           dimensions, count[0] must == 1. For now, we assume there
            are more than one record variable.
            TODO: we may need an API to inquire how many record variables
            are defined */
-        if (ncp->vars.num_rec_vars > 1) {
-            /* or if (ncp->recsize > varp->len) more than one record variable */
-            if (counts[0] > 1) return 0;
+        if (numRecVars > 1) { /* more than one record variable */
+            if (count[0] > 1) return 0;
 
-            /* we need to check from dimension ndims-1 up to dimension 1 */
+            /* continue to check from dimension ndims-1 up to dimension 1 */
             most_sig_dim = 1;
         }
-        /* if there is only one record variable, then we need to check from
+        /* if there is only one record variable, then we need to check
          * dimension ndims-1 up to dimension 0 */
     }
 
     for (i=ndims-1; i>most_sig_dim; i--) {
-        /* find the first counts[i] that is not the entire dimension */
-        if (counts[i] < varp->shape[i]) {
-            /* check dim from i-1, i-2, ..., most_sig_dim and
-               their counts[] should all be 1 */
+        /* find the first count[i] that is not equal to the entire dimension */
+        if (count[i] < shape[i]) {
+            /* the request is contiguous only if count[i-1], count[i-2], ...
+             * count[0] are all 1s. */
             for (j=i-1; j>=most_sig_dim; j--) {
-                if (counts[j] > 1)
+                if (count[j] > 1)
                     return 0;
             }
             break;
         }
-        else { /* counts[i] == varp->shape[i] */
-            /* when accessing the entire dimension, starts[i] must be 0 */
-            if (starts[i] != 0) return 0; /* actually this should be error */
+#if 0
+        else { /* count[i] == shape[i] */
+            /* when accessing the entire dimension, start[i] must be 0 */
+            if (start[i] != 0) return 0; /* actually this should be error */
         }
+#endif
     }
     return 1;
 }
@@ -108,9 +113,9 @@ is_request_contiguous(NC               *ncp,
  * typically for MPI-1 implementation only */
 static int
 type_create_subarray(int           ndims,
-                     int          *array_of_sizes,    /* [ndims] */
-                     int          *array_of_subsizes, /* [ndims] */
-                     int          *array_of_starts,   /* [ndims] */
+                     const int    *array_of_sizes,    /* [ndims] */
+                     const int    *array_of_subsizes, /* [ndims] */
+                     const int    *array_of_starts,   /* [ndims] */
                      int           order,
                      MPI_Datatype  oldtype,
                      MPI_Datatype *newtype)
@@ -242,13 +247,13 @@ type_create_subarray(int           ndims,
  * checked for any possible 4-byte integer overflow.
  */
 static int
-type_create_subarray64(int           ndims,
-                       MPI_Offset   *array_of_sizes,    /* [ndims] */
-                       MPI_Offset   *array_of_subsizes, /* [ndims] */
-                       MPI_Offset   *array_of_starts,   /* [ndims] */
-                       int           order,
-                       MPI_Datatype  oldtype,
-                       MPI_Datatype *newtype)
+type_create_subarray64(int               ndims,
+                       const MPI_Offset *array_of_sizes,    /* [ndims] */
+                       const MPI_Offset *array_of_subsizes, /* [ndims] */
+                       const MPI_Offset *array_of_starts,   /* [ndims] */
+                       int               order,
+                       MPI_Datatype      oldtype,
+                       MPI_Datatype     *newtype)
 {
     int i, err, tag, blklens[3] = {1, 1, 1};
     MPI_Datatype type1, type2;
@@ -436,15 +441,15 @@ type_create_subarray64(int           ndims,
 
 /*----< filetype_create_vara() >--------------------------------------------*/
 static int
-filetype_create_vara(NC               *ncp,
-                     NC_var           *varp,
+filetype_create_vara(const NC         *ncp,
+                     const NC_var     *varp,
                      const MPI_Offset *start,
                      const MPI_Offset *count,
                      int               rw_flag,
-                     int              *blocklen,
-                     MPI_Offset       *offset_ptr,
-                     MPI_Datatype     *filetype_ptr,
-                     int              *is_filetype_contig)
+                     int              *blocklen,           /* OUT */
+                     MPI_Offset       *offset_ptr,         /* OUT */
+                     MPI_Datatype     *filetype_ptr,       /* OUT */
+                     int              *is_filetype_contig) /* OUT */
 {
     int          dim, status, err;
     MPI_Offset   nbytes, offset;
@@ -467,7 +472,8 @@ filetype_create_vara(NC               *ncp,
     }
 
     /* if the request is contiguous in file, no need to create a filetype */
-    if (is_request_contiguous(ncp, varp, start, count)) {
+    if (is_request_contiguous(IS_RECVAR(varp), ncp->vars.num_rec_vars,
+                              varp->ndims, varp->shape, start, count)) {
         status = ncmpio_last_offset(ncp, varp, start, NULL, NULL, rw_flag,
                                     &offset);
         *offset_ptr   = offset;
@@ -490,7 +496,7 @@ filetype_create_vara(NC               *ncp,
 
 #if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET
         /* check overflow only if MPI_Aint is smaller than MPI_Offset */
-        status = check_recsize_too_big(ncp);
+        status = check_recsize_too_big(ncp->recsize);
         if (status != NC_NOERR) return status;
 #endif
         /* check overflow, because 1st argument of hvector is of type int */
@@ -664,16 +670,16 @@ stride_flatten(int               isRecVar, /* whether record variable */
 
 /*----< ncmpio_filetype_create_vars() >--------------------------------------*/
 int
-ncmpio_filetype_create_vars(NC               *ncp,
-                            NC_var           *varp,
-                            const MPI_Offset  start[],
-                            const MPI_Offset  count[],
-                            const MPI_Offset  stride[],
+ncmpio_filetype_create_vars(const NC         *ncp,
+                            const NC_var     *varp,
+                            const MPI_Offset *start,
+                            const MPI_Offset *count,
+                            const MPI_Offset *stride,
                             int               rw_flag,
-                            int              *blocklen,
-                            MPI_Offset       *offset_ptr,
-                            MPI_Datatype     *filetype_ptr,
-                            int              *is_filetype_contig)
+                            int              *blocklen,           /* OUT */
+                            MPI_Offset       *offset_ptr,         /* OUT */
+                            MPI_Datatype     *filetype_ptr,       /* OUT */
+                            int              *is_filetype_contig) /* OUT */
 {
     int           dim, err, nblocks, *blocklens;
     MPI_Aint     *disps;
@@ -777,7 +783,7 @@ ncmpio_filetype_create_vars(NC               *ncp,
 
     if (ndims == 1 && IS_RECVAR(varp)) {
 #if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET
-        err = check_recsize_too_big(ncp);
+        err = check_recsize_too_big(ncp->recsize);
         if (err != NC_NOERR) return err;
 #endif
         stride_off = stride[ndims-1] * ncp->recsize;
@@ -865,7 +871,7 @@ ncmpio_filetype_create_vars(NC               *ncp,
  * This function is collective if called in collective data mode
  */
 int
-ncmpio_file_set_view(NC           *ncp,
+ncmpio_file_set_view(const NC     *ncp,
                      MPI_File      fh,
                      MPI_Offset   *offset,  /* IN/OUT */
                      MPI_Datatype  filetype)
@@ -948,7 +954,7 @@ ncmpio_file_set_view(NC           *ncp,
  * buftype_is_contig: whether buftype is contiguous
  */
 int
-ncmpio_calc_datatype_elems(NC_var           *varp,
+ncmpio_calc_datatype_elems(const NC_var     *varp,
                            const MPI_Offset *count,
                            MPI_Datatype      buftype,
                            MPI_Datatype     *ptype,             /* out */

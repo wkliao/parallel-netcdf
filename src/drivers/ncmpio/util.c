@@ -164,8 +164,8 @@ void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
  * request
  */
 int
-ncmpio_last_offset(NC               *ncp,
-                   NC_var           *varp,
+ncmpio_last_offset(const NC         *ncp,
+                   const NC_var     *varp,
                    const MPI_Offset  starts[],   /* [varp->ndims] */
                    const MPI_Offset  counts[],   /* [varp->ndims] */
                    const MPI_Offset  strides[],  /* [varp->ndims] */

@@ -374,9 +374,6 @@ extern NC *
 ncmpio_dup_NC(const NC *ref);
 
 extern int
-ncmpio_cktype(int cdf_ver, nc_type xtype);
-
-extern int
 ncmpio_NC_check_vlens(NC *ncp);
 
 /* Begin defined in ncmpio_header_get.c -------------------------------------*/
@@ -414,22 +411,21 @@ ncmpio_write_numrecs(NC *ncp, MPI_Offset new_numrecs);
 
 /* Begin defined in ncmpio_filetype.c ---------------------------------------*/
 extern int
-ncmpio_filetype_create_vars(NC* ncp, NC_var* varp,
+ncmpio_filetype_create_vars(const NC* ncp, const NC_var* varp,
                 const MPI_Offset start[], const MPI_Offset count[],
                 const MPI_Offset stride[], int rw_flag, int *blocklen,
                 MPI_Offset *offset, MPI_Datatype *filetype,
                 int *is_filetype_contig);
 
 extern int                
-ncmpio_file_set_view(NC *ncp, MPI_File fh, MPI_Offset *offset,
+ncmpio_file_set_view(const NC *ncp, MPI_File fh, MPI_Offset *offset,
                 MPI_Datatype filetype);
 
 extern int
-ncmpio_calc_datatype_elems(NC_var *varp, const MPI_Offset *count,
-                           MPI_Datatype buftype,
-                           MPI_Datatype *ptype, MPI_Offset *bufcount,
-                           MPI_Offset *bnelems, MPI_Offset *nbytes,
-                           int *el_size, int *buftype_is_contig);
+ncmpio_calc_datatype_elems(const NC_var *varp, const MPI_Offset *count,
+                MPI_Datatype buftype, MPI_Datatype *ptype,
+                MPI_Offset *bufcount, MPI_Offset *bnelems, MPI_Offset *nbytes,
+                int *el_size, int *buftype_is_contig);
 
 /* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
 extern int
@@ -581,8 +577,8 @@ extern int
 ncmpio_NC_check_name(const char *name, int file_ver);
 
 extern int
-ncmpio_last_offset(NC *ncp, NC_var *varp, const MPI_Offset starts[],
-                const MPI_Offset counts[], const MPI_Offset strides[],
-                const int rw_flag, MPI_Offset *offset_ptr);
+ncmpio_last_offset(const NC *ncp, const NC_var *varp, const MPI_Offset starts[],
+                   const MPI_Offset counts[], const MPI_Offset strides[],
+                   const int rw_flag, MPI_Offset *offset_ptr);
 
 #endif /* _NC_H */
