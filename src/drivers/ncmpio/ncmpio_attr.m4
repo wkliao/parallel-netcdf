@@ -46,8 +46,8 @@ include(`foreach.m4')dnl
 include(`utils.m4')dnl
 
 /*----< x_len_NC_attrV() >---------------------------------------------------*/
-/* How much space will 'nelems' of 'type' take in
- * external representation (as the values of an attribute)?
+/* How much space will 'nelems' of 'xtype' take in external representation.
+ * Note the space is aligned in 4-byte boundary.
  */
 inline static MPI_Offset
 x_len_NC_attrV(nc_type    xtype,
@@ -56,15 +56,15 @@ x_len_NC_attrV(nc_type    xtype,
     switch(xtype) {
         case NC_BYTE:
         case NC_CHAR:
-        case NC_UBYTE:  return ncmpix_len_char(nelems);
-        case NC_SHORT:  return ncmpix_len_short(nelems);
-        case NC_USHORT: return ncmpix_len_ushort(nelems);
-        case NC_INT:    return ncmpix_len_int(nelems);
-        case NC_UINT:   return ncmpix_len_uint(nelems);
-        case NC_FLOAT:  return ncmpix_len_float(nelems);
-        case NC_DOUBLE: return ncmpix_len_double(nelems);
-        case NC_INT64:  return ncmpix_len_int64(nelems);
-        case NC_UINT64: return ncmpix_len_uint64(nelems);
+        case NC_UBYTE:  return _RNDUP(nelems, 4);
+        case NC_SHORT:
+        case NC_USHORT: return ((nelems + nelems%2) * 2);
+        case NC_INT:
+        case NC_UINT:
+        case NC_FLOAT:  return (nelems * 4);
+        case NC_DOUBLE:
+        case NC_INT64:
+        case NC_UINT64: return (nelems * 8);
         default: fprintf(stderr, "Error: bad type(%d) in %s\n",xtype,__func__);
     }
     return 0;
@@ -92,6 +92,7 @@ ncmpio_new_NC_attr(char        *name,
     (*attrp)->name_len = strlen(name);
 
     if (nelems > 0) {
+        /* obtain 4-byte aligned size of space to store the values */
         MPI_Offset xsz = x_len_NC_attrV(xtype, nelems);
         (*attrp)->xsz    = xsz;
         (*attrp)->xvalue = NCI_Malloc((size_t)xsz);
@@ -105,6 +106,7 @@ ncmpio_new_NC_attr(char        *name,
 }
 
 /*----< dup_NC_attr() >------------------------------------------------------*/
+/* duplicate an NC_attr object */
 static int
 dup_NC_attr(const NC_attr *rattrp, NC_attr **attrp)
 {
@@ -130,7 +132,8 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
     assert(ncap != NULL);
 
     for (i=0; i<ncap->ndefined; i++) {
-        if (ncap->value[i]->xvalue != NULL) NCI_Free(ncap->value[i]->xvalue);
+        if (ncap->value[i]->xvalue != NULL)
+            NCI_Free(ncap->value[i]->xvalue);
         NCI_Free(ncap->value[i]->name);
         NCI_Free(ncap->value[i]);
     }
@@ -153,7 +156,7 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
     assert(ref != NULL);
     assert(ncap != NULL);
 
-    if (ref->ndefined == 0) {
+    if (ref->ndefined == 0) { /* return now, if no attribute is defined */
         ncap->ndefined = 0;
         ncap->value    = NULL;
         return NC_NOERR;
@@ -181,13 +184,15 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 }
 
 /*----< incr_NC_attrarray() >------------------------------------------------*/
-/* Add a new handle on the end of an array of handles */
+/* Add a new handle at the end of an array of handles */
 static int
 incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
 {
     assert(ncap != NULL);
+    assert(newelemp != NULL);
 
     if (ncap->ndefined % NC_ARRAY_GROWBY == 0) {
+        /* grow the array to accommodate the new handle */
         NC_attr **vp;
         size_t alloc_size = (size_t)ncap->ndefined + NC_ARRAY_GROWBY;
 
@@ -197,7 +202,7 @@ incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
         ncap->value = vp;
     }
 
-    if (newelemp != NULL) ncap->value[ncap->ndefined++] = newelemp;
+    ncap->value[ncap->ndefined++] = newelemp;
 
     return NC_NOERR;
 }
@@ -205,13 +210,13 @@ incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
 /* End attrarray per se */
 
 /*----< NC_attrarray0() >----------------------------------------------------*/
-/* Given ncp and varid, return ptr to array of attributes
- * else NULL on error. This is equivalent to validate varid.
+/* Given ncp and varid, return pointer to array of attributes
+ * else NULL on error. This can also be used to validate varid.
  */
 static NC_attrarray *
 NC_attrarray0(NC *ncp, int varid)
 {
-    if (varid == NC_GLOBAL) /* Global attribute, attach to cdf */
+    if (varid == NC_GLOBAL) /* Global attribute */
         return &ncp->attrs;
 
     if (varid >= 0 && varid < ncp->vars.ndefined)
@@ -222,7 +227,7 @@ NC_attrarray0(NC *ncp, int varid)
 
 /*----< ncmpio_NC_findattr() >------------------------------------------------*/
 /* Step thru NC_ATTRIBUTE array, seeking match on name.
- *  return match or -1 if Not Found.
+ * return match or -1 if Not Found.
  */
 int
 ncmpio_NC_findattr(const NC_attrarray *ncap,
@@ -239,6 +244,10 @@ ncmpio_NC_findattr(const NC_attrarray *ncap,
     if (name == NULL || *name == 0) return -1;
     */
 
+    /* for now, we assume the number of attributes is small and use the
+     * following linear search. If the number is expected to be large, then
+     * we can use the name hashing used in variables and dimensions.
+     */
     nchars = strlen(name);
     for (i=0; i<ncap->ndefined; i++) {
         if (ncap->value[i]->name_len == nchars &&
@@ -252,13 +261,13 @@ ncmpio_NC_findattr(const NC_attrarray *ncap,
 /*----< NC_lookupattr() >----------------------------------------------------*/
 /* Look up by ncid, ncap, and name */
 static int
-NC_lookupattr(NC_attrarray  *ncap,
-              const char    *name,   /* normalized attribute name */
-              NC_attr      **attrpp) /* modified on return */
+NC_lookupattr(const NC_attrarray  *ncap,
+              const char          *name,   /* normalized attribute name */
+              NC_attr            **attrpp) /* modified on return */
 {
     int indx;
 
-    /* validity of ncid and ncap has already been checked */
+    /* requires validity of ncid and ncap already been checked */
 
     indx = ncmpio_NC_findattr(ncap, name);
     if (indx == -1) DEBUG_RETURN_ERROR(NC_ENOTATT)
@@ -430,7 +439,7 @@ err_check:
         int minE, mpireturn;
 
         /* check error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN,ncp->comm);
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, ncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             if (nnewname != NULL) NCI_Free(nnewname);
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
@@ -538,10 +547,10 @@ ncmpio_copy_att(void       *ncdp_in,
             DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
             goto err_check;
         }
-        /* Note we no longer limit the number of attributes, as CDF file formats
-         * impose no such limit. Thus, the value of NC_MAX_ATTRS has been
-         * changed NC_MAX_INT, as NC_attrarray.ndefined is of type signd int and
-         * so is natts argument in ncmpi_inq_varnatts()
+        /* Note we no longer limit the number of attributes, as CDF file
+         * formats impose no such limit. Thus, the value of NC_MAX_ATTRS has
+         * been changed NC_MAX_INT, as NC_attrarray.ndefined is of type signed
+         * int and so is natts argument in ncmpi_inq_varnatts()
          */
         if (ncap_out->ndefined == NC_MAX_ATTRS) {
             DEBUG_ASSIGN_ERROR(err, NC_EMAXATTS)
@@ -745,14 +754,8 @@ ncmpio_get_att_$1(void           *ncdp,
     const void     *xp;
     MPI_Offset      nelems;
 
-#if 0
-    /* check if varid is valid */
-    ncap = NC_attrarray0(ncp, varid);
-    if (ncap == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
+    /* sanity checks for varid and name has been done in dispatcher */
 
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EBADNAME)
-#endif
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
@@ -778,7 +781,7 @@ ncmpio_get_att_$1(void           *ncdp,
     xp = attrp->xvalue;
 
     switch(attrp->xtype) {
-        /* possible error returned n this switch block is NC_ERANGE */
+        /* possible error returned in this switch block is NC_ERANGE */
         case NC_BYTE:
             ifelse(`$1',`uchar',
            `if (ncp->format < 5) { /* no NC_ERANGE check */
@@ -793,17 +796,17 @@ ncmpio_get_att_$1(void           *ncdp,
         case NC_USHORT:
             return ncmpix_pad_getn_NC_USHORT_$1(&xp, nelems, buf);
         case NC_INT:
-            return ncmpix_getn_NC_INT_$1   (&xp, nelems, buf);
+            return ncmpix_getn_NC_INT_$1       (&xp, nelems, buf);
         case NC_UINT:
-            return ncmpix_getn_NC_UINT_$1  (&xp, nelems, buf);
+            return ncmpix_getn_NC_UINT_$1      (&xp, nelems, buf);
         case NC_FLOAT:
-            return ncmpix_getn_NC_FLOAT_$1 (&xp, nelems, buf);
+            return ncmpix_getn_NC_FLOAT_$1     (&xp, nelems, buf);
         case NC_DOUBLE:
-            return ncmpix_getn_NC_DOUBLE_$1(&xp, nelems, buf);
+            return ncmpix_getn_NC_DOUBLE_$1    (&xp, nelems, buf);
         case NC_INT64:
-            return ncmpix_getn_NC_INT64_$1 (&xp, nelems, buf);
+            return ncmpix_getn_NC_INT64_$1     (&xp, nelems, buf);
         case NC_UINT64:
-            return ncmpix_getn_NC_UINT64_$1(&xp, nelems, buf);
+            return ncmpix_getn_NC_UINT64_$1    (&xp, nelems, buf);
         case NC_CHAR:
             return NC_ECHAR; /* NC_ECHAR already checked earlier */
         default:
@@ -892,17 +895,17 @@ ncmpix_putn_$1(void       **xpp,    /* buffer to be written to file */
         case NC_USHORT:
             return ncmpix_pad_putn_NC_USHORT_$1(xpp, nelems, buf, fillp);
         case NC_INT:
-            return ncmpix_putn_NC_INT_$1   (xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_INT_$1       (xpp, nelems, buf, fillp);
         case NC_UINT:
-            return ncmpix_putn_NC_UINT_$1  (xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_UINT_$1      (xpp, nelems, buf, fillp);
         case NC_FLOAT:
-            return ncmpix_putn_NC_FLOAT_$1 (xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_FLOAT_$1     (xpp, nelems, buf, fillp);
         case NC_DOUBLE:
-            return ncmpix_putn_NC_DOUBLE_$1(xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_DOUBLE_$1    (xpp, nelems, buf, fillp);
         case NC_INT64:
-            return ncmpix_putn_NC_INT64_$1 (xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_INT64_$1     (xpp, nelems, buf, fillp);
         case NC_UINT64:
-            return ncmpix_putn_NC_UINT64_$1(xpp, nelems, buf, fillp);
+            return ncmpix_putn_NC_UINT64_$1    (xpp, nelems, buf, fillp);
         case NC_CHAR:
             return NC_ECHAR; /* NC_ECHAR check is done earlier */
         default: fprintf(stderr, "Error: bad xtype(%d) in %s\n",xtype,__func__);
@@ -970,69 +973,8 @@ ncmpio_put_att_$1(void       *ncdp,
     NC_attr *attrp=NULL;
     ifelse(`$1',`text', `nc_type xtype=NC_CHAR;')
 
-#if 0
-    /* file should be opened with writable permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
+    /* sanity checks for varid, name, xtype has been done in dispatcher */
 
-    /* check if varid is valid and get the pointer to the attribute array */
-    ncap = NC_attrarray0(ncp, varid);
-    if (ncap == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOTVAR)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check if the attribute name is legal (check for NC_EBADNAME) */
-    err = ncmpii_check_name(name, ncp->format);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR(err)
-        goto err_check;
-    }
-
-    ifelse(`$1',`text', ,`/* check if xtype is valid (check for NC_EBADTYPE) */
-    err = ncmpio_cktype(ncp->format, xtype);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR(err)
-        goto err_check;
-    }')
-
-    ifelse(`$1',`text', , `/* No character conversions are allowed. */
-    if (xtype == NC_CHAR) {
-        DEBUG_ASSIGN_ERROR(err, NC_ECHAR)
-        goto err_check;
-    }')
-
-    /* Should CDF-5 allow very large file header? */
-    /*
-    if (len > X_INT_MAX) {
-        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
-        goto err_check;
-    }
-    */
-
-    /* nelems can be zero, i.e. an attribute with only its name */
-    if (nelems > 0 && buf == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_EINVAL) /* Null arg */
-        goto err_check;
-    }
-
-    if (nelems < 0 || (nelems > X_INT_MAX && ncp->format <= 2)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EINVAL) /* Invalid nelems */
-        goto err_check;
-    }
-#endif
     /* If this is the _FillValue attribute, then let PnetCDF return the
      * same error codes as netCDF
      */
@@ -1103,8 +1045,8 @@ ncmpio_put_att_$1(void       *ncdp,
         }
         /* Note we no longer limit the number of attributes, as CDF file formats
          * impose no such limit. Thus, the value of NC_MAX_ATTRS has been
-         * changed NC_MAX_INT, as NC_attrarray.ndefined is of type signd int and
-         * so is natts argument in ncmpi_inq_varnatts()
+         * changed NC_MAX_INT, as NC_attrarray.ndefined is of type signed int
+         * and so is natts argument in ncmpi_inq_varnatts()
          */
         if (ncap->ndefined == NC_MAX_ATTRS) {
             DEBUG_ASSIGN_ERROR(err, NC_EMAXATTS)
@@ -1125,110 +1067,7 @@ err_check:
             if (nname != NULL) NCI_Free(nname);
             return minE;
         }
-#if 0
-        int rank, root_name_len, root_varid, status, mpireturn;
-        char *root_name;
-        MPI_Offset root_nelems;
-        size_t buf_size;
-        void *root_buf;
-        ifelse(`$1',`text',,`int root_xtype;')
-
-        /* first check the error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nname != NULL) NCI_Free(nname);
-            return status;
-        }
-        assert(nname != NULL);
-
-        /* check if name is consistent among all processes */
-        assert(name != NULL);
-        root_name_len = 1;
-        if (name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-        }
-
-        root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        root_name[0] = NULL_CHAR;
-        if (name != NULL) strcpy(root_name, name);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_NAME)
-        NCI_Free(root_name);
-
-        /* check if varid is consistent across all processes */
-        root_varid = varid;
-        TRACE_COMM(MPI_Bcast)(&root_varid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_varid != varid)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-
-        /* check if nelems is consistent across all processes */
-        root_nelems = nelems;
-        TRACE_COMM(MPI_Bcast)(&root_nelems, 1, MPI_OFFSET, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_nelems != nelems)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_LEN)
-
-        ifelse(`$1',`text', , `root_xtype = xtype;
-        TRACE_COMM(MPI_Bcast)(&root_xtype, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_xtype != xtype)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_TYPE)')
-
-        if (root_nelems > 0) { /* non-scalar attribute */
-            /* check if buf contents is consistent across all processes */
-            /* note xsz is aligned, thus must use the exact size of buf */
-            buf_size = (size_t)root_nelems * SIZEOFITYPE($1);
-            MPI_Comm_rank(ncp->comm, &rank);
-            if (rank > 0)
-                root_buf = (void*) NCI_Malloc(buf_size);
-            else
-                root_buf = (void*)buf;
-            TRACE_COMM(MPI_Bcast)(root_buf, (int)buf_size, MPI_BYTE, 0,
-                                  ncp->comm);
-            if (mpireturn != MPI_SUCCESS) {
-                if (nname != NULL) NCI_Free(nname);
-                return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-            }
-            if (err == NC_NOERR &&
-                (root_nelems != nelems || memcmp(root_buf, buf, buf_size)))
-                DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_ATTR_VAL)
-            if (rank > 0) NCI_Free(root_buf);
-        }
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            if (nname != NULL) NCI_Free(nname);
-            return status;
-        }
-#endif
+        /* argument consistency check has been done at the dispatchers */
     }
 
     if (err != NC_NOERR) {
@@ -1337,7 +1176,7 @@ ncmpio_put_att(void         *ncdp,
                nc_type       xtype,  /* external (file/NC) data type */
                MPI_Offset    nelems,
                const void   *buf,
-               MPI_Datatype  itype)  /* interanl (memory) data type */
+               MPI_Datatype  itype)  /* internal (memory) data type */
 {
     switch(itype) {
         case MPI_CHAR:
