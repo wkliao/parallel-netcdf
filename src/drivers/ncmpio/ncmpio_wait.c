@@ -174,7 +174,7 @@ ncmpio_cancel(void *ncdp,
         for (i=0; i<ncp->numPutReqs; i++) {
             if (put_list[i].num_recs != 0 && put_list[i].need_swap_back_buf)
                 /* if user buffer is in-place byte-swapped, swap it back */
-                ncmpio_in_swapn(put_list[i].buf,
+                ncmpii_in_swapn(put_list[i].buf,
                                 put_list[i].bnelems * put_list[i].num_recs,
                                 put_list[i].varp->xsz);
 
@@ -250,7 +250,7 @@ ncmpio_cancel(void *ncdp,
                         /* put_list[j].num_recs should be >= 1 */
                         if (put_list[j].need_swap_back_buf)
                             /* if user buffer is in-place byte-swapped, swap it back */
-                            ncmpio_in_swapn(put_list[j].buf,
+                            ncmpii_in_swapn(put_list[j].buf,
                                    put_list[j].bnelems * put_list[j].num_recs,
                                    put_list[j].varp->xsz);
 
@@ -821,7 +821,7 @@ req_commit(NC  *ncp,
 	 * does swap for the entire request)
          */
         if (put_list[i].num_recs > 0 && put_list[i].need_swap_back_buf)
-            ncmpio_in_swapn(put_list[i].buf,
+            ncmpii_in_swapn(put_list[i].buf,
                             put_list[i].bnelems * put_list[i].num_recs,
                             put_list[i].varp->xsz);
     }
@@ -886,7 +886,7 @@ req_commit(NC  *ncp,
             if (status == NC_NOERR) status = err;
         } else {
             if (ncmpio_need_swap(varp->xtype, get_list[i].ptype))
-                ncmpio_in_swapn(get_list[i].xbuf, bnelems, varp->xsz);
+                ncmpii_in_swapn(get_list[i].xbuf, bnelems, varp->xsz);
             cbuf = get_list[i].xbuf;
         }
 

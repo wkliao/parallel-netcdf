@@ -36,7 +36,7 @@
 /* for write case, buf needs to swapped back if swapped previously */
 #define FINAL_CLEAN_UP {                                                 \
     if (is_buf_swapped) /* byte-swap back to buf's original contents */  \
-        ncmpio_in_swapn(buf, bnelems, varp->xsz);                        \
+        ncmpii_in_swapn(buf, bnelems, varp->xsz);                        \
                                                                          \
     if (cbuf != NULL && cbuf != buf) NCI_Free(cbuf);                     \
 }
@@ -198,7 +198,7 @@ getput_vard(NC               *ncp,
                 memcpy(cbuf, buf, (size_t)filetype_size);
             }
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, varp->xsz);
+            ncmpii_in_swapn(cbuf, bnelems, varp->xsz);
             is_buf_swapped = (cbuf == buf) ? 1 : 0;
             /* is_buf_swapped indicates if the contents of the original user
              * buffer, buf, have been changed, i.e. byte swapped. */
@@ -300,7 +300,7 @@ err_check:
     if (fIsSet(reqMode, NC_REQ_RD)) {
         if (need_swap)
             /* perform array in-place byte swap on cbuf */
-            ncmpio_in_swapn(cbuf, bnelems, varp->xsz);
+            ncmpii_in_swapn(cbuf, bnelems, varp->xsz);
 
         if (!buftype_is_contig && bnelems > 0) {
             /* unpack cbuf, a contiguous buffer, to buf using buftype */

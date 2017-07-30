@@ -23,15 +23,11 @@ if ENABLE_ERANGE_FILL
 M4FLAGS += -DERANGE_FILL
 endif
 
-M4_HFILES = ncx_h.m4
-
 M4_SRCS   = ncmpio_getput.m4 \
             ncmpio_i_getput.m4 \
-            ncx.m4 \
             ncmpio_varn.m4 \
             ncmpio_i_varn.m4 \
-            ncmpio_attr.m4 \
-            convert_swap.m4
+            ncmpio_attr.m4
 
 H_SRCS = ncmpio_driver.h \
          nc.h \
@@ -63,22 +59,19 @@ $(M4_SRCS:.m4=.c): Makefile
 .m4.c:
 	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
 
-ncx.h: ncx_h.m4 Makefile
-	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
-
 libncmpio_la_SOURCES = $(C_SRCS) $(H_SRCS)
-nodist_libncmpio_la_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
+nodist_libncmpio_la_SOURCES = $(M4_SRCS:.m4=.c)
 
 # automake says "... BUILT_SOURCES is honored only by 'make all', 'make check',
 # and 'make install'. This means you cannot build a specific target (e.g.,
 # 'make foo') in a clean tree if it depends on a built source."
-BUILT_SOURCES = ncx.h $(M4_SRCS:.m4=.c)
+BUILT_SOURCES = $(M4_SRCS:.m4=.c)
 
 if ENABLE_SUBFILING
 libncmpio_la_SOURCES += subfile.c
 endif
 
-CLEANFILES = $(M4_SRCS:.m4=.c) ncx.h *.gcno
+CLEANFILES = $(M4_SRCS:.m4=.c) *.gcno
 
 EXTRA_DIST = $(M4_HFILES) \
              $(M4_SRCS) \

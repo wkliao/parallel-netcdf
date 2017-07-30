@@ -6,6 +6,21 @@
 #
 # @configure_input@
 
+M4_HFILES = ncx_h.m4
 
-EXTRA_DIST = utf8proc.h common.h
+M4FLAGS += -I${top_srcdir}/m4
+
+ncx.h: ncx_h.m4 Makefile
+	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
+
+# automake says "... BUILT_SOURCES is honored only by 'make all', 'make check',
+# and 'make install'. This means you cannot build a specific target (e.g.,
+# 'make foo') in a clean tree if it depends on a built source."
+BUILT_SOURCES = ncx.h
+
+EXTRA_DIST = utf8proc.h common.h $(M4_HFILES)
+
+CLEANFILES = ncx.h
+
+tests-local: all
 

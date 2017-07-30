@@ -37,6 +37,13 @@
 #define M_RNDDOWN(x)      _RNDDOWN(x, M_RND_UNIT)
 #define D_RNDUP(x, align) _RNDUP(x, (off_t)(align))
 
+/* for put request less than 4KB, copy it to a buffer and do byte swap there,
+ * so if the user buffer is immutable (assuming smaller than 4KB), it will not
+ * cause seg fault. Not a perfect solution, but should be sufficient for most
+ * of the cases.
+ */
+#define NC_BYTE_SWAP_BUFFER_SIZE 4096
+
 extern void *
 NCI_Malloc_fn(size_t size, const int lineno, const char *func,
               const char *filename);
@@ -97,13 +104,104 @@ ncmpii_xlen_nc_type(nc_type xtype, int *size);
 
 extern int
 ncmpii_buftype_decode(int ndims, nc_type xtype, const MPI_Offset *count,
-                      MPI_Datatype buftype, MPI_Datatype *ptype,
-                      MPI_Offset *bufcount, MPI_Offset *bnelems,
-                      MPI_Offset *nbytes, int *el_size,
-                      int *buftype_is_contig);
+                      MPI_Offset bufcount, MPI_Datatype buftype,
+                      MPI_Datatype *etype, int *esize, MPI_Offset *nelems,
+                      MPI_Offset *xnbytes, int *isContig);
 
 extern int
 ncmpii_pack(int ndims, const MPI_Offset *count, const MPI_Offset *imap,
             void *buf, MPI_Offset bufcount, MPI_Datatype buftype,
             MPI_Offset *bnelems, MPI_Datatype *ptype, void **cbuf);
+
+extern int    
+ncmpii_put_cast_swap(int format, MPI_Offset nelems, nc_type xtype,
+                     MPI_Datatype itype, void *fillp, void *ibuf,
+                     int isNewBuf, void **xbuf);
+
+extern int
+ncmpii_get_cast_swap(int format, MPI_Offset nelems, nc_type xtype,
+                     MPI_Datatype etype, void *buf, void *xbuf, void **ibuf);
+
+extern int
+ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype mpitype);
+
+extern int
+ncmpio_need_swap(nc_type xtype, MPI_Datatype mpitype);
+
+extern void
+ncmpii_in_swapn(void *buf, MPI_Offset nelems, int esize);
+
+#if 1
+extern int
+ncmpio_x_putn_NC_CHAR  (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_putn_NC_BYTE  (int cdf_ver,
+                       void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_UBYTE (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_SHORT (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_USHORT(void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_INT   (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_UINT  (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_FLOAT (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_DOUBLE(void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_INT64 (void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
+extern int
+ncmpio_x_putn_NC_UINT64(void *xbuf, const void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype, void *fillp);
 #endif
+
+extern int
+ncmpio_x_getn_NC_CHAR  (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_BYTE  (int cdf_ver,
+                       const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_UBYTE (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_SHORT (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_USHORT(const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_INT   (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_UINT  (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_FLOAT (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_DOUBLE(const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_INT64 (const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+extern int
+ncmpio_x_getn_NC_UINT64(const void *xbuf, void *buf, MPI_Offset nelems,
+                       MPI_Datatype datatype);
+
+#endif
+

@@ -348,7 +348,7 @@ ncmpio_igetput_varm(NC               *ncp,
                     memcpy(xbuf, buf, (size_t)nbytes);
                 }
                 /* perform array in-place byte swap on xbuf */
-                ncmpio_in_swapn(xbuf, bnelems, varp->xsz);
+                ncmpii_in_swapn(xbuf, bnelems, varp->xsz);
 
                 if (xbuf == buf) need_swap_back_buf = 1;
                 /* user buf needs to be swapped back to its original contents */

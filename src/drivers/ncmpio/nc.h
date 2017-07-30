@@ -20,13 +20,6 @@
 #define FILE_ALIGNMENT_DEFAULT 512
 #define HEADER_ALIGNMENT_LB    4
 
-/* for put request less than 4KB, copy it to a buffer and do byte swap there,
- * so if the user buffer is immutable (assuming smaller than 4KB), it will not
- * cause seg fault. Not a perfect solution, but should be sufficient for most
- * of the cases.
- */
-#define NC_BYTE_SWAP_BUFFER_SIZE 4096
-
 /* define MPI_OFFSET if not defined */
 #ifndef HAVE_DECL_MPI_OFFSET
     #ifdef HAVE_DECL_MPI_LONG_LONG_INT
@@ -433,9 +426,6 @@ ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype mpitype);
 
 extern int
 ncmpio_need_swap(nc_type xtype, MPI_Datatype mpitype);
-
-extern void
-ncmpio_in_swapn(void *buf, MPI_Offset nelems, int esize);
 
 extern int
 ncmpio_x_putn_NC_CHAR  (void *xbuf, const void *buf, MPI_Offset nelems,

@@ -41,9 +41,9 @@ dnl
 ifdef(`PNETCDF',`
 `#'include <pnetcdf.h>
 `#'include <pnc_debug.h>
-`#'include "ncx.h"',`
+`#'include <ncx.h>',`
 `#'pragma GCC diagnostic ignored "-Wdeprecated"
-`#'include "ncx.h"
+`#'include <ncx.h>
 `#'include "nc3dispatch.h"')
 
 define(`IntType',  `ifdef(`PNETCDF', `MPI_Offset', `size_t')')dnl

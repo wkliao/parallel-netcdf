@@ -708,7 +708,8 @@ ncmpi_inq_file_format(const char *filename,
         else if (errno == EACCES)       DEBUG_RETURN_ERROR(NC_EACCESS)
         else if (errno == ENAMETOOLONG) DEBUG_RETURN_ERROR(NC_EBAD_FILE)
         else {
-            fprintf(stderr,"Error on opening file %s (%s)\n",filename,strerror(errno));
+            fprintf(stderr,"Error on opening file %s (%s)\n",
+                    filename,strerror(errno));
             DEBUG_RETURN_ERROR(NC_EFILE)
         }
     }
@@ -739,7 +740,7 @@ ncmpi_inq_file_format(const char *filename,
     return NC_NOERR;
 }
 
-/*----< ncmpi_inq_version() >-----------------------------------------------*/
+/*----< ncmpi_inq_version() >------------------------------------------------*/
 int
 ncmpi_inq_version(int ncid, int *nc_mode)
 {
@@ -761,7 +762,7 @@ ncmpi_inq_version(int ncid, int *nc_mode)
     return NC_NOERR;
 }
 
-/*----< ncmpi_inq() >------------------------------------------------------*/
+/*----< ncmpi_inq() >--------------------------------------------------------*/
 int
 ncmpi_inq(int  ncid,
           int *ndimsp,
@@ -924,7 +925,7 @@ ncmpi_inq_header_extent(int ncid, MPI_Offset *header_extent)
                                   NULL, NULL, NULL, NULL, NULL);
 }
 
-/*----< ncmpi_inq_recsize() >-----------------------------------------------*/
+/*----< ncmpi_inq_recsize() >------------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_inq_recsize(int ncid, MPI_Offset *recsize)
@@ -942,7 +943,7 @@ ncmpi_inq_recsize(int ncid, MPI_Offset *recsize)
                                   NULL, NULL, NULL, NULL, NULL);
 }
 
-/*----< ncmpi_inq_put_size() >----------------------------------------------*/
+/*----< ncmpi_inq_put_size() >-----------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_inq_put_size(int ncid, MPI_Offset *put_size)
@@ -960,7 +961,7 @@ ncmpi_inq_put_size(int ncid, MPI_Offset *put_size)
                                   NULL, NULL, NULL, NULL, NULL);
 }
 
-/*----< ncmpi_inq_get_size() >----------------------------------------------*/
+/*----< ncmpi_inq_get_size() >-----------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_inq_get_size(int ncid, MPI_Offset *get_size)
@@ -978,7 +979,7 @@ ncmpi_inq_get_size(int ncid, MPI_Offset *get_size)
                                   get_size, NULL, NULL, NULL, NULL);
 }
 
-/*----< ncmpi_inq_file_info() >---------------------------------------------*/
+/*----< ncmpi_inq_file_info() >----------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_inq_file_info(int ncid, MPI_Info *info)
@@ -1188,7 +1189,7 @@ ncmpi_inq_buffer_size(int         ncid,
                                   NULL, NULL, NULL, NULL, buf_size);
 }
 
-/*----< ncmpi_buffer_attach() >-----------------------------------------------*/
+/*----< ncmpi_buffer_attach() >----------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_buffer_attach(int        ncid,
@@ -1207,7 +1208,7 @@ ncmpi_buffer_attach(int        ncid,
     return pncp->driver->buffer_attach(pncp->ncp, bufsize);
 }
 
-/*----< ncmpi_buffer_detach() >-----------------------------------------------*/
+/*----< ncmpi_buffer_detach() >----------------------------------------------*/
 /* This is an independent subroutine. */
 int
 ncmpi_buffer_detach(int ncid)

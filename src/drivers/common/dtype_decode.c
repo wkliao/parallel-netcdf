@@ -492,96 +492,76 @@ int ncmpii_dtype_decode(MPI_Datatype  dtype,
 }
 
 /*----< ncmpii_buftype_decode() >--------------------------------------------*/
-/* obtain the following metadata about buftype:
- * ptype: element data type (MPI primitive type) in buftype
+/* Obtain the following metadata about buftype:
+ * etype:    element data type (MPI primitive type) in buftype
  * bufcount: If it is -1, then this is called from a high-level API and in
- * this case buftype will be an MPI primitive data type. If not -1, then this
- * is called from a flexible API. In the former case, we recalculate bufcount
- * to match with count[].
- * bnelems: number of ptypes in user buffer
- * nbytes: number of bytes (in external data representation) to read/write
- * from/to the file
- * el_size: size of ptype
- * buftype_is_contig: whether buftype is contiguous
+ *           this case buftype will be an MPI primitive data type.
+ *           If bufcount is not -1, then this is called from a flexible API.
+ * nelems:   number of etypes in user buffer
+ * xnbytes:  number of bytes (in external data representation) to read/write
+ *           from/to the file
+ * esize:    byte size of etype
+ * isContig: whether buftype is contiguous
  */
 int
 ncmpii_buftype_decode(int               ndims,
                       nc_type           xtype,
                       const MPI_Offset *count,
+                      MPI_Offset        bufcount,
                       MPI_Datatype      buftype,
-                      MPI_Datatype     *ptype,             /* out */
-                      MPI_Offset       *bufcount,          /* in/out */
-                      MPI_Offset       *bnelems,           /* out */
-                      MPI_Offset       *nbytes,            /* out */
-                      int              *el_size,           /* out */
-                      int              *buftype_is_contig) /* out */
+                      MPI_Datatype     *etype,    /* out */
+                      int              *esize,    /* out */
+                      MPI_Offset       *nelems,   /* out */
+                      MPI_Offset       *xnbytes,  /* out */
+                      int              *isContig) /* out */
 {
-    int i, err=NC_NOERR, xsz;
+    int i, xsz, err;
     MPI_Offset fnelems;
 
-    /* Sanity check for error codes should have already done before reaching
-     * here
-     *
-     * when (*bufcount == -1), buftype is an MPI primitive data type,
-     * it means this subroutine is called from a high-level API.
-     */
-    if (*bufcount != -1 && buftype != MPI_DATATYPE_NULL) {
-        /* This subroutine is called from a flexible API */
-        int isderived;
-        /* check MPI derived datatype error */
-        err = ncmpii_dtype_decode(buftype, ptype, el_size, bnelems,
-                                  &isderived, buftype_is_contig);
-        if (err != NC_NOERR) return err;
-    }
+    err = ncmpii_xlen_nc_type(xtype, &xsz);
+    if (err != NC_NOERR) DEBUG_RETURN_ERROR(err);
 
     /* fnelems is the total number of nc_type elements calculated from
      * count[]. count[] is the access count to the variable defined in
      * the netCDF file.
      */
     fnelems = 1;
-    for (i=0; i<ndims; i++) fnelems *= count[i];
+    for (i=0; i<ndims; i++)
+        fnelems *= count[i];
 
-    ncmpii_xlen_nc_type(xtype, &xsz);
-
-    if (*bufcount == -1) { /* buftype is an MPI primitive data type */
-        /* this subroutine is called from a high-level API */
-        *bnelems = *bufcount = fnelems;
-        *ptype = buftype;
-        MPI_Type_size(buftype, el_size); /* buffer element size */
-        *buftype_is_contig = 1;
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * xsz; /* xsz is external element size */
+    if (bufcount == -1) { /* the subroutine is called from a high-level API */
+        *nelems   = fnelems;
+        *etype    = buftype; /* buftype is an MPI primitive data type */
+        MPI_Type_size(buftype, esize);
+        *xnbytes  = *nelems * xsz;
+        *isContig = 1;
     }
     else if (buftype == MPI_DATATYPE_NULL) {
-        /* This is called from a flexible API and buftype is set by user
-         * to MPI_DATATYPE_NULL. In this case, bufcount is set to match
-         * count[], and buf's data type to match the data type of variable
-         * defined in the file - no data conversion will be done.
+        /* This is called from a flexible API and buftype is set by user to
+         * MPI_DATATYPE_NULL. In this case, bufcount is ignored and set by
+         * this subroutine to a number match count[], and etype to match the
+         * variable's external NC data type.
          */
-        *bnelems = *bufcount = fnelems;
-        *ptype = buftype = ncmpii_nc2mpitype(xtype);
-        *el_size = xsz;
-        *buftype_is_contig = 1;
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * xsz;
+        *nelems   = fnelems;
+        *etype    = ncmpii_nc2mpitype(xtype);
+        *esize    = xsz;
+        *xnbytes  = *nelems * xsz;
+        *isContig = 1;
     }
-    else {
-        /* This is called from a flexible API */
+    else { /* This is called from a flexible API */
+        int isderived;
+        /* check some metadata of the MPI derived datatype */
+        err = ncmpii_dtype_decode(buftype, etype, esize, nelems, &isderived,
+                                  isContig);
+        if (err != NC_NOERR) return err;
 
-        /* make bnelems the number of ptype in the whole user buf */
-        *bnelems *= *bufcount;
+        /* make nelems the number of etype in the whole user buf */
+        *nelems  *= bufcount;
+        *xnbytes  = *nelems * xsz;
 
-        /* check mismatch between bnelems and fnelems */
-        if (fnelems != *bnelems) {
-            DEBUG_ASSIGN_ERROR(err, NC_EIOMISMATCH)
-            (fnelems>*bnelems) ? (fnelems=*bnelems) : (*bnelems=fnelems);
-            /* only handle partial of the request, smaller number of the two */
-        }
-        /* now fnelems == *bnelems */
-
-        /* nbytes is the amount in bytes of this request to file */
-        *nbytes = *bnelems * xsz;
+        /* check mismatch between nelems and fnelems */
+        if (fnelems != *nelems) DEBUG_RETURN_ERROR(NC_EIOMISMATCH)
     }
-    return err;
+    return NC_NOERR;
 }
 
