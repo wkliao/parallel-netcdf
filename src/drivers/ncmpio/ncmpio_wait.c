@@ -8,7 +8,7 @@
  * This file implements the corresponding APIs defined in src/dispatchers/file.c
  *
  * ncmpi_wait()     : dispatcher->wait()
- * ncmpi_wait_all() : dispatcher->wait_all()
+ * ncmpi_wait_all() : dispatcher->wait()
  * ncmpi_cancel()   : dispatcher->cancel()
  */
 

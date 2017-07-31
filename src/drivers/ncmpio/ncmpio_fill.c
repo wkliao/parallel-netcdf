@@ -11,7 +11,6 @@
  * ncmpi_set_fill()     : dispatcher->set_fill()
  * ncmpi_fill_var_rec() : dispatcher->fill_rec()
  * ncmpi_def_var_fill() : dispatcher->def_var_fill()
- * ncmpi_inq_var_fill() : dispatcher->buffer_detach()
  */
 
 #ifdef HAVE_CONFIG_H
