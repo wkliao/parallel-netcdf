@@ -147,7 +147,7 @@ ncmpio_igetput_varm(NC               *ncp,
                     int               isSameGroup) /* if part of a varn group */
 {
     void *xbuf=NULL, *cbuf=NULL, *lbuf=NULL;
-    int err=NC_NOERR, status=NC_NOERR, warning=NC_NOERR;
+    int err=NC_NOERR, status=NC_NOERR;
     int i, abuf_index=-1, el_size, buftype_is_contig;
     int need_convert, need_swap, need_swap_back_buf=0;
     size_t  dims_chunk;
@@ -170,15 +170,14 @@ ncmpio_igetput_varm(NC               *ncp,
     err = ncmpio_calc_datatype_elems(varp, count,
                                      buftype, &ptype, &bufcount, &bnelems,
                                      &nbytes, &el_size, &buftype_is_contig);
-    if (err == NC_EIOMISMATCH) DEBUG_ASSIGN_ERROR(warning, err)
-    else if (err != NC_NOERR) return err;
+    if (err != NC_NOERR) return err;
 
     if (bnelems == 0) {
         /* zero-length request, mark this as a NULL request */
         if (!isSameGroup && reqid != NULL)
             /* only if this is not part of a group request */
             *reqid = NC_REQ_NULL;
-        return ((warning != NC_NOERR) ? warning : NC_NOERR);
+        return NC_NOERR;
     }
 
     /* for bput call, check if the remaining buffer space is sufficient
@@ -466,7 +465,7 @@ ncmpio_igetput_varm(NC               *ncp,
     /* return the request ID */
     if (reqid != NULL) *reqid = req->id;
 
-    return ((warning != NC_NOERR) ? warning : status);
+    return status;
 }
 
 include(`utils.m4')dnl
