@@ -127,6 +127,8 @@ This is essentially a placeholder for the next release note ...
       configure command line
 
   o Bug fixes
+    * Fix the bug of string parsing the environment variable PNETCDF_HINTS and
+      print warning messages for ill-formed hint strings. See r3284.
     * Fix F90 APIs for reading and writing scalar variables, i.e. number of
       dimensions is zero. The bugs appear only when using Intel Fortran
       compiler which does not allow checking presence of an argument and

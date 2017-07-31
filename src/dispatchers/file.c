@@ -9,8 +9,8 @@
 #endif
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdlib.h>  /* getenv() */
+#include <string.h>  /* strtok(), strtok_r(), strchr(), strdup(), strcpy() */
 #include <fcntl.h>   /* open() */
 #include <unistd.h>  /* read(), close() */
 #include <assert.h>  /* assert() */
@@ -122,11 +122,11 @@ combine_env_hints(MPI_Info  user_info,
 {
     char *env_str;
 
-    /* take hints from the environment variable PNETCDF_HINTS
-     * a string of hints separated by ";" and each hint is in the
-     * form of hint=value. E.g. cb_nodes=16;cb_config_list=*:6
-     * If this environment variable is set, it overrides any values that
-     * were set by using calls to MPI_Info_set in the application code.
+    /* take hints from the environment variable PNETCDF_HINTS, a string of
+     * hints separated by ";" and each hint is in the form of hint=value. E.g.
+     * "cb_nodes=16;cb_config_list=*:6". If this environment variable is set,
+     * it overrides the same hints that were set by MPI_Info_set() called in
+     * the application program.
      */
     if (user_info != MPI_INFO_NULL)
         MPI_Info_dup(user_info, new_info); /* ignore error */
@@ -138,19 +138,28 @@ combine_env_hints(MPI_Info  user_info,
         if (*new_info == MPI_INFO_NULL)
             MPI_Info_create(new_info); /* ignore error */
 
-        char *env_str_cpy, *key;
-        env_str_cpy = (char*) malloc(strlen(env_str)+1);
-        strcpy(env_str_cpy, env_str);
-        key = strtok(env_str_cpy, ";");
-        while (key != NULL) {
-            char *val;
-            val = strchr(key, '=');
-            if (val == NULL) continue; /* ill-formed hint */
-            *val = '\0';
-            val++;
+        char *env_str_cpy, *env_str_saved, *hint, *key;
+        env_str_cpy = strdup(env_str);
+        hint = strtok_r(env_str_cpy, ";", &env_str_saved);
+        while (hint != NULL) {
+            char *hint_saved = strdup(hint);
+            char *val = strchr(hint, '=');
+            if (val == NULL) { /* ill-formed hint */
+                if (NULL != strtok(hint, " \t"))
+                    printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
+                /* else case: ignore white-spaced hints */
+                hint = strtok_r(NULL, ";", &env_str_saved); /* get next hint */
+                continue;
+            }
+            key = strtok(hint, "= \t");
+            val = strtok(NULL, "= \t");
+            if (NULL != strtok(NULL, "= \t")) /* expect no more token */
+                printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
+            else
+                MPI_Info_set(*new_info, key, val); /* override or add */
             /* printf("env hint: key=%s val=%s\n",key,val); */
-            MPI_Info_set(*new_info, key, val); /* override or add */
-            key = strtok(NULL, ";");
+            hint = strtok_r(NULL, ";", &env_str_saved);
+            free(hint_saved);
         }
         free(env_str_cpy);
     }
