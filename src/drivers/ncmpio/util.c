@@ -144,8 +144,8 @@ void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
 
 #ifdef ENABLE_SUBFILING
     MPI_Info_get(info, "pnetcdf_subfiling", MPI_MAX_INFO_VAL-1, value, &flag);
-    if (flag && strcasecmp(value, "disable") == 0)
-        ncp->subfile_mode = 0;
+    if (flag && strcasecmp(value, "enable") == 0)
+        ncp->subfile_mode = 1;
 
     MPI_Info_get(info, "nc_num_subfiles", MPI_MAX_INFO_VAL-1, value, &flag);
     if (flag) {

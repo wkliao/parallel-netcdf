@@ -359,10 +359,14 @@ ncmpio_inq_misc(void       *ncdp,
         MPI_Info_set(*info_used, "nc_header_read_chunk_size", value);
 
 #ifdef ENABLE_SUBFILING
-        sprintf(value, "%d", ncp->subfile_mode);
-        MPI_Info_set(*info_used, "pnetcdf_subfiling", value);
+        if (ncp->subfile_mode)
+            MPI_Info_set(*info_used, "pnetcdf_subfiling", "enable");
+        else
+            MPI_Info_set(*info_used, "pnetcdf_subfiling", "disable");
         sprintf(value, "%d", ncp->num_subfiles);
         MPI_Info_set(*info_used, "nc_num_subfiles", value);
+#else
+        MPI_Info_set(*info_used, "pnetcdf_subfiling", "disable");
 #endif
     }
 
