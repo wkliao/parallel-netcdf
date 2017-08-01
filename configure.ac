@@ -1386,7 +1386,7 @@ AC_CONFIG_FILES(Makefile \
                 src/drivers/common/Makefile \
                 src/drivers/include/Makefile \
                 src/drivers/ncmpio/Makefile \
-                src/drivers/foo/Makefile \
+                src/drivers/ncfoo/Makefile \
                 src/binding/Makefile \
                 src/binding/cxx/Makefile \
                 src/binding/f77/Makefile \

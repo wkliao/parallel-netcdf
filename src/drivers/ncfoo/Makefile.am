@@ -16,7 +16,7 @@ if PNETCDF_DEBUG
    AM_CPPFLAGS += -DPNETCDF_DEBUG
 endif
 
-noinst_LTLIBRARIES = libfoo.la
+noinst_LTLIBRARIES = libncfoo.la
 
 M4FLAGS += -I${top_srcdir}/m4
 if ENABLE_ERANGE_FILL
@@ -25,25 +25,25 @@ endif
 
 M4_SRCS = 
 
-H_SRCS = foo_driver.h
+H_SRCS = ncfoo_driver.h
 
-C_SRCS = foo_attr.c \
-         foo_dim.c \
-         foo_driver.c \
-         foo_file.c \
-         foo_var.c
+C_SRCS = ncfoo_attr.c \
+         ncfoo_dim.c \
+         ncfoo_driver.c \
+         ncfoo_file.c \
+         ncfoo_var.c
 
 $(M4_SRCS:.m4=.c): Makefile
 
 .m4.c:
 	$(M4) $(AM_M4FLAGS) $(M4FLAGS) $< >$@
 
-libfoo_la_SOURCES = $(C_SRCS) $(H_SRCS)
-nodist_libfoo_la_SOURCES = $(M4_SRCS:.m4=.c)
+libncfoo_la_SOURCES = $(C_SRCS) $(H_SRCS)
+nodist_libncfoo_la_SOURCES = $(M4_SRCS:.m4=.c)
 
 # automake says "... BUILT_SOURCES is honored only by 'make all', 'make check',
 # and 'make install'. This means you cannot build a specific target (e.g.,
-# 'make foo') in a clean tree if it depends on a built source."
+# 'make target') in a clean tree if it depends on a built source."
 BUILT_SOURCES = $(M4_SRCS:.m4=.c)
 
 CLEANFILES = $(M4_SRCS:.m4=.c) *.gcno

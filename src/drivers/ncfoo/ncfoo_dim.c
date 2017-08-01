@@ -24,38 +24,38 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include <foo_driver.h>
+#include <ncfoo_driver.h>
 
 int
-foo_def_dim(void       *ncdp,
-            const char *name,
-            MPI_Offset  size,
-            int        *dimidp)
-{
-    return NC_NOERR;
-}
-
-int
-foo_inq_dimid(void       *ncdp,
+ncfoo_def_dim(void       *ncdp,
               const char *name,
-              int        *dimid)
+              MPI_Offset  size,
+              int        *dimidp)
 {
     return NC_NOERR;
 }
 
 int
-foo_inq_dim(void       *ncdp,
-            int         dimid,
-            char       *name,
-            MPI_Offset *sizep)
+ncfoo_inq_dimid(void       *ncdp,
+                const char *name,
+                int        *dimid)
 {
     return NC_NOERR;
 }
 
 int
-foo_rename_dim(void       *ncdp,
-               int         dimid,
-               const char *newname)
+ncfoo_inq_dim(void       *ncdp,
+              int         dimid,
+              char       *name,
+              MPI_Offset *sizep)
+{
+    return NC_NOERR;
+}
+
+int
+ncfoo_rename_dim(void       *ncdp,
+                 int         dimid,
+                 const char *newname)
 {
     return NC_NOERR;
 }

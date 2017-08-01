@@ -13,7 +13,7 @@ libpnetcdf_la_SOURCES =
 libpnetcdf_la_LIBADD  = ../dispatchers/libdispatchers.la
 libpnetcdf_la_LIBADD += ../drivers/common/libcommon.la
 libpnetcdf_la_LIBADD += ../drivers/ncmpio/libncmpio.la
-libpnetcdf_la_LIBADD += ../drivers/foo/libfoo.la
+libpnetcdf_la_LIBADD += ../drivers/ncfoo/libncfoo.la
 nodist_EXTRA_libpnetcdf_la_SOURCES = dummyc.c
 
 if HAS_MPICXX
@@ -47,8 +47,8 @@ endif
 ../drivers/ncmpio/libncmpio.la:
 	set -e; cd ../drivers/ncmpio && $(MAKE) $(MFLAGS)
 
-../drivers/foo/libfoo.la:
-	set -e; cd ../drivers/foo && $(MAKE) $(MFLAGS)
+../drivers/ncfoo/libncfoo.la:
+	set -e; cd ../drivers/ncfoo && $(MAKE) $(MFLAGS)
 
 ../binding/cxx/libcxx.la:
 	set -e; cd ../binding/cxx && $(MAKE) $(MFLAGS)
