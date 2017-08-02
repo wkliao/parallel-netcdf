@@ -123,12 +123,12 @@ put_varm(NC               *ncp,
     MPI_Datatype etype, filetype=MPI_BYTE;
     MPI_File fh;
 
-    /* pack buf to cbuf ----------------------------------------------------*/
+    /* pack buf into a contiguous buffer, cbuf -----------------------------*/
     /* If called from a true varm API or a flexible API, ncmpii_pack() packs
      * user buf into a contiguous cbuf (need to be freed later). Otherwise,
      * cbuf is simply set to buf. ncmpii_pack() also returns etype (MPI
      * primitive datatype in buftype), and nelems (number of etypes in
-     * buftype * bufcount)
+     * buftype * bufcount). Not cbuf may be == buf.
      */
     err = ncmpii_pack(varp->ndims, count, imap, buf, bufcount, buftype,
                       &nelems, &etype, &cbuf);

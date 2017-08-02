@@ -284,8 +284,8 @@ APINAME($1,$2,$3,$4)(int ncid,
                      BufArgs($1,$3))
 {
     int status, err, reqMode=0;
-    NC_api api_kind;
     PNC *pncp;
+    ifelse(`$2',`',`',`NC_api api_kind=API_KIND($2);')
     ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
 
     /* check if ncid is valid.
@@ -298,7 +298,6 @@ APINAME($1,$2,$3,$4)(int ncid,
 
     err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
     
-    api_kind = API_KIND($2);
     ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
     else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
     ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
@@ -308,12 +307,13 @@ APINAME($1,$2,$3,$4)(int ncid,
         err = check_start_count_stride(pncp, varid, IS_READ($1), api_kind,
                                        IndexArgs($2));')
 
-    ifelse(`$3',`',`ifelse(`$4',`',`if (bufcount == 0) return NC_NOERR;')')
+    ifelse(`$3',`',`ifelse(`$4',`',`if (bufcount == 0)
+        /* independent flexible API, return now if zero-length request */
+        return NC_NOERR;')')
 
-    ifelse(`$4',`',
-    `/* for independent API, return now if error encountered */
+    ifelse(`$4',`',`/* for independent API, return now if error encountered */
     if (err != NC_NOERR) return err;',`
-    /* In safe mode, check errors across all processes */
+    /* collective APIs and safe mode enabled, check errors across all procs */
     if (pncp->flag & NC_MODE_SAFE) {
         err = allreduce_error(pncp, err);
         if (err != NC_NOERR) return err;
@@ -500,8 +500,8 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
                       `FUNC2ITYPE($3)* const *bufs')'))
 {
     int i, reqMode=0, status=NC_NOERR, err, *reqs;
-    NC_api api_kind;
     PNC *pncp;
+    ifelse(`$2',`',`',`NC_api api_kind=API_KIND($2);')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -513,7 +513,6 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
 
     ifelse(`$4',`',`if (nvars == 0) return NC_NOERR;')
 
-    api_kind = API_KIND($2);
     ifelse(`$2',`m',`if (imaps == NULL && strides != NULL) api_kind = API_VARS;
     else if (imaps == NULL && strides == NULL) api_kind = API_VARA;')
     ifelse(`$2',`s',`if (strides == NULL) api_kind = API_VARA;')
@@ -613,8 +612,8 @@ IAPINAME($1,$2,$3)(int ncid,
                    int *reqid)
 {   
     int err, reqMode;
-    NC_api api_kind;
     PNC *pncp;
+    ifelse(`$2',`',`',`NC_api api_kind=API_KIND($2);')
     ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
 
     /* check if ncid is valid.
@@ -637,7 +636,6 @@ IAPINAME($1,$2,$3)(int ncid,
                                  NULL, NULL, NULL, NULL, &buf_size);
     if (err != NC_NOERR) return err;')
 
-    api_kind = API_KIND($2);
     ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
     else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
     ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
