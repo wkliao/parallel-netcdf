@@ -63,11 +63,13 @@ ncmpii_pack(int                ndims,
 
         buf_size *= bufcount;
 
-
         if (buf_size != (int)buf_size) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
 
-        if (buf_size == 0) /* zero-length request */
+        if (buf_size == 0) { /* zero-length request */
+            if (bnelems != NULL) *bnelems = 0;
+            if (ptype   != NULL) *ptype   = MPI_BYTE;
             return NC_NOERR;
+        }
     
         /* check if buftype is an MPI predefined primitive datatype */
         err = ncmpii_dtype_decode(buftype, &etype, &el_size, &num_ptypes,
