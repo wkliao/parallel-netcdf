@@ -135,11 +135,9 @@ combine_env_hints(MPI_Info  user_info,
 
     /* get environment variable PNETCDF_HINTS */
     if ((env_str = getenv("PNETCDF_HINTS")) != NULL) {
-        if (*new_info == MPI_INFO_NULL)
-            MPI_Info_create(new_info); /* ignore error */
-
-        char *env_str_cpy, *env_str_saved=NULL, *hint, *key;
+        char *env_str_cpy, *env_str_saved, *hint, *key;
         env_str_cpy = strdup(env_str);
+        env_str_saved = env_str_cpy;
         hint = strtok_r(env_str_cpy, ";", &env_str_saved);
         while (hint != NULL) {
             char *hint_saved = strdup(hint);
@@ -156,8 +154,11 @@ combine_env_hints(MPI_Info  user_info,
             val = strtok(NULL, "= \t");
             if (NULL != strtok(NULL, "= \t")) /* expect no more token */
                 printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
-            else
+            else {
+                if (*new_info == MPI_INFO_NULL)
+                    MPI_Info_create(new_info); /* ignore error */
                 MPI_Info_set(*new_info, key, val); /* override or add */
+            }
             /* printf("env hint: key=%s val=%s\n",key,val); */
             hint = strtok_r(NULL, ";", &env_str_saved);
             free(hint_saved);
