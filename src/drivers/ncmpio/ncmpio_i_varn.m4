@@ -15,6 +15,7 @@ dnl
  *
  * ncmpi_iget_varn_<type>() : dispatcher->iget_varn()
  * ncmpi_iput_varn_<type>() : dispatcher->iput_varn()
+ * ncmpi_bput_varn_<type>() : dispatcher->bput_varn()
  */
 
 #ifdef HAVE_CONFIG_H
