@@ -15,8 +15,6 @@
 
 #include <testutils.h>
 
-#define MAXLINE 128
-
 /* The file name is taken as a command-line argument. */
 
 /* Measures the I/O bandwidth for writing/reading a 3D
@@ -38,7 +36,7 @@ int main(int argc, char **argv)
     int array_of_psizes[3];
     int err;
     MPI_Offset array_of_starts[3];
-    char *fbasename = NULL, *fbasename1 = NULL, filename[256];
+    char *fbasename=NULL;
     char dimname[20], varname[20];
     int ncid, dimids0[3], rank_dim[3], *varid=NULL;
     MPI_Info info=MPI_INFO_NULL, info_used=MPI_INFO_NULL;
@@ -46,7 +44,7 @@ int main(int argc, char **argv)
     MPI_Offset *bufcount_list;
     int ndims=3, nvars=1, ngatts, unlimdimid;
     MPI_Datatype *datatype_list;
-    int length = 128; /* 8MB per proc */
+    int length = 8;
     double stim, write_tim, new_write_tim, write_bw;
     double read_tim, new_read_tim, read_bw;
     double open_tim, new_open_tim;
@@ -63,7 +61,7 @@ int main(int argc, char **argv)
     /* process 0 takes the file name as a command-line argument and
        broadcasts it to other processes */
     if (!rank) {
-	while ((opt = getopt(argc, argv, "f:s:rp:n:l:")) != EOF) {
+	while ((opt = getopt(argc, argv, "f:s:p:n:l:r")) != EOF) {
 	    switch (opt) {
 	    case 'f': fbasename = optarg;
 		break;
@@ -86,9 +84,7 @@ int main(int argc, char **argv)
 	    MPI_Abort(MPI_COMM_WORLD, 1);
 	}
 
-	fbasename1 = (char *) malloc (MAXLINE);
-	sprintf(fbasename1, "%s", fbasename);
-	len = strlen(fbasename1);
+	len = strlen(fbasename);
 	MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(fbasename, len+1, MPI_CHAR, 0, MPI_COMM_WORLD);
         MPI_Bcast(&num_sf, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -98,9 +94,9 @@ int main(int argc, char **argv)
         MPI_Bcast(&length, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
     else {
-	fbasename1 = (char *) malloc (MAXLINE);
 	MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	MPI_Bcast(fbasename1, len+1, MPI_CHAR, 0, MPI_COMM_WORLD);
+	fbasename = (char *) malloc(len+1);
+	MPI_Bcast(fbasename, len+1, MPI_CHAR, 0, MPI_COMM_WORLD);
         MPI_Bcast(&num_sf, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&par_dim_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&nvars, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -204,13 +200,12 @@ int main(int argc, char **argv)
     char tmp[10];
     sprintf(tmp, "%d", num_sf);
     MPI_Info_set(info, "nc_num_subfiles", tmp);
-
-    sprintf(filename, "%s.%d.%d.%d.nc", fbasename1, length, 1, 0);
+    MPI_Info_set(info, "pnetcdf_subfiling", "enable");
 
     if (do_read == 1) goto read;
 
     stim = MPI_Wtime();
-    err = ncmpi_create(MPI_COMM_WORLD, filename, NC_CLOBBER|NC_64BIT_DATA,
+    err = ncmpi_create(MPI_COMM_WORLD, fbasename, NC_CLOBBER|NC_64BIT_DATA,
                        info, &ncid);
     CHECK_ERR
 
@@ -337,7 +332,7 @@ int main(int argc, char **argv)
     goto end;
 
 read:
-    err = ncmpi_open(MPI_COMM_WORLD, filename, NC_NOWRITE, MPI_INFO_NULL, &ncid);
+    err = ncmpi_open(MPI_COMM_WORLD, fbasename, NC_NOWRITE, info, &ncid);
     CHECK_ERR
 
     stim = MPI_Wtime();
@@ -387,7 +382,7 @@ end:
     if (!do_read) free(varid);
     free(starts_list);
     free(count_list);
-    free(fbasename1);
+    if (rank > 0) free(fbasename);
 
     MPI_Offset malloc_size, sum_size;
     int nfiles, ncids[10];

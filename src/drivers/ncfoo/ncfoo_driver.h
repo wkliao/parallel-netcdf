@@ -11,6 +11,16 @@
 #include <pnetcdf.h>
 #include <dispatch.h>
 
+typedef struct NC_foo NC_foo; /* forward reference */
+struct NC_foo {
+    int                mode;        /* file _open/_create mode */
+    int                flag;        /* define/data/collective/indep mode */
+    char              *path;        /* path name */
+    MPI_Comm           comm;        /* MPI communicator */
+    void              *ncp;         /* pointer to driver's internal object */
+    struct PNC_driver *driver;
+};
+
 extern int
 ncfoo_create(MPI_Comm comm, const char *path, int cmode, int ncid, MPI_Info info, void **ncdp);
 
@@ -114,10 +124,10 @@ extern int
 ncfoo_rename_var(void *ncdp, int varid, const char *newname);
 
 extern int
-ncfoo_get_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, NC_api api, int reqMode);
+ncfoo_get_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int reqMode);
 
 extern int
-ncfoo_put_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, NC_api api, int reqMode);
+ncfoo_put_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int reqMode);
 
 extern int
 ncfoo_get_varn(void *ncdp, int varid, int num, MPI_Offset* const *starts, MPI_Offset* const *counts, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int reqMode);
@@ -132,13 +142,13 @@ extern int
 ncfoo_put_vard(void *ncdp, int varid, MPI_Datatype filetype, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int reqMode);
 
 extern int
-ncfoo_iget_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, NC_api api, int reqMode);
+ncfoo_iget_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, int reqMode);
 
 extern int
-ncfoo_iput_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, NC_api api, int reqMode);
+ncfoo_iput_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, int reqMode);
 
 extern int
-ncfoo_bput_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, NC_api api, int reqMode);
+ncfoo_bput_var(void *ncdp, int varid, const MPI_Offset *start, const MPI_Offset *count, const MPI_Offset *stride, const MPI_Offset *imap, const void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *req, int reqMode);
 
 extern int
 ncfoo_iget_varn(void *ncdp, int varid, int num, MPI_Offset* const *starts, MPI_Offset* const *counts, void *buf, MPI_Offset bufcount, MPI_Datatype buftype, int *reqid, int reqMode);

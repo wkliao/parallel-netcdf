@@ -633,9 +633,6 @@ ncmpio__enddef(void       *ncdp,
     char value[MPI_MAX_INFO_VAL];
     MPI_Offset all_var_size;
     NC *ncp = (NC*)ncdp;
-#ifdef ENABLE_SUBFILING
-    NC *ncp_sf=NULL;
-#endif
 
     if (!NC_indef(ncp)) /* must currently in define mode */
         DEBUG_RETURN_ERROR(NC_ENOTINDEFINE)
@@ -769,7 +766,7 @@ ncmpio__enddef(void       *ncdp,
     MPI_Info_set(ncp->mpiinfo, "nc_num_subfiles", value);
     if (ncp->num_subfiles > 1) {
         /* TODO: should return subfile-related msg when there's an error */
-        err = ncmpio_subfile_partition(ncp, &ncp->ncid_sf);
+        err = ncmpio_subfile_partition(ncp);
         CHECK_ERROR(err)
     }
 #endif
@@ -793,12 +790,7 @@ ncmpio__enddef(void       *ncdp,
 #ifdef ENABLE_SUBFILING
     if (ncp->num_subfiles > 1) {
         /* get ncp info for the subfile */
-        PNC *pncp;
-        err = PNC_check_id(ncp->ncid_sf, &pncp);
-        if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-
-        ncp_sf = (NC*)pncp->ncp;
-        err = NC_begins(ncp_sf);
+        err = NC_begins(ncp->ncp_sf);
         CHECK_ERROR(err)
     }
 #endif
@@ -852,7 +844,7 @@ ncmpio__enddef(void       *ncdp,
 #ifdef ENABLE_SUBFILING
     /* write header to subfile */
     if (ncp->num_subfiles > 1) {
-        err = write_NC(ncp_sf);
+        err = write_NC(ncp->ncp_sf);
         if (status == NC_NOERR) status = err;
     }
 #endif
@@ -876,7 +868,7 @@ ncmpio__enddef(void       *ncdp,
 
 #ifdef ENABLE_SUBFILING
     if (ncp->num_subfiles > 1)
-        fClr(ncp_sf->flags, NC_MODE_CREATE | NC_MODE_DEF);
+        fClr(ncp->ncp_sf->flags, NC_MODE_CREATE | NC_MODE_DEF);
 #endif
 
     /* If the user sets NC_SHARE, we enforce a stronger data consistency */

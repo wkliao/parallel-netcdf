@@ -306,7 +306,7 @@ struct NC {
 #ifdef ENABLE_SUBFILING
     int           subfile_mode; /* 0 or 1, for disable/enable subfiling */
     int           num_subfiles; /* number of subfiles */
-    int           ncid_sf;      /* ncid of subfile */
+    struct NC    *ncp_sf;       /* ncp of subfile */
 #endif
     int           striping_unit; /* file stripe size of the file */
     MPI_Offset    chunk;       /* chunk size for reading header */

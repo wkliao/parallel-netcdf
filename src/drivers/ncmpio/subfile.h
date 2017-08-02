@@ -22,11 +22,11 @@ typedef struct {
 #define ROUND(x) ( x >= 0 ? (int)(x+0.5) : (int)(x-0.5) )
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 
-extern int ncmpio_subfile_open(NC *ncp, int *ncidp);
+extern int ncmpio_subfile_open(NC *ncp);
 
 extern int ncmpio_subfile_close(NC *ncp);
 
-extern int ncmpio_subfile_partition(NC *ncp, int *ncidp);
+extern int ncmpio_subfile_partition(NC *ncp);
 
 extern int ncmpio_subfile_getput_vars(NC *ncp, NC_var *varp,
            const MPI_Offset start[], const MPI_Offset count[],

@@ -484,7 +484,6 @@ define(`IGETPUT_API',dnl
  *         flexible APIs and if its value is MPI_DATATYPE_NULL, then it means
  *         the data type of buffer in memory matches the variable external
  *         data type and bufcount is thus ignored.
- * api     NC_VAR, NC_VAR1, NC_VARA, NC_VARS, or NC_VARM
  * reqMode indicates modes (NC_REQ_COLL/NC_REQ_INDEP/NC_REQ_WR etc.)
  */
 int
@@ -498,49 +497,15 @@ ncmpio_i$1_var(void             *ncdp,
                MPI_Offset        bufcount,
                MPI_Datatype      buftype,
                int              *reqid,
-               NC_api            api,
                int               reqMode)
 {
-    int         err;
-    NC         *ncp=(NC*)ncdp;
-    NC_var     *varp=NULL;
-    MPI_Offset *_start, *_count;
+    NC *ncp=(NC*)ncdp;
 
-#if 0
-    if (reqid != NULL) *reqid = NC_REQ_NULL;
+    /* Note sanity check for ncdp and varid has been done in dispatchers */
 
-    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
-     * NC_ECHAR, NC_EINVAL */
-    err = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
-    if (err != NC_NOERR) return err;
-
-    if (fIsSet(reqMode, NC_REQ_ZERO)) /* zero-length request */
-        return NC_NOERR;
-
-    /* check NC_EINVALCOORDS, NC_EEDGE, NC_ESTRIDE */
-    err = ncmpii_start_count_stride_check(ncp->format, api, varp->ndims,
-                              ncp->numrecs, varp->shape, start, count,
-                              stride, reqMode);
-    if (err != NC_NOERR) return err;
-#endif
-
-    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
-    varp = ncp->vars.value[varid];
-
-    _start = (MPI_Offset*)start;
-    _count = (MPI_Offset*)count;
-         if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
-    else if (api == API_VAR1) GET_ONE_COUNT(_count)
-
-    err = ncmpio_igetput_varm(ncp, varp, _start, _count, stride, imap,
-                                 (void*)buf, bufcount, buftype,
-                                 reqid, reqMode, 0);
-
-         if (api == API_VAR)  NCI_Free(_start);
-    else if (api == API_VAR1) NCI_Free(_count);
-
-    return err;
+    return ncmpio_igetput_varm(ncp, ncp->vars.value[varid], start, count,
+                               stride, imap, (void*)buf, bufcount, buftype,
+                               reqid, reqMode, 0);
 }
 ')dnl
 dnl

@@ -25,6 +25,32 @@ include(`utils.m4')dnl
 
 define(`GOTO_CHECK',`{ DEBUG_ASSIGN_ERROR(err, $1) goto err_check; }')
 
+#define GET_ONE_COUNT(ndims, count) {                                    \
+    int _i;                                                              \
+    count = (MPI_Offset*) NCI_Malloc((size_t)ndims * SIZEOF_MPI_OFFSET); \
+    for (_i=0; _i<ndims; _i++)                                           \
+        count[_i] = 1;                                                   \
+}
+
+#define GET_FULL_DIMENSIONS(pncp, varp, start, count) {                       \
+    int _i=0;                                                                 \
+    start = (MPI_Offset*) NCI_Malloc((size_t)varp.ndims*2*SIZEOF_MPI_OFFSET); \
+    count = start + varp.ndims;                                               \
+                                                                              \
+    if (varp.recdim >= 0) { /* find current numrec if varp is record var */   \
+        MPI_Offset numrecs;                                                   \
+        err = pncp->driver->inq_dim(pncp->ncp, varp.recdim, NULL, &numrecs);  \
+        if (err != NC_NOERR) return err;                                      \
+        count[0] = numrecs;                                                   \
+        start[0] = 0;                                                         \
+        _i = 1;                                                               \
+    }                                                                         \
+    for (; _i<varp.ndims; _i++) {                                             \
+        count[_i] = varp.shape[_i];                                           \
+        start[_i] = 0;                                                        \
+    }                                                                         \
+}
+
 
 /*----< check_EINVALCOORDS() >-----------------------------------------------*/
 static
@@ -260,6 +286,7 @@ APINAME($1,$2,$3,$4)(int ncid,
     int status, err, reqMode=0;
     NC_api api_kind;
     PNC *pncp;
+    ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -305,15 +332,19 @@ APINAME($1,$2,$3,$4)(int ncid,
                ifelse(`$3',`',`NC_REQ_FLEX', `NC_REQ_HL') |
                ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
 
+    ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varid], start, count)',
+           `$2',`1',`GET_ONE_COUNT(pncp->vars[varid].ndims, count)')
+
     /* call the subroutine that implements APINAME($1,$2,$3,$4)() */
     status = pncp->driver->`$1'_var(pncp->ncp,
                                     varid,
-                                    ArgStartCountStrideMap($2),
+                                    start, count, ArgStrideMap($2),
                                     buf,
                                     ifelse(`$3',`',`bufcount, buftype',
                                                    `-1, ITYPE2MPI($3)'),
-                                    api_kind,
                                     reqMode);
+
+    ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
 
     ifelse(`$4',`',`return status;',`
     return (err != NC_NOERR) ? err : status; /* first error encountered */')
@@ -526,19 +557,26 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     reqs = (int*) NCI_Malloc((size_t)nvars * SIZEOF_INT);
     for (i=0; i<nvars; i++) {
         /* call the nonblocking subroutines */
+        ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
         MPI_Offset *stride=NULL, *imap=NULL;
         ifelse(`$2',`m',`if (imaps != NULL) imap = imaps[i];
         if (strides != NULL) stride = strides[i];')
         ifelse(`$2',`s',`if (strides != NULL) stride = strides[i];')
+        ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varids[i]], start, count)',
+               `$2',`1',`GET_ONE_COUNT(pncp->vars[varids[i]].ndims, count)')
+
         err = pncp->driver->i`$1'_var(pncp->ncp,
                                       varids[i],
-                                      MStartCount($2), stride, imap,
+                                      ifelse(`$2',`',`start, count,',
+                                             `$2',`1',`starts[i], count,',
+                                             `starts[i], counts[i],')
+                                      stride, imap,
                                       bufs[i],
                                       ifelse(`$3',`',`bufcounts[i],buftypes[i]',
                                                      `-1, ITYPE2MPI($3)'),
                                       &reqs[i],
-                                      api_kind,
                                       reqMode);
+        ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
         if (err != NC_NOERR) break;
     }
     status = pncp->driver->wait(pncp->ncp, i, reqs, NULL, reqMode);
@@ -577,6 +615,7 @@ IAPINAME($1,$2,$3)(int ncid,
     int err, reqMode;
     NC_api api_kind;
     PNC *pncp;
+    ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -617,16 +656,21 @@ IAPINAME($1,$2,$3)(int ncid,
                      `$1',`bput',`NC_REQ_WR | NC_REQ_NBB') |
               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL');
 
+    ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varid], start, count)',
+           `$2',`1',`GET_ONE_COUNT(pncp->vars[varid].ndims, count)')
+
     /* calling the subroutine that implements IAPINAME($1,$2,$3)() */
-    return pncp->driver->`$1'_var(pncp->ncp,
-                                  varid,
-                                  ArgStartCountStrideMap($2),
-                                  buf,
-                                  ifelse(`$3',`',`bufcount, buftype',
-                                                 `-1, ITYPE2MPI($3)'),
-                                  reqid,
-                                  api_kind,
-                                  reqMode);
+    err = pncp->driver->`$1'_var(pncp->ncp,
+                                 varid,
+                                 start, count, ArgStrideMap($2),
+                                 buf,
+                                 ifelse(`$3',`',`bufcount, buftype',
+                                                `-1, ITYPE2MPI($3)'),
+                                 reqid,
+                                 reqMode);
+
+    ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
+    return err;
 }
 ')dnl
 dnl

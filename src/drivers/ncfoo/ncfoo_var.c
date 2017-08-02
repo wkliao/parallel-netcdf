@@ -35,6 +35,7 @@
  *
  * ncmpi_iget_varn_<type>()         : dispatcher->iget_varn()
  * ncmpi_iput_varn_<type>()         : dispatcher->iput_varn()
+ * ncmpi_bput_varn_<type>()         : dispatcher->bput_varn()
  *
  * ncmpi_get_vard()                 : dispatcher->get_vard()
  * ncmpi_put_vard()                 : dispatcher->put_vard()
@@ -61,6 +62,12 @@ ncfoo_def_var(void       *ncdp,
               const int  *dimids,
               int        *varidp)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->def_var(foo->ncp, name, xtype, ndims, dimids, varidp);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -69,6 +76,12 @@ ncfoo_inq_varid(void       *ncdp,
                 const char *name,
                 int        *varid)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->inq_varid(foo->ncp, name, varid);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -84,6 +97,13 @@ ncfoo_inq_var(void       *ncdp,
               int        *no_fillp,
               void       *fill_valuep)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->inq_var(foo->ncp, varid, name, xtypep, ndimsp, dimids,
+                               nattsp, offsetp, no_fillp, fill_valuep);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -92,6 +112,12 @@ ncfoo_rename_var(void       *ncdp,
                  int         varid,
                  const char *newname)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->rename_var(foo->ncp, varid, newname);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -105,9 +131,15 @@ ncfoo_get_var(void             *ncdp,
               void             *buf,
               MPI_Offset        bufcount,
               MPI_Datatype      buftype,
-              NC_api            api,
               int               reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->get_var(foo->ncp, varid, start, count, stride, imap,
+                               buf, bufcount, buftype, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -121,9 +153,42 @@ ncfoo_put_var(void             *ncdp,
               const void       *buf,
               MPI_Offset        bufcount,
               MPI_Datatype      buftype,
-              NC_api            api,
               int               reqMode)
 {
+    int err;
+    void *cbuf=(void*)buf;
+    NC_foo *foo = (NC_foo*)ncdp;
+
+    if (imap != NULL || bufcount != -1) {
+        /* pack buf to cbuf -------------------------------------------------*/
+        /* If called from a true varm API or a flexible API, ncmpii_pack()
+         * packs user buf into a contiguous cbuf (need to be freed later).
+         * Otherwise, cbuf is simply set to buf. ncmpii_pack() also returns
+         * etype (MPI primitive datatype in buftype), and nelems (number of
+         * etypes in buftype * bufcount)
+         */
+        int ndims;
+        MPI_Offset nelems;
+        MPI_Datatype etype;
+
+        err = foo->driver->inq_var(foo->ncp, varid, NULL, NULL, &ndims, NULL,
+                                   NULL, NULL, NULL, NULL);
+        if (err != NC_NOERR) return err;
+
+        err = ncmpii_pack(ndims, count, imap, (void*)buf, bufcount, buftype,
+                          &nelems, &etype, &cbuf);
+        if (err != NC_NOERR) return err;
+
+        imap     = NULL;
+        bufcount = (nelems == 0) ? 0 : -1;  /* make it a high-level API */
+        buftype  = etype;                   /* an MPI primitive type */
+    }
+
+    err = foo->driver->put_var(foo->ncp, varid, start, count, stride, imap,
+                               cbuf, bufcount, buftype, reqMode);
+    if (cbuf != buf) NCI_Free(cbuf);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -138,9 +203,15 @@ ncfoo_iget_var(void             *ncdp,
                MPI_Offset        bufcount,
                MPI_Datatype      buftype,
                int              *reqid,
-               NC_api            api,
                int               reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->iget_var(foo->ncp, varid, start, count, stride, imap,
+                                buf, bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -155,12 +226,65 @@ ncfoo_iput_var(void             *ncdp,
                MPI_Offset        bufcount,
                MPI_Datatype      buftype,
                int              *reqid,
-               NC_api            api,
                int               reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->iput_var(foo->ncp, varid, start, count, stride, imap,
+                                buf, bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
+int
+ncfoo_buffer_attach(void       *ncdp,
+                    MPI_Offset  bufsize)
+{
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->buffer_attach(foo->ncp, bufsize);
+    if (err != NC_NOERR) return err;
+
+    return NC_NOERR;
+}
+
+int
+ncfoo_buffer_detach(void *ncdp)
+{
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->buffer_detach(foo->ncp);
+    if (err != NC_NOERR) return err;
+
+    return NC_NOERR;
+}
+
+int
+ncfoo_bput_var(void             *ncdp,
+               int               varid,
+               const MPI_Offset *start,
+               const MPI_Offset *count,
+               const MPI_Offset *stride,
+               const MPI_Offset *imap,
+               const void       *buf,
+               MPI_Offset        bufcount,
+               MPI_Datatype      buftype,
+               int              *reqid,
+               int               reqMode)
+{
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->bput_var(foo->ncp, varid, start, count, stride, imap,
+                                buf, bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
+    return NC_NOERR;
+}
 int
 ncfoo_get_varn(void              *ncdp,
                int                varid,
@@ -172,6 +296,13 @@ ncfoo_get_varn(void              *ncdp,
                MPI_Datatype       buftype,
                int                reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->get_varn(foo->ncp, varid, num, starts, counts, buf,
+                                bufcount, buftype, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -186,6 +317,13 @@ ncfoo_put_varn(void              *ncdp,
                MPI_Datatype       buftype,
                int                reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->put_varn(foo->ncp, varid, num, starts, counts, buf,
+                                bufcount, buftype, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -201,6 +339,13 @@ ncfoo_iget_varn(void               *ncdp,
                 int                *reqid,
                 int                 reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->iget_varn(foo->ncp, varid, num, starts, counts, buf,
+                                 bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -216,6 +361,35 @@ ncfoo_iput_varn(void               *ncdp,
                 int                *reqid,
                 int                 reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->iput_varn(foo->ncp, varid, num, starts, counts, buf,
+                                 bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
+    return NC_NOERR;
+}
+
+int
+ncfoo_bput_varn(void               *ncdp,
+                int                 varid,
+                int                 num,
+                MPI_Offset* const  *starts,
+                MPI_Offset* const  *counts,
+                const void         *buf,
+                MPI_Offset          bufcount,
+                MPI_Datatype        buftype,
+                int                *reqid,
+                int                 reqMode)
+{
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->bput_varn(foo->ncp, varid, num, starts, counts, buf,
+                                 bufcount, buftype, reqid, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -228,6 +402,13 @@ ncfoo_get_vard(void         *ncdp,
                MPI_Datatype  buftype,
                int           reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->get_vard(foo->ncp, varid, filetype, buf, bufcount,
+                                buftype, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -240,35 +421,13 @@ ncfoo_put_vard(void         *ncdp,
                MPI_Datatype  buftype,
                int           reqMode)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->put_vard(foo->ncp, varid, filetype, buf, bufcount,
+                                buftype, reqMode);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
-int
-ncfoo_buffer_attach(void       *ncdp,
-                    MPI_Offset  bufsize)
-{
-    return NC_NOERR;
-}
-
-int
-ncfoo_buffer_detach(void *ncdp)
-{
-    return NC_NOERR;
-}
-
-int
-ncfoo_bput_var(void             *ncdp,
-               int               varid,
-               const MPI_Offset *start,
-               const MPI_Offset *count,
-               const MPI_Offset *stride,
-               const MPI_Offset *imap,
-               const void       *buf,
-               MPI_Offset        bufcount,
-               MPI_Datatype      buftype,
-               int              *reqid,
-               NC_api            api,
-               int               reqMode)
-{
-    return NC_NOERR;
-}

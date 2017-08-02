@@ -210,7 +210,7 @@ ncmpio_create(MPI_Comm     comm,
 #ifdef ENABLE_SUBFILING
     ncp->subfile_mode = 0;
     ncp->num_subfiles = 0;
-    ncp->ncid_sf      = -1; /* subfile ncid; init to -1 */
+    ncp->ncp_sf       = NULL; /* pointer to subfile NC object */
 #endif
 
     ncp->chunk        = NC_DEFAULT_CHUNKSIZE;

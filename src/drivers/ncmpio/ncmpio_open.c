@@ -111,7 +111,7 @@ ncmpio_open(MPI_Comm     comm,
 #ifdef ENABLE_SUBFILING
     ncp->subfile_mode = 0;
     ncp->num_subfiles = 0;
-    ncp->ncid_sf      = -1; /* subfile ncid; init to -1 */
+    ncp->ncp_sf       = NULL; /* pointer to subfile NC object */
 #endif
 
     ncp->chunk        = NC_DEFAULT_CHUNKSIZE;
@@ -166,27 +166,33 @@ ncmpio_open(MPI_Comm     comm,
 #ifdef ENABLE_SUBFILING
     if (ncp->subfile_mode) {
         /* check subfiling attribute */
-        err = ncmpio_get_att(ncp, NC_GLOBAL, "num_subfiles", &ncp->num_subfiles,
-                             MPI_INT);
+        err = ncmpio_get_att(ncp, NC_GLOBAL, "_PnetCDF_SubFiling.num_subfiles",
+                             &ncp->num_subfiles, MPI_INT);
         if (err == NC_NOERR && ncp->num_subfiles > 1) {
             /* ignore error NC_ENOTATT if this attribute is not defined */
             for (i=0; i<ncp->vars.ndefined; i++) {
-                err = ncmpio_get_att(ncp, i, "num_subfiles",
-                                     &ncp->vars.value[i]->num_subfiles, MPI_INT);
+                /* variables may have different numbers of subfiles */
+                err = ncmpio_get_att(ncp, i, "_PnetCDF_SubFiling.num_subfiles",
+                             &ncp->vars.value[i]->num_subfiles,MPI_INT);
                 if (err == NC_ENOTATT) continue;
                 if (err != NC_NOERR) return err;
-
                 if (ncp->vars.value[i]->num_subfiles > 1) {
-                    err = ncmpio_get_att(ncp, i, "ndims_org",
-                                         &ncp->vars.value[i]->ndims_org,MPI_INT);
+                    /* find the orginal ndims of variable i */
+                    err = ncmpio_get_att(ncp,i,"_PnetCDF_SubFiling.ndims_org",
+                                 &ncp->vars.value[i]->ndims_org,MPI_INT);
+                    if (err != NC_NOERR) return err;
+                    ncp->vars.value[i]->dimids_org = (int*) NCI_Malloc(
+                              ncp->vars.value[i]->ndims_org * SIZEOF_INT);
+                    err = ncmpio_get_att(ncp,i,"_PnetCDF_SubFiling.dimids_org",
+                              ncp->vars.value[i]->dimids_org, MPI_INT);
                     if (err != NC_NOERR) return err;
                 }
             }
-            if (ncp->num_subfiles > 1) {
-                err = ncmpio_subfile_open(ncp, &ncp->ncid_sf);
-                if (err != NC_NOERR) return err;
-            }
+            /* open subfile */
+            err = ncmpio_subfile_open(ncp);
+            if (err != NC_NOERR) return err;
         }
+        else ncp->num_subfiles = 0;
     }
     else
         ncp->num_subfiles = 0;

@@ -541,7 +541,6 @@ define(`GETPUT_API',dnl
  *         flexible API and if its value is MPI_DATATYPE_NULL, then it means
  *         the data type of buf in memory matches the variable external data
  *         type. In this case, bufcount is ignored.
- * api     NC_VAR, NC_VAR1, NC_VARA, NC_VARS, or NC_VARM
  * reqMode indicates modes (NC_REQ_COLL/NC_REQ_INDEP/NC_REQ_WR etc.)
  */
 int
@@ -554,14 +553,11 @@ ncmpio_$1_var(void             *ncdp,
               ifelse(`$1',`put',`const') void *buf,
               MPI_Offset        bufcount,
               MPI_Datatype      buftype,
-              NC_api            api,
               int               reqMode)
 
 {
-    int         status;
-    NC         *ncp=(NC*)ncdp;
-    NC_var     *varp=NULL;
-    MPI_Offset *_start, *_count;
+    NC     *ncp=(NC*)ncdp;
+    NC_var *varp=NULL;
 
     /* sanity check has been done at dispatchers */
 
@@ -573,32 +569,21 @@ ncmpio_$1_var(void             *ncdp,
      * varid has been done in dispatchers */
     varp = ncp->vars.value[varid];
 
-    _start = (MPI_Offset*)start;
-    _count = (MPI_Offset*)count;
-         if (api == API_VAR)  GET_FULL_DIMENSIONS(_start, _count)
-    else if (api == API_VAR1) GET_ONE_COUNT(_count)
-
 #ifdef ENABLE_SUBFILING
     /* call a separate routine if variable is stored in subfiles */
     if (varp->num_subfiles > 1) {
         if (imap != NULL) {
             fprintf(stderr, "varm APIs for subfiling is NOT implemented\n");
-            DEBUG_ASSIGN_ERROR(status, NC_ENOTSUPPORT)
+            DEBUG_RETURN_ERROR(NC_ENOTSUPPORT)
         }
         else
-            status = ncmpio_subfile_getput_vars(ncp, varp, _start, _count,
-                                                stride, (void*)buf, bufcount,
-                                                buftype, reqMode);
+            return ncmpio_subfile_getput_vars(ncp, varp, start, count,
+                                              stride, (void*)buf, bufcount,
+                                              buftype, reqMode);
     }
-    else
 #endif
-    status = $1_varm(ncp, varp, _start, _count, stride, imap, (void*)buf,
-                     bufcount, buftype, reqMode);
-
-         if (api == API_VAR)  NCI_Free(_start);
-    else if (api == API_VAR1) NCI_Free(_count);
-
-    return status;
+    return $1_varm(ncp, varp, start, count, stride, imap, (void*)buf,
+                   bufcount, buftype, reqMode);
 }
 ')dnl
 dnl

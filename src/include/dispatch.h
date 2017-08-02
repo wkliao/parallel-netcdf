@@ -82,8 +82,8 @@ struct PNC_driver {
     int (*inq_varid)(void*,const char*,int*);
     int (*rename_var)(void*,int,const char*);
 
-    int (*get_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,NC_api,int);
-    int (*put_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,NC_api,int);
+    int (*get_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,int);
+    int (*put_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int);
 
     int (*get_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,int);
     int (*put_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int);
@@ -91,9 +91,9 @@ struct PNC_driver {
     int (*get_vard)(void*,int,MPI_Datatype,void*,MPI_Offset,MPI_Datatype,int);
     int (*put_vard)(void*,int,MPI_Datatype,const void*,MPI_Offset,MPI_Datatype,int);
 
-    int (*iget_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
-    int (*iput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
-    int (*bput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,NC_api,int);
+    int (*iget_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,void*,MPI_Offset,MPI_Datatype,int*,int);
+    int (*iput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,int);
+    int (*bput_var)(void*,int,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const MPI_Offset*,const void*,MPI_Offset,MPI_Datatype,int*,int);
 
     int (*iget_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,void*,MPI_Offset,MPI_Datatype,int*,int);
     int (*iput_varn)(void*,int,int,MPI_Offset* const*,MPI_Offset* const*,const void*,MPI_Offset,MPI_Datatype,int*,int);

@@ -138,7 +138,7 @@ combine_env_hints(MPI_Info  user_info,
         if (*new_info == MPI_INFO_NULL)
             MPI_Info_create(new_info); /* ignore error */
 
-        char *env_str_cpy, *env_str_saved, *hint, *key;
+        char *env_str_cpy, *env_str_saved=NULL, *hint, *key;
         env_str_cpy = strdup(env_str);
         hint = strtok_r(env_str_cpy, ";", &env_str_saved);
         while (hint != NULL) {
@@ -148,6 +148,7 @@ combine_env_hints(MPI_Info  user_info,
                 if (NULL != strtok(hint, " \t"))
                     printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
                 /* else case: ignore white-spaced hints */
+                free(hint_saved);
                 hint = strtok_r(NULL, ";", &env_str_saved); /* get next hint */
                 continue;
             }
@@ -176,9 +177,10 @@ ncmpi_create(MPI_Comm    comm,
              int        *ncidp)
 {
     int default_format, rank, status=NC_NOERR, err;
-    int safe_mode=0, mpireturn, root_cmode;
+    int safe_mode=0, mpireturn, root_cmode, enable_foo_driver=0;
     char *env_str;
     MPI_Info combined_info=MPI_INFO_NULL;
+    void *ncp;
     PNC *pncp;
     PNC_driver *driver;
 
@@ -223,10 +225,28 @@ ncmpi_create(MPI_Comm    comm,
     /* continue to use root's cmode to create the file, but will report cmode
      * inconsistency error, if there is any */
 
-    /* TODO: Use cmode to tell the file format which is later used to select
-     * the right driver. For now, we have only one driver, ncmpio.
+    /* combine user's info and PNETCDF_HINTS env variable */
+    combine_env_hints(info, &combined_info);
+
+    /* check if nc_foo_driver is enabled */
+    if (combined_info != MPI_INFO_NULL) {
+        char value[MPI_MAX_INFO_VAL];
+        int flag;
+
+        MPI_Info_get(combined_info, "nc_foo_driver", MPI_MAX_INFO_VAL-1,
+                     value, &flag);
+        if (flag && strcasecmp(value, "enable") == 0)
+            enable_foo_driver = 1;
+    }
+
+    /* TODO: Use environment variable and cmode to tell the file format which
+     * is later used to select the right driver. For now, we have only one
+     * driver, ncmpio.
      */
-    driver = ncmpio_inq_driver();
+    if (enable_foo_driver)
+        driver = ncfoo_inq_driver();
+    else /* default is ncmpio driver */
+        driver = ncmpio_inq_driver();
 
 #if 0 /* refer to netCDF library's USE_REFCOUNT */
     /* check whether this path is already opened */
@@ -238,14 +258,25 @@ ncmpi_create(MPI_Comm    comm,
     err = new_id_PNCList(ncidp);
     if (err != NC_NOERR) return err;
 
+    /* calling the create subroutine */
+    err = driver->create(comm, path, cmode, *ncidp, combined_info, &ncp);
+    if (status == NC_NOERR) status = err;
+    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
+    if (status != NC_NOERR && status != NC_EMULTIDEFINE_CMODE) {
+        *ncidp = -1;
+        return status;
+    }
+
     /* Create a PNC object and save the driver pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
     if (pncp == NULL) {
+        driver->close(ncp); /* close file and ignore error */
         *ncidp = -1;
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     pncp->path = (char*) malloc(strlen(path)+1);
     if (pncp->path == NULL) {
+        driver->close(ncp); /* close file and ignore error */
         *ncidp = -1;
         free(pncp);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
@@ -258,24 +289,11 @@ ncmpi_create(MPI_Comm    comm,
     pncp->nvars      = 0;
     pncp->vars       = NULL;
     pncp->flag       = NC_MODE_DEF | NC_MODE_CREATE;
-    if (safe_mode) pncp->flag |= NC_MODE_SAFE;
+    pncp->ncp        = ncp;
+
+    if (safe_mode)         pncp->flag |= NC_MODE_SAFE;
+    if (enable_foo_driver) pncp->flag |= NC_MODE_BB;
     MPI_Comm_dup(comm, &pncp->comm);
-
-    /* combine user's info and PNETCDF_HINTS env variable */
-    combine_env_hints(info, &combined_info);
-
-    /* calling the create subroutine */
-    err = driver->create(comm, path, cmode, *ncidp, combined_info, &pncp->ncp);
-    if (status == NC_NOERR) status = err;
-    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
-
-    if (status != NC_NOERR && status != NC_EMULTIDEFINE_CMODE) {
-        *ncidp = -1;
-        MPI_Comm_free(&pncp->comm);
-        free(pncp->path);
-        free(pncp);
-        return status;
-    }
 
     /* set the file format version based on the create mode, cmode */
     ncmpi_inq_default_format(&default_format);
@@ -290,6 +308,7 @@ ncmpi_create(MPI_Comm    comm,
     /* add to PNCList */
     err = add_to_PNCList(pncp, *ncidp);
     if (err != NC_NOERR) {
+        driver->close(ncp); /* close file and ignore error */
         *ncidp = -1;
         MPI_Comm_free(&pncp->comm);
         free(pncp->path);
@@ -306,12 +325,13 @@ ncmpi_open(MPI_Comm    comm,
            const char *path,
            int         omode,
            MPI_Info    info,
-           int        *ncidp)
+           int        *ncidp)  /* OUT */
 {
     int i, nalloc, rank, format, msg[2], status=NC_NOERR, err;
-    int safe_mode=0, mpireturn, root_omode;
+    int safe_mode=0, mpireturn, root_omode, enable_foo_driver=0;
     char *env_str;
     MPI_Info combined_info=MPI_INFO_NULL;
+    void *ncp;
     PNC *pncp;
     PNC_driver *driver;
 
@@ -377,12 +397,28 @@ ncmpi_open(MPI_Comm    comm,
     /* continue to use root's omode to open the file, but will report omode
      * inconsistency error, if there is any */
 
-    if (format == NC_FORMAT_CLASSIC ||
-        format == NC_FORMAT_CDF2 ||
-        format == NC_FORMAT_CDF5) {
-        /* TODO: currently we only have ncmpio driver. Need to add other
-         * drivers once they are available
-         */
+    /* combine user's info and PNETCDF_HINTS env variable */
+    combine_env_hints(info, &combined_info);
+
+    /* check if nc_foo_driver is enabled */
+    if (combined_info != MPI_INFO_NULL) {
+        char value[MPI_MAX_INFO_VAL];
+        int flag;
+
+        MPI_Info_get(combined_info, "nc_foo_driver", MPI_MAX_INFO_VAL-1,
+                     value, &flag);
+        if (flag && strcasecmp(value, "enable") == 0)
+            enable_foo_driver = 1;
+    }
+
+    /* TODO: currently we only have ncmpio driver. Need to add other
+     * drivers once they are available
+     */
+    if (enable_foo_driver)
+        driver = ncfoo_inq_driver();
+    else if (format == NC_FORMAT_CLASSIC ||
+             format == NC_FORMAT_CDF2 ||
+             format == NC_FORMAT_CDF5) {
         driver = ncmpio_inq_driver();
     }
     else if (format == NC_FORMAT_NETCDF4_CLASSIC) {
@@ -401,14 +437,25 @@ ncmpi_open(MPI_Comm    comm,
     err = new_id_PNCList(ncidp);
     if (err != NC_NOERR) return err;
 
+    /* calling the open subroutine */
+    err = driver->open(comm, path, omode, *ncidp, combined_info, &ncp);
+    if (status == NC_NOERR) status = err;
+    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
+    if (status != NC_NOERR && status != NC_EMULTIDEFINE_OMODE) {
+        *ncidp = -1;
+        return status;
+    }
+
     /* Create a PNC object and save its driver pointer */
     pncp = (PNC*) malloc(sizeof(PNC));
     if (pncp == NULL) {
+        driver->close(ncp); /* close file and ignore error */
         *ncidp = -1;
         DEBUG_RETURN_ERROR(NC_ENOMEM)
     }
     pncp->path = (char*) malloc(strlen(path)+1);
     if (pncp->path == NULL) {
+        driver->close(ncp); /* close file and ignore error */
         *ncidp = -1;
         free(pncp);
         DEBUG_RETURN_ERROR(NC_ENOMEM)
@@ -421,51 +468,33 @@ ncmpi_open(MPI_Comm    comm,
     pncp->nvars      = 0;
     pncp->vars       = NULL;
     pncp->flag       = 0;
+    pncp->ncp        = ncp;
+    pncp->format     = format;
     if (!fIsSet(omode, NC_WRITE)) pncp->flag |= NC_MODE_RDONLY;
-    if (safe_mode) pncp->flag |= NC_MODE_SAFE;
+    if (safe_mode)                pncp->flag |= NC_MODE_SAFE;
+    if (enable_foo_driver)        pncp->flag |= NC_MODE_BB;
     MPI_Comm_dup(comm, &pncp->comm);
-
-    /* combine user's info and PNETCDF_HINTS env variable */
-    combine_env_hints(info, &combined_info);
-
-    /* calling the open subroutine */
-    err = driver->open(comm, path, omode, *ncidp, combined_info, &pncp->ncp);
-    if (status == NC_NOERR) status = err;
-    if (combined_info != MPI_INFO_NULL) MPI_Info_free(&combined_info);
-
-    if (status != NC_NOERR && status != NC_EMULTIDEFINE_OMODE) {
-        *ncidp = -1;
-        MPI_Comm_free(&pncp->comm);
-        free(pncp->path);
-        free(pncp);
-        return status;
-    }
-
-    pncp->format = format;
 
     /* add to the PNCList */
     err = add_to_PNCList(pncp, *ncidp);
-    if (err != NC_NOERR) {
-        *ncidp = -1;
-        MPI_Comm_free(&pncp->comm);
-        free(pncp->path);
-        free(pncp);
-        return err;
-    }
+    if (err != NC_NOERR) goto fn_exit;
 
     /* construct pncp->vars[] */
 
     /* inquire number of dimensions, variables defined and rec dim ID */
     err = driver->inq(pncp->ncp, &pncp->ndims, &pncp->nvars, NULL,
                       &pncp->unlimdimid);
-    if (err != NC_NOERR) return err;
+    if (err != NC_NOERR) goto fn_exit;
 
     if (pncp->nvars == 0) return status; /* no variable defined */
 
     /* allocate chunk size for pncp->vars[] */
     nalloc = _RNDUP(pncp->nvars, PNC_VARS_CHUNK);
     pncp->vars = NCI_Malloc(nalloc * sizeof(PNC_var));
-    if (pncp->vars == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    if (pncp->vars == NULL) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
+        goto fn_exit;
+    }
 
     for (i=0; i<pncp->nvars; i++) {
         nc_type xtype;
@@ -484,17 +513,27 @@ ncmpi_open(MPI_Comm    comm,
             dimids = (int*) NCI_Malloc(ndims * SIZEOF_INT);
             err = driver->inq_var(pncp->ncp, i, NULL, NULL, NULL,
                                   dimids, NULL, NULL, NULL, NULL);
-            if (err != NC_NOERR) return err;
+            if (err != NC_NOERR) goto fn_exit;
             if (dimids[0] == pncp->unlimdimid)
                 pncp->vars[i].recdim = pncp->unlimdimid;
             for (j=0; j<ndims; j++) {
                 /* obtain size of dimension j */
                 err = driver->inq_dim(pncp->ncp, dimids[j], NULL,
                                       pncp->vars[i].shape+j);
-                if (err != NC_NOERR) return err;
+                if (err != NC_NOERR) goto fn_exit;
             }
             NCI_Free(dimids);
         }
+    }
+
+fn_exit:
+    if (err != NC_NOERR) {
+        driver->close(ncp); /* close file and ignore error */
+        *ncidp = -1;
+        MPI_Comm_free(&pncp->comm);
+        free(pncp->path);
+        free(pncp);
+        if (status == NC_NOERR) status = err;
     }
 
     return status;
