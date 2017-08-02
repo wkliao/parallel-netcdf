@@ -28,6 +28,7 @@
 #define NC_MODE_CREATE 0x00008000  /* just created and still in define mode */
 #define NC_MODE_FILL   0x00010000  /* fill mode */
 #define NC_MODE_SAFE   0x00020000  /* safe mode enabled */
+#define NC_MODE_BB     0x00040000  /* burst buffering mode enabled */
 
 /* list of all API kinds */
 typedef enum {
@@ -76,7 +77,7 @@ struct PNC_driver {
     /* APIs read/write variables */
     int (*def_var)(void*,const char*,nc_type,int,const int*,int*);
     int (*def_var_fill)(void*,int,int,const void*);
-    int (*fill_rec)(void*,int,MPI_Offset);
+    int (*fill_var_rec)(void*,int,MPI_Offset);
     int (*inq_var)(void*,int,char*,nc_type*,int*,int*,int*,MPI_Offset*,int*,void*);
     int (*inq_varid)(void*,const char*,int*);
     int (*rename_var)(void*,int,const char*);

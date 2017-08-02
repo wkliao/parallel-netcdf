@@ -559,7 +559,7 @@ err_check:
     }
 
     /* calling the subroutine that implements ncmpi_fill_var_rec() */
-    return pncp->driver->fill_rec(pncp->ncp, varid, recno);
+    return pncp->driver->fill_var_rec(pncp->ncp, varid, recno);
 }
 
 /*----< ncmpi_rename_var() >-------------------------------------------------*/
