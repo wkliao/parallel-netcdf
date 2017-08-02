@@ -36,6 +36,12 @@ ncfoo_inq_attname(void *ncdp,
                   int   attid,
                   char *name)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->inq_attname(foo->ncp, varid, attid, name);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -45,6 +51,12 @@ ncfoo_inq_attid(void       *ncdp,
                 const char *name,
                 int        *attidp)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->inq_attid(foo->ncp, varid, name, attidp);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -55,6 +67,12 @@ ncfoo_inq_att(void       *ncdp,
               nc_type    *datatypep,
               MPI_Offset *lenp)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->inq_att(foo->ncp, varid, name, datatypep, lenp);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -64,6 +82,12 @@ ncfoo_rename_att(void       *ncdp,
                  const char *name,
                  const char *newname)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->rename_att(foo->ncp, varid, name, newname);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -75,6 +99,14 @@ ncfoo_copy_att(void       *ncdp_in,
                void       *ncdp_out,
                int         varid_out)
 {
+    int err;
+    NC_foo *foo_in  = (NC_foo*)ncdp_in;
+    NC_foo *foo_out = (NC_foo*)ncdp_out;
+    
+    err = foo_in->driver->copy_att(foo_in->ncp,  varid_in, name,
+                                   foo_out->ncp, varid_out);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -83,6 +115,12 @@ ncfoo_del_att(void       *ncdp,
               int         varid,
               const char *name)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->del_att(foo->ncp, varid, name);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -93,6 +131,12 @@ ncfoo_get_att(void         *ncdp,
               void         *buf,
               MPI_Datatype  itype)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->get_att(foo->ncp, varid, name, buf, itype);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
 
@@ -105,5 +149,12 @@ ncfoo_put_att(void         *ncdp,
               const void   *buf,
               MPI_Datatype  itype)
 {
+    int err;
+    NC_foo *foo = (NC_foo*)ncdp;
+    
+    err = foo->driver->put_att(foo->ncp, varid, name, xtype, nelems, buf,
+                               itype);
+    if (err != NC_NOERR) return err;
+
     return NC_NOERR;
 }
