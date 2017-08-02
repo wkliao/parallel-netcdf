@@ -241,31 +241,18 @@ ncmpio_$1_varn(void               *ncdp,
                int                *reqid,
                int                 reqMode)
 {
-    NC     *ncp=(NC*)ncdp;
-    NC_var *varp=NULL;
+    NC *ncp=(NC*)ncdp;
 
     if (reqid != NULL) *reqid = NC_REQ_NULL;
 
     /* check for zero-size request */
     if (num == 0 || bufcount == 0 || fIsSet(reqMode, NC_REQ_ZERO))
         return NC_NOERR;
-#if 0
-    int err;
-    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
-     * NC_ECHAR, NC_EINVAL */
-    err = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
-    if (err != NC_NOERR) return err;
 
-    /* checking for NC_EINVALCOORDS, NC_EEDGE, and NC_ESTRIDE will be done
-     * later at calling ncmpio_igetput_varm()
-     */
-#endif
-    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
-    varp = ncp->vars.value[varid];
+    /* Note sanity check for ncdp and varid has been done in dispatchers */
 
-    return igetput_varn(ncp, varp, num, starts, counts, (void*)buf, bufcount,
-                        buftype, reqid, reqMode);
+    return igetput_varn(ncp, ncp->vars.value[varid], num, starts, counts,
+                        (void*)buf, bufcount, buftype, reqid, reqMode);
 }
 ')dnl
 dnl

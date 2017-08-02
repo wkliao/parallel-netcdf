@@ -261,64 +261,16 @@ ncmpio_$1_varn(void              *ncdp,
                MPI_Datatype       buftype,
                int                reqMode)
 {
-    NC     *ncp=(NC*)ncdp;
-    NC_var *varp=NULL;
+    NC *ncp=(NC*)ncdp;
 
-#if 0
-    int err, status;
-    /* check NC_EPERM, NC_EINDEFINE, NC_EINDEP/NC_ENOTINDEP, NC_ENOTVAR,
-     * NC_ECHAR, NC_EINVAL */
-    status = ncmpio_sanity_check(ncp, varid, bufcount, buftype, reqMode, &varp);
-
-    if (status == NC_NOERR &&
-        fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
-        /* this collective API has a zero-length request */
-        return ncmpio_getput_zero_req(ncp, reqMode);
-
-    if (status == NC_NOERR && num > 0 && starts == NULL)
-        DEBUG_ASSIGN_ERROR(status, NC_ENULLSTART)
-
-    /* checking for NC_EINVALCOORDS, NC_EEDGE, and NC_ESTRIDE will be done
-     * later at calling ncmpio_igetput_varm()
-     */
-
-    if (ncp->safe_mode == 1 && fIsSet(reqMode, NC_REQ_COLL)) {
-        int min_st, mpireturn;
-        TRACE_COMM(MPI_Allreduce)(&status, &min_st, 1, MPI_INT, MPI_MIN,
-                                  ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        if (min_st != NC_NOERR) return min_st;
-    }
-
-    if (status != NC_NOERR) {
-        if (fIsSet(reqMode, NC_REQ_INDEP) ||
-            status == NC_EBADID ||
-            status == NC_EPERM ||
-            status == NC_EINDEFINE ||
-            status == NC_EINDEP ||
-            status == NC_ENOTINDEP)
-            return status;  /* fatal error, cannot continue */
-
-        /* for collective API, participate the collective I/O with zero-length
-         * request for this process */
-        err = ncmpio_getput_zero_req(ncp, reqMode);
-        assert(err == NC_NOERR);
-
-        /* return the error code from sanity check */
-        return status;
-    }
-#endif
     if (fIsSet(reqMode, NC_REQ_ZERO) && fIsSet(reqMode, NC_REQ_COLL))
         /* this collective API has a zero-length request */
         return ncmpio_getput_zero_req(ncp, reqMode);
 
-    /* obtain NC_var object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
-    varp = ncp->vars.value[varid];
+    /* Note sanity check for ncdp and varid has been done in dispatchers */
 
-    return getput_varn(ncp, varp, num, starts, counts, (void*)buf, bufcount,
-                       buftype, reqMode);
+    return getput_varn(ncp, ncp->vars.value[varid], num, starts, counts,
+                       (void*)buf, bufcount, buftype, reqMode);
 }
 ')dnl
 
