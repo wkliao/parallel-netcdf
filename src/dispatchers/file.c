@@ -120,6 +120,7 @@ static void
 combine_env_hints(MPI_Info  user_info,
                   MPI_Info *new_info)
 {
+    char *warn_str="Warning: skip ill-formed hint set in PNETCDF_HINTS";
     char *env_str;
 
     /* take hints from the environment variable PNETCDF_HINTS, a string of
@@ -135,6 +136,7 @@ combine_env_hints(MPI_Info  user_info,
 
     /* get environment variable PNETCDF_HINTS */
     if ((env_str = getenv("PNETCDF_HINTS")) != NULL) {
+#ifdef USE_STRTOK_R
         char *env_str_cpy, *env_str_saved, *hint, *key;
         env_str_cpy = strdup(env_str);
         env_str_saved = env_str_cpy;
@@ -144,7 +146,7 @@ combine_env_hints(MPI_Info  user_info,
             char *val = strchr(hint, '=');
             if (val == NULL) { /* ill-formed hint */
                 if (NULL != strtok(hint, " \t"))
-                    printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
+                    printf("%s: '%s'\n", warn_str, hint_saved);
                 /* else case: ignore white-spaced hints */
                 free(hint_saved);
                 hint = strtok_r(NULL, ";", &env_str_saved); /* get next hint */
@@ -153,7 +155,7 @@ combine_env_hints(MPI_Info  user_info,
             key = strtok(hint, "= \t");
             val = strtok(NULL, "= \t");
             if (NULL != strtok(NULL, "= \t")) /* expect no more token */
-                printf("Warning: skip ill-formed I/O hint set in PNETCDF_HINTS: '%s'\n",hint_saved);
+                printf("%s: '%s'\n", warn_str, hint_saved);
             else {
                 if (*new_info == MPI_INFO_NULL)
                     MPI_Info_create(new_info); /* ignore error */
@@ -164,6 +166,60 @@ combine_env_hints(MPI_Info  user_info,
             free(hint_saved);
         }
         free(env_str_cpy);
+#else
+        char *env_str_cpy, *hint, *next_hint, *key, *val, *deli;
+        char *hint_saved=NULL;
+
+        env_str_cpy = strdup(env_str);
+        next_hint = env_str_cpy;
+
+        do {
+            if (*next_hint == '\0') break;
+            hint = next_hint;
+            deli = strchr(hint, ';'); /* add terminate char */
+            if (deli != NULL) {
+                *deli = '\0';
+                next_hint = deli + 1;
+            }
+            else next_hint = "\0";
+            if (hint_saved != NULL) free(hint_saved);
+
+            /* skip all-blank hint */
+            hint_saved = strdup(hint);
+            if (strtok(hint, " \t") == NULL) continue;
+
+            free(hint_saved);
+            hint_saved = strdup(hint); /* save hint for error message */
+
+            deli = strchr(hint, '=');
+            if (deli == NULL) { /* ill-formed hint */
+                printf("%s: '%s'\n", warn_str, hint_saved);
+                continue;
+            }
+            *deli = '\0';
+
+            /* hint key */
+            key = strtok(hint, "= \t");
+            if (key == NULL || NULL != strtok(NULL, "= \t")) {
+                /* expect one token before = */
+                printf("%s: '%s'\n", warn_str, hint_saved);
+                continue;
+            }
+
+            /* hint value */
+            val = strtok(deli+1, "= \t");
+            if (NULL != strtok(NULL, "= \t")) { /* expect one token before = */
+                printf("%s: '%s'\n", warn_str, hint_saved);
+                continue;
+            }
+            if (*new_info == MPI_INFO_NULL)
+                MPI_Info_create(new_info); /* ignore error */
+            MPI_Info_set(*new_info, key, val); /* override or add */
+
+        } while (hint != NULL);
+        if (hint_saved != NULL) free(hint_saved);
+        free(env_str_cpy);
+#endif
     }
     /* return no error as all hints are advisory */
 }
