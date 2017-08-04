@@ -268,6 +268,19 @@ define(`IndexArgs', `ifelse(`$1', `',  `NULL, NULL, NULL',
                             `$1', `s', `start, count, stride',
                             `$1', `m', `start, count, stride')')dnl
 
+define(`FLEX_ARG',`ifelse(`$1',`',`bufcount, buftype',`-1, ITYPE2MPI($1)')')
+
+define(`IO_MODE',`ifelse(`$1', `get',`NC_REQ_RD',`$1', `put',`NC_REQ_WR',
+                         `$1',`iget',`NC_REQ_RD',`$1',`iput',`NC_REQ_WR',
+                         `$1',`bput',`NC_REQ_WR')')
+
+define(`NB_MODE',`ifelse(`$1', `get',`NC_REQ_BLK',`$1', `put',`NC_REQ_BLK',
+                         `$1',`iget',`NC_REQ_NBI',`$1',`iput',`NC_REQ_NBI',
+                         `$1',`bput',`NC_REQ_NBB')')
+
+define(`FLEX_MODE',`ifelse(`$1',`',`NC_REQ_FLEX',`NC_REQ_HL')')
+define(`COLL_MODE',`ifelse(`$1',`',`NC_REQ_INDEP',`NC_REQ_COLL')')
+
 dnl
 define(`APINAME',`ifelse(`$3',`',`ncmpi_$1_var$2$4',`ncmpi_$1_var$2_$3$4')')dnl
 dnl
@@ -286,7 +299,8 @@ APINAME($1,$2,$3,$4)(int ncid,
     int status, err, reqMode=0;
     PNC *pncp;
     ifelse(`$2',`',`',`NC_api api_kind=API_KIND($2);')
-    ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
+    ifelse(`$2',`',`MPI_Offset *start=NULL, *count=NULL;',
+           `$2',`1',`MPI_Offset *count=NULL;')
 
     /* check if ncid is valid.
      * For invalid ncid, we must return error now, as there is no way to
@@ -299,20 +313,19 @@ APINAME($1,$2,$3,$4)(int ncid,
     err = sanity_check(pncp, varid, IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
     
     ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
-    else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
-    ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
+    else if (imap == NULL && stride == NULL) api_kind = API_VARA;',
+           `$2',`s',`if (stride == NULL) api_kind = API_VARA;')
 
     ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
     if (err == NC_NOERR && pncp->vars[varid].ndims > 0)
         err = check_start_count_stride(pncp, varid, IS_READ($1), api_kind,
                                        IndexArgs($2));')
 
-    ifelse(`$3',`',`ifelse(`$4',`',`if (bufcount == 0)
-        /* independent flexible API, return now if zero-length request */
-        return NC_NOERR;')')
-
     ifelse(`$4',`',`/* for independent API, return now if error encountered */
-    if (err != NC_NOERR) return err;',`
+    if (err != NC_NOERR) return err;
+    ifelse(`$3',`',`
+    /* independent flexible API, return now if zero-length request */
+    if (bufcount == 0) return NC_NOERR;')',`
     /* collective APIs and safe mode enabled, check errors across all procs */
     if (pncp->flag & NC_MODE_SAFE) {
         err = allreduce_error(pncp, err);
@@ -324,30 +337,22 @@ APINAME($1,$2,$3,$4)(int ncid,
     else if (err != NC_NOERR) /* other errors, participate collective call */
         reqMode |= NC_REQ_ZERO;')
 
-    reqMode |= ifelse(`$1', `get',`NC_REQ_BLK | NC_REQ_RD',
-                      `$1', `put',`NC_REQ_BLK | NC_REQ_WR',
-                      `$1',`iget',`NC_REQ_NBI | NC_REQ_RD',
-                      `$1',`iput',`NC_REQ_NBI | NC_REQ_WR',
-                      `$1',`bput',`NC_REQ_NBB | NC_REQ_WR') |
-               ifelse(`$3',`',`NC_REQ_FLEX', `NC_REQ_HL') |
-               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    reqMode |= IO_MODE($1) | NB_MODE($1) | FLEX_MODE($3) | COLL_MODE($4);
 
-    ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varid], start, count)',
-           `$2',`1',`GET_ONE_COUNT(pncp->vars[varid].ndims, count)')
+    ifelse(`$2',`',`if (err == NC_NOERR)
+        GET_FULL_DIMENSIONS(pncp, pncp->vars[varid], start, count)',
+           `$2',`1',`if (err == NC_NOERR)
+        GET_ONE_COUNT(pncp->vars[varid].ndims, count)')
 
     /* call the subroutine that implements APINAME($1,$2,$3,$4)() */
-    status = pncp->driver->`$1'_var(pncp->ncp,
-                                    varid,
-                                    start, count, ArgStrideMap($2),
-                                    buf,
-                                    ifelse(`$3',`',`bufcount, buftype',
-                                                   `-1, ITYPE2MPI($3)'),
-                                    reqMode);
+    status = pncp->driver->`$1'_var(pncp->ncp, varid, start, count,
+                                    ArgStrideMap($2), buf,
+                                    FLEX_ARG($3), reqMode);
 
-    ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
+    ifelse(`$2',`',`if (err == NC_NOERR) NCI_Free(start);',
+           `$2',`1',`if (err == NC_NOERR) NCI_Free(count);')dnl
 
-    ifelse(`$4',`',`return status;',`
-    return (err != NC_NOERR) ? err : status; /* first error encountered */')
+    return ifelse(`$4',`',`status;',`(err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')dnl
 dnl
@@ -434,24 +439,11 @@ NAPINAME($1,$2,$3)(int                ncid,
     else if (err != NC_NOERR) /* other errors, participate collective call */
         reqMode |= NC_REQ_ZERO;')
 
-    reqMode |= ifelse(`$1', `get',`NC_REQ_BLK | NC_REQ_RD',
-                      `$1', `put',`NC_REQ_BLK | NC_REQ_WR',
-                      `$1',`iget',`NC_REQ_NBI | NC_REQ_RD',
-                      `$1',`iput',`NC_REQ_NBI | NC_REQ_WR',
-                      `$1',`bput',`NC_REQ_NBB | NC_REQ_WR') |
-               ifelse(`$2',`',`NC_REQ_FLEX', `NC_REQ_HL') |
-               ifelse(`$3',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    reqMode |= IO_MODE($1) | NB_MODE($1) | FLEX_MODE($2) | COLL_MODE($3);
 
     /* calling the subroutine that implements NAPINAME($1,$2,$3)() */
-    status = pncp->driver->`$1'_varn(pncp->ncp,
-                                     varid,
-                                     num,
-                                     starts,
-                                     counts,
-                                     buf,
-                                     ifelse(`$2',`',`bufcount, buftype',
-                                                    `-1, ITYPE2MPI($2)'),
-                                     reqMode);
+    status = pncp->driver->`$1'_varn(pncp->ncp, varid, num, starts, counts,
+                                     buf, FLEX_ARG($2), reqMode);
 
     ifelse(`$3',`',`return status;',`
     return (err != NC_NOERR) ? err : status; /* first error encountered */')
@@ -511,11 +503,12 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    ifelse(`$4',`',`if (nvars == 0) return NC_NOERR;')
+    ifelse(`$4',`',`/* for independent APIs, return now if zero-length request */
+    if (nvars == 0) return NC_NOERR;')
 
     ifelse(`$2',`m',`if (imaps == NULL && strides != NULL) api_kind = API_VARS;
-    else if (imaps == NULL && strides == NULL) api_kind = API_VARA;')
-    ifelse(`$2',`s',`if (strides == NULL) api_kind = API_VARA;')
+    else if (imaps == NULL && strides == NULL) api_kind = API_VARA;',
+           `$2',`s',`if (strides == NULL) api_kind = API_VARA;')
 
     for (i=0; i<nvars; i++) {
         err = sanity_check(pncp, varids[i], IO_TYPE($1), ITYPE2MPI($3), IS_COLL($4));
@@ -532,10 +525,7 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
         }')
     }
 
-    reqMode |= NC_REQ_NBI |
-               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-               ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL') |
-               ifelse(`$4',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    reqMode |= IO_MODE($1) | NC_REQ_NBI | FLEX_MODE($3) | COLL_MODE($4);
 
     ifelse(`$4',`',
     `/* for independent API, return now if error encountered */
@@ -555,26 +545,21 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
 
     reqs = (int*) NCI_Malloc((size_t)nvars * SIZEOF_INT);
     for (i=0; i<nvars; i++) {
-        /* call the nonblocking subroutines */
-        ifelse(`$2',`',`MPI_Offset *start, *count;',`$2',`1',`MPI_Offset *count;')
-        MPI_Offset *stride=NULL, *imap=NULL;
-        ifelse(`$2',`m',`if (imaps != NULL) imap = imaps[i];
-        if (strides != NULL) stride = strides[i];')
-        ifelse(`$2',`s',`if (strides != NULL) stride = strides[i];')
-        ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varids[i]], start, count)',
-               `$2',`1',`GET_ONE_COUNT(pncp->vars[varids[i]].ndims, count)')
+        MPI_Offset *start, *count, *stride=NULL, *imap=NULL;
 
-        err = pncp->driver->i`$1'_var(pncp->ncp,
-                                      varids[i],
-                                      ifelse(`$2',`',`start, count,',
-                                             `$2',`1',`starts[i], count,',
-                                             `starts[i], counts[i],')
-                                      stride, imap,
-                                      bufs[i],
+        /* call the nonblocking subroutines */
+        ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varids[i]], start, count)',
+               `$2',`1',`GET_ONE_COUNT(pncp->vars[varids[i]].ndims, count)
+        start = starts[i];',`start = starts[i]; count = counts[i];')
+        ifelse(`$2',`s',`if (strides != NULL) stride = strides[i];',
+               `$2',`m',`if (strides != NULL) stride = strides[i];
+        if (imaps != NULL) imap = imaps[i];')
+
+        err = pncp->driver->i`$1'_var(pncp->ncp, varids[i], start, count,
+                                      stride, imap, bufs[i],
                                       ifelse(`$3',`',`bufcounts[i],buftypes[i]',
                                                      `-1, ITYPE2MPI($3)'),
-                                      &reqs[i],
-                                      reqMode);
+                                      &reqs[i], reqMode);
         ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
         if (err != NC_NOERR) break;
     }
@@ -649,23 +634,15 @@ IAPINAME($1,$2,$3)(int ncid,
 
     ifelse(`$3',`',`if (bufcount == 0) return NC_NOERR;')
 
-    reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
-                     `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
-                     `$1',`bput',`NC_REQ_WR | NC_REQ_NBB') |
-              ifelse(`$3',`',`NC_REQ_FLEX',`NC_REQ_HL');
+    reqMode = IO_MODE($1) | NB_MODE($1) | FLEX_MODE($3);
 
     ifelse(`$2',`',`GET_FULL_DIMENSIONS(pncp, pncp->vars[varid], start, count)',
            `$2',`1',`GET_ONE_COUNT(pncp->vars[varid].ndims, count)')
 
     /* calling the subroutine that implements IAPINAME($1,$2,$3)() */
-    err = pncp->driver->`$1'_var(pncp->ncp,
-                                 varid,
-                                 start, count, ArgStrideMap($2),
-                                 buf,
-                                 ifelse(`$3',`',`bufcount, buftype',
-                                                `-1, ITYPE2MPI($3)'),
-                                 reqid,
-                                 reqMode);
+    err = pncp->driver->`$1'_var(pncp->ncp, varid, start, count,
+                                 ArgStrideMap($2), buf,
+                                 FLEX_ARG($3), reqid, reqMode);
 
     ifelse(`$2',`',`NCI_Free(start);',`$2',`1',`NCI_Free(count);')
     return err;
@@ -757,22 +734,11 @@ INAPINAME($1,$2)(int                ncid,
 
     ifelse(`$2',`',`if (bufcount == 0) return NC_NOERR;')
 
-    reqMode = ifelse(`$1',`iget',`NC_REQ_RD | NC_REQ_NBI',
-                     `$1',`iput',`NC_REQ_WR | NC_REQ_NBI',
-                     `$1',`bput',`NC_REQ_WR | NC_REQ_NBB') |
-              ifelse(`$2',`',`NC_REQ_FLEX',`NC_REQ_HL');
+    reqMode = IO_MODE($1) | NB_MODE($1) | FLEX_MODE($2);
 
     /* calling the subroutine that implements INAPINAME($1,$2)() */
-    return pncp->driver->`$1'_varn(pncp->ncp,
-                                   varid,
-                                   num,
-                                   starts,
-                                   counts,
-                                   buf,
-                                   ifelse(`$2',`',`bufcount, buftype',
-                                                  `-1, ITYPE2MPI($2)'),
-                                   reqid,
-                                   reqMode);
+    return pncp->driver->`$1'_varn(pncp->ncp, varid, num, starts, counts,
+                                   buf, FLEX_ARG($2), reqid, reqMode);
 }
 ')dnl
 dnl
@@ -825,18 +791,11 @@ ncmpi_$1_vard$2(int           ncid,
     else if (err != NC_NOERR) /* other errors, participate collective call */
         reqMode |= NC_REQ_ZERO;')
 
-    reqMode |= NC_REQ_BLK | NC_REQ_FLEX |
-               ifelse(`$1',`get',`NC_REQ_RD',`NC_REQ_WR') |
-               ifelse(`$2',`',`NC_REQ_INDEP',`NC_REQ_COLL');
+    reqMode |= IO_MODE($1) | NC_REQ_BLK | NC_REQ_FLEX | COLL_MODE($2);
 
     /* calling the subroutine that implements ncmpi_$1_vard$2() */
-    status = pncp->driver->$1_vard(pncp->ncp,
-                                   varid,
-                                   filetype,
-                                   buf,
-                                   bufcount,
-                                   buftype,
-                                   reqMode);
+    status = pncp->driver->$1_vard(pncp->ncp, varid, filetype, buf,
+                                   bufcount, buftype, reqMode);
 
     ifelse(`$2',`',`return status;',`
     return (err != NC_NOERR) ? err : status; /* first error encountered */')
