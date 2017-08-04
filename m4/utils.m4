@@ -10,17 +10,17 @@ dnl
 dnl dnl dnl
 dnl
 define(`NC2ITYPE', `ifelse(`$1', `text',      `char',
-                             `$1', `schar',     `schar',
-                             `$1', `uchar',     `uchar',
-                             `$1', `short',     `short',
-                             `$1', `ushort',    `ushort',
-                             `$1', `int',       `int',
-                             `$1', `uint',      `uint',
-                             `$1', `long',      `long',
-                             `$1', `float',     `float',
-                             `$1', `double',    `double',
-                             `$1', `longlong',  `long long',
-                             `$1', `ulonglong', `unsigned long long')')dnl
+                           `$1', `schar',     `schar',
+                           `$1', `uchar',     `uchar',
+                           `$1', `short',     `short',
+                           `$1', `ushort',    `ushort',
+                           `$1', `int',       `int',
+                           `$1', `uint',      `uint',
+                           `$1', `long',      `long',
+                           `$1', `float',     `float',
+                           `$1', `double',    `double',
+                           `$1', `longlong',  `long long',
+                           `$1', `ulonglong', `unsigned long long')')dnl
 dnl
 dnl dnl dnl
 dnl

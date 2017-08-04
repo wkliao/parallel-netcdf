@@ -317,6 +317,10 @@ int ncmpii_dtype_decode(MPI_Datatype  dtype,
 
     *isderived = 0;
 
+    /* Note to PnetCDF developers. High-level APIs should never reach this
+     * subroutine. Check whether it is a high-level of flexible API should
+     * be done before entering here.
+     */
     if (dtype == MPI_DATATYPE_NULL) {
         *nelems = 0;
         *ptype = dtype;
