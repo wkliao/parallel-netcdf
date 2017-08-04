@@ -22,8 +22,8 @@ dnl
 
 include(`foreach.m4')dnl
 include(`utils.m4')dnl
-
-define(`GOTO_CHECK',`{ DEBUG_ASSIGN_ERROR(err, $1) goto err_check; }')
+dnl
+define(`GOTO_CHECK',`{ DEBUG_ASSIGN_ERROR(err, $1) goto err_check; }')dnl
 
 #define GET_ONE_COUNT(ndims, count) {                                    \
     int _i;                                                              \
@@ -259,7 +259,7 @@ define(`IO_TYPE', `ifelse(`$1',  `get', `API_GET',
                           `$1', `iget', `API_IGET',
                           `$1', `iput', `API_IPUT',
                           `$1', `bput', `API_BPUT')')dnl
-
+dnl
 define(`IS_COLL', `ifelse(`$1',`_all',`1',`0')')dnl
 define(`IS_READ', `ifelse(`$1',`get',`1',`$1',`iget',`1',`0')')dnl
 define(`IndexArgs', `ifelse(`$1', `',  `NULL, NULL, NULL',
@@ -267,20 +267,20 @@ define(`IndexArgs', `ifelse(`$1', `',  `NULL, NULL, NULL',
                             `$1', `a', `start, count, NULL',
                             `$1', `s', `start, count, stride',
                             `$1', `m', `start, count, stride')')dnl
-
-define(`FLEX_ARG',`ifelse(`$1',`',`bufcount, buftype',`-1, ITYPE2MPI($1)')')
-
+dnl
+define(`FLEX_ARG',`ifelse(`$1',`',`bufcount, buftype',`-1, ITYPE2MPI($1)')')dnl
+dnl
 define(`IO_MODE',`ifelse(`$1', `get',`NC_REQ_RD',`$1', `put',`NC_REQ_WR',
                          `$1',`iget',`NC_REQ_RD',`$1',`iput',`NC_REQ_WR',
-                         `$1',`bput',`NC_REQ_WR')')
-
+                         `$1',`bput',`NC_REQ_WR')')dnl
+dnl
 define(`NB_MODE',`ifelse(`$1', `get',`NC_REQ_BLK',`$1', `put',`NC_REQ_BLK',
                          `$1',`iget',`NC_REQ_NBI',`$1',`iput',`NC_REQ_NBI',
-                         `$1',`bput',`NC_REQ_NBB')')
-
-define(`FLEX_MODE',`ifelse(`$1',`',`NC_REQ_FLEX',`NC_REQ_HL')')
-define(`COLL_MODE',`ifelse(`$1',`',`NC_REQ_INDEP',`NC_REQ_COLL')')
-
+                         `$1',`bput',`NC_REQ_NBB')')dnl
+dnl
+define(`FLEX_MODE',`ifelse(`$1',`',`NC_REQ_FLEX',`NC_REQ_HL')')dnl
+define(`COLL_MODE',`ifelse(`$1',`',`NC_REQ_INDEP',`NC_REQ_COLL')')dnl
+dnl
 dnl
 define(`APINAME',`ifelse(`$3',`',`ncmpi_$1_var$2$4',`ncmpi_$1_var$2_$3$4')')dnl
 dnl
@@ -350,20 +350,20 @@ APINAME($1,$2,$3,$4)(int ncid,
                                     FLEX_ARG($3), reqMode);
 
     ifelse(`$2',`',`if (err == NC_NOERR) NCI_Free(start);',
-           `$2',`1',`if (err == NC_NOERR) NCI_Free(count);')dnl
+           `$2',`1',`if (err == NC_NOERR) NCI_Free(count);')
 
     return ifelse(`$4',`',`status;',`(err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')dnl
 dnl
-
+dnl
 foreach(`kind', (, 1, a, s, m),
         `foreach(`putget', (put, get),
                  `foreach(`collindep', (, _all),
                           `foreach(`iType', (`',ITYPE_LIST),
                                    `GETPUT_API(putget,kind,iType,collindep)'
-)')')')
-
+)')')')dnl
+dnl
 /* ncmpi_get/put_varn_<type>_<mode> API:
  *    type:   data type of I/O buffer, buf
  *    mode:   independent (<nond>) or collective (_all)
@@ -423,11 +423,10 @@ NAPINAME($1,$2,$3)(int                ncid,
         }
     }
 
-    ifelse(`$3',`',`if (num == 0) return NC_NOERR;')
-
-    ifelse(`$3',`',
-    `/* for independent API, return now if error encountered */
-    if (err != NC_NOERR) return err;',`
+    ifelse(`$3',`',`/* for independent API, return now if error encountered */
+    if (err != NC_NOERR) return err;
+    /* for independent API, return now if zero-length request */
+    if (num == 0) return NC_NOERR;',`
     /* In safe mode, check errors across all processes */
     if (pncp->flag & NC_MODE_SAFE) {
         err = allreduce_error(pncp, err);
@@ -445,18 +444,16 @@ NAPINAME($1,$2,$3)(int                ncid,
     status = pncp->driver->`$1'_varn(pncp->ncp, varid, num, starts, counts,
                                      buf, FLEX_ARG($2), reqMode);
 
-    ifelse(`$3',`',`return status;',`
-    return (err != NC_NOERR) ? err : status; /* first error encountered */')
+    return ifelse(`$3',`',`status;',`(err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')dnl
 dnl
-
 foreach(`putget', (put, get),
         `foreach(`iType', (`',ITYPE_LIST),
                  `foreach(`collindep', (, _all),
                           `VARN(putget,iType,collindep)'
-)')')
-
+)')')dnl
+dnl
 define(`MStartCount',`ifelse(`$1', `',  `NULL, NULL',
                              `$1', `1', `starts[i], NULL',
                              `$1', `a', `starts[i], counts[i]',
@@ -503,7 +500,7 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
-    ifelse(`$4',`',`/* for independent APIs, return now if zero-length request */
+    ifelse(`$4',`',`/* for independent API, return now if zero-length request */
     if (nvars == 0) return NC_NOERR;')
 
     ifelse(`$2',`m',`if (imaps == NULL && strides != NULL) api_kind = API_VARS;
@@ -527,8 +524,7 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
 
     reqMode |= IO_MODE($1) | NC_REQ_NBI | FLEX_MODE($3) | COLL_MODE($4);
 
-    ifelse(`$4',`',
-    `/* for independent API, return now if error encountered */
+    ifelse(`$4',`',`/* for independent API, return now if error encountered */
     if (err != NC_NOERR) return err;',`
     /* In safe mode, check errors across all processes */
     if (pncp->flag & NC_MODE_SAFE) {
@@ -570,14 +566,12 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
 }
 ')dnl
 dnl
-
 foreach(`kind', (, 1, a, s, m),
         `foreach(`putget', (put, get),
                  `foreach(`collindep', (, _all),
                           `foreach(`iType', (`',ITYPE_LIST),
                                    `MVAR(putget,kind,iType,collindep)'
-)')')')
-
+)')')')dnl
 dnl
 define(`IAPINAME',`ifelse(`$3',`',`ncmpi_$1_var$2',`ncmpi_$1_var$2_$3')')dnl
 dnl
@@ -622,8 +616,8 @@ IAPINAME($1,$2,$3)(int ncid,
     if (err != NC_NOERR) return err;')
 
     ifelse(`$2',`m',`if (imap == NULL && stride != NULL) api_kind = API_VARS;
-    else if (imap == NULL && stride == NULL) api_kind = API_VARA;')
-    ifelse(`$2',`s',`if (stride == NULL) api_kind = API_VARA;')
+    else if (imap == NULL && stride == NULL) api_kind = API_VARA;',
+           `$2',`s',`if (stride == NULL) api_kind = API_VARA;')
 
     ifelse(`$2',`',`',`/* not-scalar variable checks start, count, stride */
     if (pncp->vars[varid].ndims > 0) {
@@ -649,14 +643,12 @@ IAPINAME($1,$2,$3)(int ncid,
 }
 ')dnl
 dnl
-
 foreach(`kind', (, 1, a, s, m),
         `foreach(`putget', (iput, iget, bput),
                  `foreach(`iType', (`',ITYPE_LIST),
                           `IGETPUT_API(putget,kind,iType)'
-)')')
-
-
+)')')dnl
+dnl
 /* ncmpi_iget/iput_varn_<type>_<mode> API:
  *    type:   data type of I/O buffer, buf
  *    mode:   indpendent (<nond>) or collective (_all)
@@ -742,12 +734,10 @@ INAPINAME($1,$2)(int                ncid,
 }
 ')dnl
 dnl
-
 foreach(`putget', (iget, iput, bput),
         `foreach(`iType', (`',ITYPE_LIST),
                  `IVARN(putget,iType)'
-)')
-
+)')dnl
 dnl
 dnl VARD(get/put, `'/_all)
 dnl
@@ -797,13 +787,12 @@ ncmpi_$1_vard$2(int           ncid,
     status = pncp->driver->$1_vard(pncp->ncp, varid, filetype, buf,
                                    bufcount, buftype, reqMode);
 
-    ifelse(`$2',`',`return status;',`
-    return (err != NC_NOERR) ? err : status; /* first error encountered */')
+    return ifelse(`$2',`',`status;',`(err != NC_NOERR) ? err : status; /* first error encountered */')
 }
 ')
 dnl
 foreach(`putget', (put, get),
         `foreach(`collindep', (, _all),
                  `VARD(putget,collindep)'
-)')
-
+)')dnl
+dnl
