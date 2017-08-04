@@ -234,7 +234,7 @@ APINAME($1,$2)(int         ncid,
                const char *name,
                ifelse(`$1',`put',`ifelse(`$2',`text',,`nc_type xtype,')
                MPI_Offset  nelems,   /* number of elements in buf */')
-               ifelse(`$1',`put',`const') ifelse(`$2',`','void`,FUNC2ITYPE($2)) *buf)
+               ifelse(`$1',`put',`const') ifelse(`$2',`','void`,NC2ITYPE($2)) *buf)
 {
     int err=NC_NOERR;
     PNC *pncp;

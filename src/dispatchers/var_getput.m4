@@ -485,8 +485,8 @@ MAPINAME($1,$2,$3,$4)(int                ncid,
     `ifelse($1,`get',`void **bufs,',`void* const *bufs,')
                       const MPI_Offset *bufcounts,
                       const MPI_Datatype *buftypes',
-    `ifelse($1,`get',`FUNC2ITYPE($3) **bufs',
-                      `FUNC2ITYPE($3)* const *bufs')'))
+    `ifelse($1,`get',`NC2ITYPE($3) **bufs',
+                     `NC2ITYPE($3)* const *bufs')'))
 {
     int i, reqMode=0, status=NC_NOERR, err, *reqs;
     PNC *pncp;

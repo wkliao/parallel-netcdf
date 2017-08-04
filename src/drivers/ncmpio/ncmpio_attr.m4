@@ -688,73 +688,84 @@ err_check:
     return NC_NOERR;
 }
 
-/*----< ncmpio_get_att_text() >----------------------------------------------*/
-/* This is an independent subroutine.
- * Note this API will never return NC_ERANGE error, as text is not convertible
- * to numerical types.
- */
-static int
-ncmpio_get_att_text(void       *ncdp,
-                    int         varid,
-                    const char *name,
-                    char       *buf)
-{
-    int      err=NC_NOERR;
-    char    *nname=NULL; /* normalized name */
-    NC      *ncp=(NC*)ncdp;
-    NC_attr *attrp;
-    NC_attrarray *ncap=NULL;
-    const void *xp;
-
-    /* check if varid is valid */
-    ncap = NC_attrarray0(ncp, varid);
-    if (ncap == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
-
-    if (name == NULL || *name == 0 || strlen(name) > NC_MAX_NAME)
-        DEBUG_RETURN_ERROR(NC_EBADNAME)
-
-    /* create a normalized character string */
-    nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
-    if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    err = NC_lookupattr(ncap, nname, &attrp);
-    NCI_Free(nname);
-    if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-
-    if (attrp->nelems == 0) return NC_NOERR;
-
-    /* No character conversions are allowed. */
-    if (attrp->xtype != NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
-
-    if (buf == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
-
-    /* must use xp, as ncmpix_pad_getn_text moves xp ahead */
-    xp = attrp->xvalue;
-    return ncmpix_pad_getn_text(&xp, attrp->nelems, (char*)buf);
-}
-
 dnl
 dnl GET_ATT(fntype)
 dnl
 define(`GET_ATT',dnl
 `dnl
-/*----< ncmpio_get_att_$1() >------------------------------------------------*/
+/*----< get_att_$1() >-------------------------------------------------------*/
 /* This is an independent subroutine */
 static int
-ncmpio_get_att_$1(void           *ncdp,
-                  int             varid,
-                  const char     *name,
-                  FUNC2ITYPE($1) *buf)
+get_att_$1(nc_type       xtype,
+           const void  **xp,
+           MPI_Offset    nelems,
+           NC2ITYPE($1) *buf)
 {
-    int            err=NC_NOERR;
-    char           *nname=NULL; /* normalized name */
-    NC             *ncp=(NC*)ncdp;
-    NC_attr        *attrp;
-    NC_attrarray   *ncap=NULL;
-    const void     *xp;
-    MPI_Offset      nelems;
+    switch(xtype) {
+        /* possible error returned of this switch block is NC_ERANGE */
+        case NC_BYTE:
+            return ncmpix_pad_getn_NC_BYTE_$1  (xp, nelems, buf);
+        case NC_UBYTE:
+            return ncmpix_pad_getn_NC_UBYTE_$1 (xp, nelems, buf);
+        case NC_SHORT:
+            return ncmpix_pad_getn_NC_SHORT_$1 (xp, nelems, buf);
+        case NC_USHORT:
+            return ncmpix_pad_getn_NC_USHORT_$1(xp, nelems, buf);
+        case NC_INT:
+            return ncmpix_getn_NC_INT_$1       (xp, nelems, buf);
+        case NC_UINT:
+            return ncmpix_getn_NC_UINT_$1      (xp, nelems, buf);
+        case NC_FLOAT:
+            return ncmpix_getn_NC_FLOAT_$1     (xp, nelems, buf);
+        case NC_DOUBLE:
+            return ncmpix_getn_NC_DOUBLE_$1    (xp, nelems, buf);
+        case NC_INT64:
+            return ncmpix_getn_NC_INT64_$1     (xp, nelems, buf);
+        case NC_UINT64:
+            return ncmpix_getn_NC_UINT64_$1    (xp, nelems, buf);
+        default:
+            /* this error is unlikely, but an internal error if happened */
+            fprintf(stderr, "Error: bad attrp->xtype(%d) in %s\n",
+                    xtype,__func__);
+            return NC_EBADTYPE;
+    }
+}
+')dnl
+dnl
+foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulonglong),
+        `GET_ATT(iType)dnl
+')dnl
+dnl
+/*----< ncmpio_get_att() >---------------------------------------------------*/
+/* This is an independent subroutine */
+/* user buffer data type matches the external type defined in file */
+int
+ncmpio_get_att(void         *ncdp,
+               int           varid,
+               const char   *name,
+               void         *buf,
+               MPI_Datatype  itype)
+{
+    int           err=NC_NOERR;
+    char         *nname=NULL; /* normalized name */
+    NC           *ncp=(NC*)ncdp;
+    NC_attr      *attrp;
+    NC_attrarray *ncap=NULL;
+    const void   *xp;
+    nc_type       xtype;
+    MPI_Offset    nelems;
 
     /* sanity checks for varid and name has been done in dispatcher */
+
+    if (itype == MPI_DATATYPE_NULL) {
+        /* this is for the API ncmpi_get_att() where the internal and external
+         * data types match (inquire attribute's external data type)
+         */
+        nc_type dtype;
+        err = ncmpio_inq_att(ncdp, varid, name, &dtype, NULL);
+        if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
+        itype = ncmpii_nc2mpitype(dtype);
+    }
 
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
@@ -771,102 +782,44 @@ ncmpio_get_att_$1(void           *ncdp,
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
     if (attrp->nelems == 0) return NC_NOERR;
-    nelems = attrp->nelems;
 
     /* No character conversions are allowed. */
-    if (attrp->xtype == NC_CHAR) DEBUG_RETURN_ERROR(NC_ECHAR)
+    if ((attrp->xtype == NC_CHAR && itype != MPI_CHAR) ||
+        (attrp->xtype != NC_CHAR && itype == MPI_CHAR))
+        DEBUG_RETURN_ERROR(NC_ECHAR)
 
     if (buf == NULL) DEBUG_RETURN_ERROR(NC_EINVAL)
 
-    xp = attrp->xvalue;
-
-    switch(attrp->xtype) {
-        /* possible error returned in this switch block is NC_ERANGE */
-        case NC_BYTE:
-            ifelse(`$1',`uchar',
-           `if (ncp->format < 5) { /* no NC_ERANGE check */
-                /* note this is not ncmpix_getn_NC_BYTE_$1 */
-                return ncmpix_pad_getn_NC_UBYTE_$1(&xp, nelems, buf);
-            } else')
-                return ncmpix_pad_getn_NC_BYTE_$1 (&xp, nelems, buf);
-        case NC_UBYTE:
-            return ncmpix_pad_getn_NC_UBYTE_$1 (&xp, nelems, buf);
-        case NC_SHORT:
-            return ncmpix_pad_getn_NC_SHORT_$1 (&xp, nelems, buf);
-        case NC_USHORT:
-            return ncmpix_pad_getn_NC_USHORT_$1(&xp, nelems, buf);
-        case NC_INT:
-            return ncmpix_getn_NC_INT_$1       (&xp, nelems, buf);
-        case NC_UINT:
-            return ncmpix_getn_NC_UINT_$1      (&xp, nelems, buf);
-        case NC_FLOAT:
-            return ncmpix_getn_NC_FLOAT_$1     (&xp, nelems, buf);
-        case NC_DOUBLE:
-            return ncmpix_getn_NC_DOUBLE_$1    (&xp, nelems, buf);
-        case NC_INT64:
-            return ncmpix_getn_NC_INT64_$1     (&xp, nelems, buf);
-        case NC_UINT64:
-            return ncmpix_getn_NC_UINT64_$1    (&xp, nelems, buf);
-        case NC_CHAR:
-            return NC_ECHAR; /* NC_ECHAR already checked earlier */
-        default:
-            /* this error is unlikely, but an internal error if happened */
-            fprintf(stderr, "Error: bad attrp->xtype(%d) in %s\n",
-                    attrp->xtype,__func__);
-            return NC_EBADTYPE;
-    }
-}
-')dnl
-
-foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulonglong),
-        `GET_ATT(iType)
-')
-
-/*----< ncmpio_get_att() >---------------------------------------------------*/
-/* This is an independent subroutine */
-/* user buffer data type matches the external type defined in file */
-int
-ncmpio_get_att(void         *ncdp,
-               int           varid,
-               const char   *name,
-               void         *buf,
-               MPI_Datatype  itype)
-{
-    int err=NC_NOERR;
-
-    if (itype == MPI_DATATYPE_NULL) {
-        /* this is for the API ncmpi_get_att() where the internal and external
-         * data types match (inquire attribute's external data type)
-         */
-        nc_type dtype;
-        err = ncmpio_inq_att(ncdp, varid, name, &dtype, NULL);
-        if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-        itype = ncmpii_nc2mpitype(dtype);
-    }
+    /* must use xp, as ncmpix_pad_getn_text moves xp ahead */
+    xp     = attrp->xvalue;
+    xtype  = attrp->xtype;
+    nelems = attrp->nelems;
 
     switch(itype) {
         case MPI_CHAR:
-             return ncmpio_get_att_text     (ncdp, varid, name, (char*)buf);
+             return ncmpix_pad_getn_text    (&xp, nelems,      (char*)buf);
         case MPI_SIGNED_CHAR:
-             return ncmpio_get_att_schar    (ncdp, varid, name, (signed char*)buf);
+             return get_att_schar    (xtype, &xp, nelems,     (schar*)buf);
         case MPI_UNSIGNED_CHAR:
-             return ncmpio_get_att_uchar    (ncdp, varid, name, (unsigned char*)buf);
+             if (xtype == NC_BYTE && ncp->format < NC_FORMAT_CDF5)
+                 xtype = NC_UBYTE; /* special case: no NC_ERANGE check */
+             return get_att_uchar    (xtype, &xp, nelems,     (uchar*)buf);
         case MPI_SHORT:
-             return ncmpio_get_att_short    (ncdp, varid, name, (short*)buf);
+             return get_att_short    (xtype, &xp, nelems,     (short*)buf);
         case MPI_UNSIGNED_SHORT:
-             return ncmpio_get_att_ushort   (ncdp, varid, name, (unsigned short*)buf);
+             return get_att_ushort   (xtype, &xp, nelems,    (ushort*)buf);
         case MPI_INT:
-             return ncmpio_get_att_int      (ncdp, varid, name, (int*)buf);
+             return get_att_int      (xtype, &xp, nelems,       (int*)buf);
         case MPI_UNSIGNED:
-             return ncmpio_get_att_uint     (ncdp, varid, name, (unsigned int*)buf);
+             return get_att_uint     (xtype, &xp, nelems,      (uint*)buf);
         case MPI_FLOAT:
-             return ncmpio_get_att_float    (ncdp, varid, name, (float*)buf);
+             return get_att_float    (xtype, &xp, nelems,     (float*)buf);
         case MPI_DOUBLE:
-             return ncmpio_get_att_double   (ncdp, varid, name, (double*)buf);
+             return get_att_double   (xtype, &xp, nelems,    (double*)buf);
         case MPI_LONG_LONG_INT:
-             return ncmpio_get_att_longlong (ncdp, varid, name, (long long*)buf);
+             return get_att_longlong (xtype, &xp, nelems,  (longlong*)buf);
         case MPI_UNSIGNED_LONG_LONG:
-             return ncmpio_get_att_ulonglong(ncdp, varid, name, (unsigned long long*)buf);
+             return get_att_ulonglong(xtype, &xp, nelems, (ulonglong*)buf);
         default: return NC_EBADTYPE;
     }
 }
@@ -876,14 +829,14 @@ dnl PUTN_ITYPE(_pad, itype)
 dnl
 define(`PUTN_ITYPE',dnl
 `dnl
-/*----< ncmpix_putn_$1() >---------------------------------------------------*/
+/*----< putn_$1() >----------------------------------------------------------*/
 /* This is a collective subroutine */
-inline static int
-ncmpix_putn_$1(void       **xpp,    /* buffer to be written to file */
-               MPI_Offset   nelems, /* no. elements in user buffer */
-               const $1    *buf,    /* user buffer of type $1 */
-               nc_type      xtype,  /* external NC type */
-               void        *fillp)  /* fill value in internal representation */
+static int
+putn_$1(void       **xpp,    /* buffer to be written to file */
+        MPI_Offset   nelems, /* no. elements in user buffer */
+        const $1    *buf,    /* user buffer of type $1 */
+        nc_type      xtype,  /* external NC type */
+        void        *fillp)  /* fill value in internal representation */
 {
     switch(xtype) {
         case NC_BYTE:
@@ -913,11 +866,10 @@ ncmpix_putn_$1(void       **xpp,    /* buffer to be written to file */
     }
 }
 ')dnl
-
+dnl
 foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulonglong),
-        `PUTN_ITYPE(iType)
-')
-
+        `PUTN_ITYPE(iType)dnl
+')dnl
 
 /* For netCDF, the type mapping between file types and buffer types
  * are based on netcdf4. Check APIs of nc_put_att_xxx from source files
@@ -937,12 +889,7 @@ foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulongl
  *
  */
 
-dnl
-dnl PUT_ATT(fntype)
-dnl
-define(`PUT_ATT',dnl
-`dnl
-/*----< ncmpio_put_att_$1() >------------------------------------------------*/
+/*----< ncmpio_put_att() >---------------------------------------------------*/
 /* This is a collective subroutine, all arguments should be consistent among
  * all processes.
  *
@@ -954,16 +901,17 @@ define(`PUT_ATT',dnl
  * Attributes are always single values or one-dimensional arrays. This works
  * out well for a string, which is a one-dimensional array of ASCII characters
  *
- * Note ncmpio_put_att_text will never return NC_ERANGE error, as text is not
+ * Note ncmpi_put_att_text will never return NC_ERANGE error, as text is not
  * convertible to numerical types.
  */
-static int
-ncmpio_put_att_$1(void       *ncdp,
-                  int         varid,
-                  const char *name,     /* attribute name */
-                  ifelse(`$1',`text',,`nc_type xtype,')
-                  MPI_Offset  nelems,   /* number of elements in buf */
-                  const FUNC2ITYPE($1) *buf) /* user write buffer */
+int
+ncmpio_put_att(void         *ncdp,
+               int           varid,
+               const char   *name,
+               nc_type       xtype,  /* external (file/NC) data type */
+               MPI_Offset    nelems,
+               const void   *buf,
+               MPI_Datatype  itype)  /* internal (memory) data type */
 {
     int indx=0, err=NC_NOERR;
     char *nname=NULL; /* normalized name */
@@ -971,7 +919,6 @@ ncmpio_put_att_$1(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_attrarray *ncap=NULL;
     NC_attr *attrp=NULL;
-    ifelse(`$1',`text', `nc_type xtype=NC_CHAR;')
 
     /* sanity checks for varid, name, xtype has been done in dispatcher */
 
@@ -1104,23 +1051,61 @@ err_check:
          * elements. Note that attrp->xvalue is malloc-ed with a buffer of
          * size that is aligned with a 4-byte boundary.
          */
-        void *xp = attrp->xvalue;
-        ifelse(`$1',`text',,`dnl
         unsigned char fill[8]; /* fill value in internal representation */
+        void *xp = attrp->xvalue;
 
-        /* find the fill value */
-        err = ncmpio_inq_default_fill_value(xtype, &fill);
-        if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)')
-
-        ifelse(`$1',`text', `err = ncmpix_pad_putn_text(&xp, nelems, buf);',
-               `$1',`uchar',`
-        if (ncp->format < 5 && xtype == NC_BYTE) { /* no NC_ERANGE check */
+        if (itype == MPI_CHAR) {
+            err = ncmpix_pad_putn_text(&xp, nelems, buf);
+        }
+        else if (ncp->format < 5 && itype == MPI_UNSIGNED_CHAR &&
+                 xtype == NC_BYTE) { /* special case: no NC_ERANGE check */
+            /* find the fill value of NC_UBYTE */
             err = ncmpio_inq_default_fill_value(NC_UBYTE, &fill);
             if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-            err = ncmpix_putn_uchar(&xp, nelems, buf, NC_UBYTE, &fill);
-        } else
-            err = ncmpix_putn_$1(&xp, nelems, buf, xtype, &fill);',
-        `err = ncmpix_putn_$1(&xp, nelems, buf, xtype, &fill);')
+            err = putn_uchar(&xp, nelems, buf, NC_UBYTE, &fill);
+        }
+        else {
+            /* find the fill value */
+            err = ncmpio_inq_default_fill_value(xtype, &fill);
+            if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
+            switch(itype) {
+                /*
+                case MPI_CHAR: _text API has been handled above
+                     break;
+                */
+                case MPI_SIGNED_CHAR:
+                     err = putn_schar    (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_UNSIGNED_CHAR:
+                     err = putn_uchar    (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_SHORT:
+                     err = putn_short    (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_UNSIGNED_SHORT:
+                     err = putn_ushort   (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_INT:
+                     err = putn_int      (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_UNSIGNED:
+                     err = putn_uint     (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_FLOAT:
+                     err = putn_float    (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_DOUBLE:
+                     err = putn_double   (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_LONG_LONG_INT:
+                     err = putn_longlong (&xp, nelems, buf, xtype, &fill);
+                     break;
+                case MPI_UNSIGNED_LONG_LONG:
+                     err = putn_ulonglong(&xp, nelems, buf, xtype, &fill);
+                     break;
+                default: err = NC_EBADTYPE;
+            }
+        }
 
         /* no immediately return error code here? Strange ...
          * Instead, we continue and call incr_NC_attrarray() to add
@@ -1159,49 +1144,3 @@ err_check:
 
     return err;
 }
-')dnl
-
-foreach(`iType', (text,schar,uchar,short,ushort,int,uint,float,double,longlong,ulonglong),
-        `PUT_ATT(iType)
-')
-
-/*----< ncmpio_put_att() >---------------------------------------------------*/
-/* This is a collective subroutine, all arguments should be consistent among
- * all processes.
- */
-int
-ncmpio_put_att(void         *ncdp,
-               int           varid,
-               const char   *name,
-               nc_type       xtype,  /* external (file/NC) data type */
-               MPI_Offset    nelems,
-               const void   *buf,
-               MPI_Datatype  itype)  /* internal (memory) data type */
-{
-    switch(itype) {
-        case MPI_CHAR:
-             return ncmpio_put_att_text     (ncdp, varid, name,        nelems, buf);
-        case MPI_SIGNED_CHAR:
-             return ncmpio_put_att_schar    (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_UNSIGNED_CHAR:
-             return ncmpio_put_att_uchar    (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_SHORT:
-             return ncmpio_put_att_short    (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_UNSIGNED_SHORT:
-             return ncmpio_put_att_ushort   (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_INT:
-             return ncmpio_put_att_int      (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_UNSIGNED:
-             return ncmpio_put_att_uint     (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_FLOAT:
-             return ncmpio_put_att_float    (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_DOUBLE:
-             return ncmpio_put_att_double   (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_LONG_LONG_INT:
-             return ncmpio_put_att_longlong (ncdp, varid, name, xtype, nelems, buf);
-        case MPI_UNSIGNED_LONG_LONG:
-             return ncmpio_put_att_ulonglong(ncdp, varid, name, xtype, nelems, buf);
-        default: return NC_EBADTYPE;
-    }
-}
-

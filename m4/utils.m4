@@ -9,7 +9,7 @@ define(`NULL_CHAR', changequote([,])[changequote([,])'\0'changequote(`,')]change
 dnl
 dnl dnl dnl
 dnl
-define(`FUNC2ITYPE', `ifelse(`$1', `text',      `char',
+define(`NC2ITYPE', `ifelse(`$1', `text',      `char',
                              `$1', `schar',     `schar',
                              `$1', `uchar',     `uchar',
                              `$1', `short',     `short',
@@ -116,8 +116,8 @@ define(`ReadWrite', `ifelse(`$1',  `get', `NC_REQ_WR',
 define(`BufArgs',   `ifelse(`$2', `',
                             `ifelse($1, `get', `void *buf,', `const void *buf,')
                              MPI_Offset bufcount, MPI_Datatype buftype',
-                            `ifelse($1, `get',       `FUNC2ITYPE($2) *buf',
-                                               `const FUNC2ITYPE($2) *buf')')')
+                            `ifelse($1, `get',       `NC2ITYPE($2) *buf',
+                                               `const NC2ITYPE($2) *buf')')')
 dnl
 dnl index arguments for APIs of different kinds
 dnl

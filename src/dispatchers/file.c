@@ -174,11 +174,10 @@ combine_env_hints(MPI_Info  user_info,
         next_hint = env_str_cpy;
 
         do {
-            if (*next_hint == '\0') break;
             hint = next_hint;
-            deli = strchr(hint, ';'); /* add terminate char */
+            deli = strchr(hint, ';');
             if (deli != NULL) {
-                *deli = '\0';
+                *deli = '\0'; /* add terminate char */
                 next_hint = deli + 1;
             }
             else next_hint = "\0";
@@ -216,7 +215,8 @@ combine_env_hints(MPI_Info  user_info,
                 MPI_Info_create(new_info); /* ignore error */
             MPI_Info_set(*new_info, key, val); /* override or add */
 
-        } while (hint != NULL);
+        } while (*next_hint != '\0');
+
         if (hint_saved != NULL) free(hint_saved);
         free(env_str_cpy);
 #endif
