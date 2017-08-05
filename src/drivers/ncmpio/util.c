@@ -159,73 +159,91 @@ void ncmpio_set_pnetcdf_hints(NC *ncp, MPI_Info info)
 }
 
 /*----< ncmpio_last_offset() >-----------------------------------------------*/
-/* returns the file offset of the last byte accessed of this request
- * If counts is NULL, this is equivalent to the starting offset of this
- * request
+/* Returns the file offset of the last byte + 1 accessed by this request.
+ * If count is NULL, this is equivalent to the starting offset of this
+ * request. Note zero-length request should never call this subroutine.
  */
 int
 ncmpio_last_offset(const NC         *ncp,
                    const NC_var     *varp,
-                   const MPI_Offset  starts[],   /* [varp->ndims] */
-                   const MPI_Offset  counts[],   /* [varp->ndims] */
-                   const MPI_Offset  strides[],  /* [varp->ndims] */
+                   const MPI_Offset  start[],   /* [varp->ndims] */
+                   const MPI_Offset  count[],   /* [varp->ndims] */
+                   const MPI_Offset  stride[],  /* [varp->ndims] */
                    const int         reqMode,
                    MPI_Offset       *offset_ptr) /* OUT: file offset */
 {
-    MPI_Offset offset, *end_off=NULL;
-    int status, i, ndims;
+    MPI_Offset offset, *last_indx=NULL;
+    int i, ndims, firstDim = 0;
 
     offset = varp->begin; /* beginning file offset of this variable */
     ndims  = varp->ndims; /* number of dimensions of this variable */
 
-    if (counts != NULL) {
-        end_off = (MPI_Offset*) NCI_Malloc((size_t)ndims * SIZEOF_MPI_OFFSET);
+    if (ndims == 0) {
+        *offset_ptr = varp->begin + varp->xsz;
+        return NC_NOERR;
+    }
 
-        if (strides != NULL) {
-            for (i=0; i<ndims; i++)
-                end_off[i] = starts[i] + (counts[i] - 1) * strides[i];
+    if (count != NULL) {
+        last_indx = (MPI_Offset*) NCI_Malloc((size_t)ndims * SIZEOF_MPI_OFFSET);
+
+        if (stride != NULL) {
+            for (i=0; i<ndims; i++) {
+                assert(count[i] > 0);
+                last_indx[i] = start[i] + (count[i] - 1) * stride[i];
+            }
         }
-        else { /* strides == NULL */
-            for (i=0; i<ndims; i++)
-                end_off[i] = starts[i] + counts[i] - 1;
+        else { /* stride == NULL */
+            for (i=0; i<ndims; i++) {
+                assert(count[i] > 0);
+                last_indx[i] = start[i] + count[i] - 1;
+            }
         }
     }
-    else { /* when counts == NULL strides is of no use */
-        end_off = (MPI_Offset*) starts;
+    else { /* when count == NULL stride is of no use */
+        last_indx = (MPI_Offset*) start;
     }
 
-    /* check whether end_off is valid */
-    status = ncmpii_start_count_stride_check(ncp->format, API_VAR1, varp->ndims,
-                                             ncp->numrecs, varp->shape,
-                                             end_off, NULL, NULL, reqMode);
-    if (status != NC_NOERR) {
-#ifdef CDEBUG
-        printf("%s(): ncmpii_start_count_stride_check() fails\n",__func__);
-#endif
-        if (end_off != NULL && end_off != starts) NCI_Free(end_off);
-        return status;
+    /* check whether last_indx is valid */
+
+    firstDim = 0;
+    /* check NC_EINVALCOORDS for record dimension */
+    if (varp->shape[0] == NC_UNLIMITED) {
+        if (ncp->format < 5 && last_indx[0] > NC_MAX_UINT) { /* CDF-1 and 2 */
+            if (count != NULL) NCI_Free(last_indx);
+            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
+        }
+        /* for record variable, [0] is the NC_UNLIMITED dimension */
+        if (fIsSet(reqMode, NC_REQ_RD) && last_indx[0] >= ncp->numrecs) {
+            /* read cannot go beyond current numrecs */
+            if (count != NULL) NCI_Free(last_indx);
+            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
+        }
+        firstDim = 1; /* done for checking the record dimension */
+    }
+    /* continue to check NC_EINVALCOORDS for the rest dimensions */
+    for (i=firstDim; i<ndims; i++) {
+        if (last_indx[i] < 0 || last_indx[i] >= varp->shape[i]) {
+            if (count != NULL) NCI_Free(last_indx);
+            DEBUG_RETURN_ERROR(NC_EINVALCOORDS)
+        }
     }
 
-    if (ndims > 0) {
+    if (varp->shape[0] == NC_UNLIMITED)
+        offset += last_indx[0] * ncp->recsize;
+    else
+        offset += last_indx[ndims-1] * varp->xsz;
+
+    if (ndims > 1) {
         if (IS_RECVAR(varp))
-            /* no need to check recsize here: if MPI_Offset is only 32 bits we
-               will have had problems long before here */
-            offset += end_off[0] * ncp->recsize;
+            offset += last_indx[ndims - 1] * varp->xsz;
         else
-            offset += end_off[ndims-1] * varp->xsz;
+            offset += last_indx[0] * varp->dsizes[1] * varp->xsz;
 
-        if (ndims > 1) {
-            if (IS_RECVAR(varp))
-                offset += end_off[ndims - 1] * varp->xsz;
-            else
-                offset += end_off[0] * varp->dsizes[1] * varp->xsz;
-
-            for (i=1; i<ndims-1; i++)
-                offset += end_off[i] * varp->dsizes[i+1] * varp->xsz;
-        }
+        for (i=1; i<ndims-1; i++)
+            offset += last_indx[i] * varp->dsizes[i+1] * varp->xsz;
     }
-    if (counts != NULL && end_off != NULL)
-        NCI_Free(end_off);
+
+    if (count != NULL) NCI_Free(last_indx);
 
     *offset_ptr = offset;
     return NC_NOERR;

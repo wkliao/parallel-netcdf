@@ -33,7 +33,6 @@ C_SRCS    = utf8proc.c \
             dtype_decode.c \
             create_imaptype.c \
             error_mpi2nc.c \
-            check_start_count_stride.c \
             check_name.c \
             pack_unpack.c \
             utils.c

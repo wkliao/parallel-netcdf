@@ -88,12 +88,6 @@ extern int
 ncmpii_error_mpi2nc(int mpi_errorcode, char *msg);
 
 extern int
-ncmpii_start_count_stride_check(int format, int api, int ndims, int numrecs,
-                const MPI_Offset *shape, const MPI_Offset *start,
-                const MPI_Offset *count, const MPI_Offset *stride,
-                const int rw_flag);
-
-extern int
 ncmpii_check_name(const char *name, int file_ver);
 
 extern MPI_Datatype
