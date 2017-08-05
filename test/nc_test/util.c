@@ -233,7 +233,7 @@ MPI_Offset roll( MPI_Offset n )
      * We don't use RAND_MAX here because not all compilation
      * environments define it (e.g. gcc(1) under SunOS 4.1.4).
      */
-    r = (MPI_Offset)(((rand() % 32768) / 32767.0) * (n - 1) + 0.5);
+    r = (MPI_Offset)(((random() % 32768) / 32767.0) * (n - 1) + 0.5);
     while (r >= n);
 
     return r;

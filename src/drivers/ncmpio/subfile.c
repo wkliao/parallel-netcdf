@@ -552,7 +552,7 @@ ncmpio_subfile_getput_vars(NC               *ncp,
             yy = (ratio)*(double)(i+1);
             max = (int)yy-(yy-(int)yy==0.0?1:0);
             if (max >= nprocs) max = nprocs-1;
-            /* scaled = (double)rand()/RAND_MAX; */
+            /* scaled = (double)random()/RAND_MAX; */
             scaled = (double)myrank/ratio-(double)color;
             aproc = (i==color)?myrank:((int)(min+(max-min+1)*scaled));
         }

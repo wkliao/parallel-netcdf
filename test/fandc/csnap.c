@@ -22,7 +22,7 @@
  *****************************************************************************/
 
 #include <stdio.h>
-#include <stdlib.h> /* srand(), rand() */
+#include <stdlib.h> /* srandom(), random() */
 #include <string.h> /* strcpy() */
 #include <unistd.h>
 #include <math.h>  /* sqrt() */
@@ -406,19 +406,19 @@ void get_fields(double *tt, double *smf) {
 
   if (random_fields) {
     unsigned int seed = (INT_MAX / totpes) * mype;
-    srand(seed);
+    srandom(seed);
 
     for (k = 0; k < locsiz_3d[0]; k++)
       for (j = 0; j < locsiz_3d[1]; j++)
         for (i = 0; i < locsiz_3d[2]; i++) {
-            double tmp = rand();
+            double tmp = random();
             *tt++ = tmp / (RAND_MAX + 1.);
         }
 
     if (has_2d)
       for (j = 0; j < locsiz_2d[0]; j++)
         for (i = 0; i < locsiz_2d[1]; i++) {
-            double tmp = rand();
+            double tmp = random();
             *smf++ = tmp / (RAND_MAX + 1.);
         }
   }
