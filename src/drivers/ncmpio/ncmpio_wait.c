@@ -17,10 +17,8 @@
 #endif
 
 #include <stdio.h>
-#include <unistd.h>
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
+#include <string.h> /* memset() */
 #include <assert.h>
 
 #include <mpi.h>

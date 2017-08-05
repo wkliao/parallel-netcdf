@@ -117,7 +117,7 @@ check_consistency_put(MPI_Comm      comm,
                       MPI_Datatype  itype,
                       int           err)
 {
-    int root_name_len, root_varid, minE, mpireturn;
+    int root_name_len, root_varid, minE, rank, mpireturn;
     char *root_name=NULL;
     nc_type root_xtype;
     MPI_Offset root_nelems;
@@ -128,6 +128,8 @@ check_consistency_put(MPI_Comm      comm,
         return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
     if (minE != NC_NOERR) return minE;
 
+    MPI_Comm_rank(comm, &rank);
+
     /* check if attribute name is consistent among all processes */
     assert(name != NULL);
     root_name_len = strlen(name) + 1;
@@ -136,7 +138,7 @@ check_consistency_put(MPI_Comm      comm,
         return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
     root_name = (char*) NCI_Malloc((size_t)root_name_len);
-    strcpy(root_name, name);
+    if (rank == 0) strcpy(root_name, name);
     TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, comm);
     if (mpireturn != MPI_SUCCESS) {
         NCI_Free(root_name);

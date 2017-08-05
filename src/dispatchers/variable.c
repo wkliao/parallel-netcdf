@@ -112,7 +112,7 @@ ncmpi_def_var(int         ncid,    /* IN:  file ID */
 
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
-        int root_name_len, root_ndims, minE, mpireturn;
+        int root_name_len, root_ndims, minE, rank, mpireturn;
         char *root_name=NULL;
 
         /* first check the error code across processes */
@@ -120,6 +120,8 @@ err_check:
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         if (minE != NC_NOERR) return minE;
+
+        MPI_Comm_rank(pncp->comm, &rank);
 
         /* check if name is consistent among all processes */
         assert(name != NULL);
@@ -129,7 +131,7 @@ err_check:
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        strcpy(root_name, name);
+        if (rank == 0) strcpy(root_name, name);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
@@ -620,7 +622,7 @@ ncmpi_rename_var(int         ncid,    /* IN: file ID */
 
 err_check:
     if (pncp->flag & NC_MODE_SAFE) {
-        int root_name_len, root_varid, minE, mpireturn;
+        int root_name_len, root_varid, minE, rank, mpireturn;
         char *root_name=NULL;
 
         /* First check error code so far across processes */
@@ -628,6 +630,8 @@ err_check:
         if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         if (minE != NC_NOERR) return minE;
+
+        MPI_Comm_rank(pncp->comm, &rank);
 
         /* check if newname is consistent among all processes */
         assert(newname != NULL);
@@ -637,7 +641,7 @@ err_check:
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
 
         root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        strcpy(root_name, newname);
+        if (rank == 0) strcpy(root_name, newname);
         TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0,pncp->comm);
         if (mpireturn != MPI_SUCCESS) {
             NCI_Free(root_name);
