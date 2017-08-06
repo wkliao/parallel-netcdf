@@ -6,8 +6,13 @@
 #
 # @configure_input@
 
-SUBDIRS = include common ncmpio ncfoo
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = include common ncmpio
+
+SUBDIRS = $(DIST_SUBDIRS)
+
+if BUILD_DRIVER_FOO
+   SUBDIRS += ncfoo
+endif
 
 # For VPATH build (parallel build), try delete all sub-directories
 distclean-local:

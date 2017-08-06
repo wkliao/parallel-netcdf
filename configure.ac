@@ -104,6 +104,7 @@ AH_TEMPLATE([PNC_MALLOC_TRACE],         [Define if to enable malloc tracing])
 AH_TEMPLATE([HAVE_FUNC_MACRO],          [Define if C++ macro __func__ is defined])
 AH_TEMPLATE([HAVE_FUNCTION_MACRO],      [Define if C++ macro __FUNCTION__ is defined])
 AH_TEMPLATE([RELAX_COORD_BOUND],        [Define if relaxed coord check is enabled])
+AH_TEMPLATE([BUILD_DRIVER_FOO],         [Define if build driver foo (development test only)])
 
 AH_TOP([#ifndef _CONFIG_H
 #define _CONFIG_H])
@@ -370,7 +371,7 @@ if test "x${has_mpicxx}" = xyes ; then
       fi
    fi
 fi
-AC_SUBST(has_mpicxx)
+AC_SUBST(has_mpicxx)dnl for src/utils/pnetcdf-config.in
 UD_MSG_DEBUG(has_mpicxx=$has_mpicxx)
 AM_CONDITIONAL(HAS_MPICXX, [test x$has_mpicxx = xyes])
 AM_CONDITIONAL(SEEK_SET_REDEFINED, [test x$ac_cv_CHECK_MPI_CPP_SEEK_SET = xyes])
@@ -611,7 +612,7 @@ if test "x${has_fortran}" = xyes ; then
       AC_SUBST(USE_MPIF_HEADER)
    fi
 fi
-AC_SUBST(has_fortran)
+AC_SUBST(has_fortran)dnl for src/utils/pnetcdf-config.in
 AM_CONDITIONAL(HAS_FORTRAN, [test x$has_fortran = xyes])
 AM_CONDITIONAL(HAVE_MPI_MOD, [test x$mpi_mod = xyes])
 
@@ -1047,7 +1048,7 @@ fi
 AC_C_CHAR_UNSIGNED
 AC_C_BIGENDIAN
 AM_CONDITIONAL(IS_BIGENDIAN, [test x$ac_cv_c_bigendian = xyes])
-AC_SUBST(ac_cv_c_bigendian)
+AC_SUBST(ac_cv_c_bigendian)dnl for src/utils/pnetcdf-config.in
 
 in_place_swap=yes
 AC_ARG_ENABLE([in-place-swap],
@@ -1064,7 +1065,7 @@ if test "x${in_place_swap}" = xno ; then
       AC_DEFINE(DISABLE_IN_PLACE_SWAP)
    fi
 fi
-AC_SUBST(in_place_swap)
+AC_SUBST(in_place_swap)dnl for src/utils/pnetcdf-config.in
 
 dnl For big Endian, put buffer needs no byte swap and hence can be declared as
 dnl INTENT(IN). For little Endian, put buffer may be used for byte swap in
@@ -1075,7 +1076,7 @@ if test "x${ac_cv_c_bigendian}" = xyes  || (test "x${in_place_swap}" = xno) ; th
 else
    INTENTV="INOUT"
 fi
-AC_SUBST(INTENTV)
+AC_SUBST(INTENTV)dnl for src/binding/f90/api.fh.in
 
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
@@ -1386,7 +1387,6 @@ AC_CONFIG_FILES(Makefile \
                 src/drivers/common/Makefile \
                 src/drivers/include/Makefile \
                 src/drivers/ncmpio/Makefile \
-                src/drivers/ncfoo/Makefile \
                 src/binding/Makefile \
                 src/binding/cxx/Makefile \
                 src/binding/f77/Makefile \
@@ -1442,6 +1442,13 @@ dnl AC_CONFIG_FILES([stamp-h], [echo timestamp > stamp-h])
 dnl add executable permission to pnetcdf-config and check_install
 AC_CONFIG_FILES([src/utils/pnetcdf-config], [chmod u+x src/utils/pnetcdf-config])
 dnl AC_CONFIG_FILES([src/utils/check_install],  [chmod u+x src/utils/check_install])
+
+AC_CHECK_FILE([${srcdir}/src/drivers/ncfoo/Makefile.am], [build_foo=yes], [build_foo=no])
+if test "x${build_foo}" = xyes ; then
+    AC_CONFIG_FILES(src/drivers/ncfoo/Makefile)
+    AC_DEFINE(BUILD_DRIVER_FOO)
+fi
+AM_CONDITIONAL(BUILD_DRIVER_FOO, [test x${build_foo} = xyes])
 
 AC_OUTPUT
 echo "------------------------------------------------------------------------------"

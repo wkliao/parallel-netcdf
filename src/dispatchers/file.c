@@ -300,9 +300,12 @@ ncmpi_create(MPI_Comm    comm,
      * is later used to select the right driver. For now, we have only one
      * driver, ncmpio.
      */
+#ifdef BUILD_DRIVER_FOO
     if (enable_foo_driver)
         driver = ncfoo_inq_driver();
-    else /* default is ncmpio driver */
+    else
+#endif
+        /* default is ncmpio driver */
         driver = ncmpio_inq_driver();
 
 #if 0 /* refer to netCDF library's USE_REFCOUNT */
@@ -349,7 +352,7 @@ ncmpi_create(MPI_Comm    comm,
     pncp->ncp        = ncp;
 
     if (safe_mode)         pncp->flag |= NC_MODE_SAFE;
-    if (enable_foo_driver) pncp->flag |= NC_MODE_BB;
+    /* if (enable_foo_driver) pncp->flag |= NC_MODE_BB; */
     MPI_Comm_dup(comm, &pncp->comm);
 
     /* set the file format version based on the create mode, cmode */
@@ -471,9 +474,12 @@ ncmpi_open(MPI_Comm    comm,
     /* TODO: currently we only have ncmpio driver. Need to add other
      * drivers once they are available
      */
+#ifdef BUILD_DRIVER_FOO
     if (enable_foo_driver)
         driver = ncfoo_inq_driver();
-    else if (format == NC_FORMAT_CLASSIC ||
+    else
+#endif
+        if (format == NC_FORMAT_CLASSIC ||
              format == NC_FORMAT_CDF2 ||
              format == NC_FORMAT_CDF5) {
         driver = ncmpio_inq_driver();
@@ -529,7 +535,7 @@ ncmpi_open(MPI_Comm    comm,
     pncp->format     = format;
     if (!fIsSet(omode, NC_WRITE)) pncp->flag |= NC_MODE_RDONLY;
     if (safe_mode)                pncp->flag |= NC_MODE_SAFE;
-    if (enable_foo_driver)        pncp->flag |= NC_MODE_BB;
+    /* if (enable_foo_driver)        pncp->flag |= NC_MODE_BB; */
     MPI_Comm_dup(comm, &pncp->comm);
 
     /* add to the PNCList */
