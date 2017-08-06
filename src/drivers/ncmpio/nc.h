@@ -414,12 +414,6 @@ extern int
 ncmpio_file_set_view(const NC *ncp, MPI_File fh, MPI_Offset *offset,
                 MPI_Datatype filetype);
 
-extern int
-ncmpio_calc_datatype_elems(const NC_var *varp, const MPI_Offset *count,
-                MPI_Datatype buftype, MPI_Datatype *ptype,
-                MPI_Offset *bufcount, MPI_Offset *bnelems, MPI_Offset *nbytes,
-                int *el_size, int *buftype_is_contig);
-
 /* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
 extern int
 ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype mpitype);
