@@ -144,7 +144,7 @@ gen_load_c(
 		break;
 	      default:
 		derror("Unhandled type %d\n", vars[varnum].type);
-		break;
+		return;
 	    }
             for (ival = 0; ival < var_len-1; ival++) {
 		switch (vars[varnum].type) {
@@ -182,7 +182,7 @@ gen_load_c(
 		    break;
 		  default:
 		    derror("Unhandled type %d\n", vars[varnum].type);
-		    break;
+		    return;
 
 		}
 		stmnt_len += strlen(s2);
