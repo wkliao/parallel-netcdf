@@ -737,8 +737,13 @@ foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulongl
 ')dnl
 dnl
 /*----< ncmpio_get_att() >---------------------------------------------------*/
-/* This is an independent subroutine */
-/* user buffer data type matches the external type defined in file */
+/* This is an independent subroutine.
+ * itype: the internal data type of buf. Its value can be MPI_DATATYPE_NULL or
+ *        MPI promitive data type. For MPI_DATATYPE_NULL, it means the data
+ *        type of buf matches the external type of attribute defined in file.
+ *        For other MPI promitive data type, it corresponds to the type names
+ *        shown in the API name.
+ */
 int
 ncmpio_get_att(void         *ncdp,
                int           varid,
@@ -757,24 +762,13 @@ ncmpio_get_att(void         *ncdp,
 
     /* sanity checks for varid and name has been done in dispatcher */
 
-    if (itype == MPI_DATATYPE_NULL) {
-        /* this is for the API ncmpi_get_att() where the internal and external
-         * data types match (inquire attribute's external data type)
-         */
-        nc_type dtype;
-        err = ncmpio_inq_att(ncdp, varid, name, &dtype, NULL);
-        if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
-        itype = ncmpii_nc2mpitype(dtype);
-    }
+    /* obtain NC_attrarray object pointer */
+    if (varid == NC_GLOBAL) ncap = &ncp->attrs;
+    else                    ncap = &ncp->vars.value[varid]->attrs;
 
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-    /* obtain NC_attrarray object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
-    if (varid == NC_GLOBAL) ncap = &ncp->attrs;
-    else                    ncap = &ncp->vars.value[varid]->attrs;
 
     /* whether the attr exists (check NC_ENOTATT) */
     err = NC_lookupattr(ncap, nname, &attrp);
@@ -782,6 +776,11 @@ ncmpio_get_att(void         *ncdp,
     if (err != NC_NOERR) DEBUG_RETURN_ERROR(err)
 
     if (attrp->nelems == 0) return NC_NOERR;
+
+    if (itype == MPI_DATATYPE_NULL)
+        /* this is called from API ncmpi_get_att() where the internal and
+         * external data types match */
+        itype = ncmpii_nc2mpitype(attrp->xtype);
 
     /* No character conversions are allowed. */
     if ((attrp->xtype == NC_CHAR && itype != MPI_CHAR) ||
@@ -903,6 +902,12 @@ foreach(`iType', (schar,uchar,short,ushort,int,uint,float,double,longlong,ulongl
  *
  * Note ncmpi_put_att_text will never return NC_ERANGE error, as text is not
  * convertible to numerical types.
+ *
+ * itype: the internal data type of buf. Its value can be MPI_DATATYPE_NULL or
+ *        MPI promitive data type. For MPI_DATATYPE_NULL, it means the data
+ *        type of buf matches the external type of attribute defined in file.
+ *        For other MPI promitive data type, it corresponds to the type names
+ *        shown in the API name.
  */
 int
 ncmpio_put_att(void         *ncdp,
@@ -926,15 +931,8 @@ ncmpio_put_att(void         *ncdp,
      * same error codes as netCDF
      */
     if (varid != NC_GLOBAL && !strcmp(name, _FillValue)) {
-        NC_var *varp;
-        err = ncmpio_NC_lookupvar(ncp, varid, &varp);
-        if (err != NC_NOERR) {
-            DEBUG_TRACE_ERROR(err)
-            goto err_check;
-        }
-
         /* Fill value must be of the same data type */
-        if (xtype != varp->xtype) {
+        if (xtype != ncp->vars.value[varid]->xtype) {
             DEBUG_ASSIGN_ERROR(err, NC_EBADTYPE)
             goto err_check;
         }
@@ -953,7 +951,7 @@ ncmpio_put_att(void         *ncdp,
     }
 
     xsz = x_len_NC_attrV(xtype, nelems);
-    /* xsz is the total size of this attribute */
+    /* xsz is the total aligned size of this attribute */
 
     if (xsz != (int)xsz) {
         DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
@@ -967,8 +965,7 @@ ncmpio_put_att(void         *ncdp,
         goto err_check;
     }
 
-    /* obtain NC_attrarray object pointer, varp. Note sanity check for ncdp and
-     * varid has been done in dispatchers */
+    /* obtain NC_attrarray object pointer, ncap */
     if (varid == NC_GLOBAL) ncap = &ncp->attrs;
     else                    ncap = &ncp->vars.value[varid]->attrs;
 
