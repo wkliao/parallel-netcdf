@@ -200,21 +200,6 @@ incr_NC_dimarray(NC_dimarray *ncap,
     return NC_NOERR;
 }
 
-/*----< inq_NC_dim() >-------------------------------------------------------*/
-static NC_dim*
-inq_NC_dim(const NC_dimarray *ncap, int dimid)
-{
-    /* returns the dimension ID defined earlier */
-    assert(ncap != NULL);
-
-    if (dimid < 0 || ncap->ndefined == 0 || dimid >= ncap->ndefined)
-        return NULL;
-
-    assert(ncap->value != NULL);
-
-    return ncap->value[dimid];
-}
-
 /*----< ncmpio_def_dim() >---------------------------------------------------*/
 int
 ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
@@ -227,169 +212,9 @@ ncmpio_def_dim(void       *ncdp,    /* IN:  NC object */
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
 
-#if 0
-    /* must be called in define mode */
-    if (!NC_indef(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
-        goto err_check;
-    }
-
-    if (name == NULL || *name == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(name) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check if the name string is legal for the netcdf format */
-    err = ncmpii_check_name(name, ncp->format);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR(err)
-        goto err_check;
-    }
-
-    /* MPI_Offset is usually a signed value, but serial netcdf uses
-     * size_t -- normally unsigned
-     * In 1999 ISO C standard, size_t is an unsigned integer type of at least
-     * 16 bit. */
-    if (ncp->format == 2) { /* CDF-2 format, max is 2^32-4 */
-        if (size > X_UINT_MAX - 3 || (size < 0))
-            /* "-3" handles rounded-up size */
-            err = NC_EDIMSIZE;
-    } else if (ncp->format == 5) { /* CDF-5 format*/
-        if (size < 0)
-            err = NC_EDIMSIZE;
-    } else { /* CDF-1 format, max is 2^31-4 */
-        if (size > X_INT_MAX - 3 || (size < 0))
-            /* "-3" handles rounded-up size */
-            err = NC_EDIMSIZE;
-    }
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR(err)
-        goto err_check;
-    }
-
-    if (size == NC_UNLIMITED) {
-#if 0
-        /* check for any existing unlimited dimension, netcdf allows
-         * one per file
-         */
-        dimid = ncmpio_find_NC_Udim(&ncp->dims, &dimp);
-        if (dimid != -1) {
-            DEBUG_ASSIGN_ERROR(err, NC_EUNLIMIT) /* found an existing one */
-            goto err_check;
-        }
-#endif
-        if (ncp->dims.unlimited_id != -1) {
-            DEBUG_ASSIGN_ERROR(err, NC_EUNLIMIT) /* already defined */
-            goto err_check;
-        }
-    }
-
-    /* Note we no longer limit the number of dimensions, as CDF file formats
-     * impose no such limit. Thus, the value of NC_MAX_DIMS has been changed
-     * to NC_MAX_INT, as NC_dimarray.ndefined is of type signed int and so is
-     * ndims argument in ncmpi_inq_varndims()
-     */
-    if (ncp->dims.ndefined == NC_MAX_DIMS) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXDIMS)
-        goto err_check;
-    }
-
-    /* create a normalized character string */
-    nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
-    if (nname == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
-        goto err_check;
-    }
-
-    /* check if the name string is previously used */
-    err = NC_finddim(&ncp->dims, nname, NULL);
-    if (err != NC_EBADDIM) {
-        DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
-        goto err_check;
-    }
-    else
-        err = NC_NOERR;
-
-err_check:
-    if (ncp->safe_mode) {
-        int root_name_len, rank, status, mpireturn;
-        char *root_name=NULL;
-        MPI_Offset root_size;
-
-        /* check the error so far across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            NCI_Free(nname);
-            return status;
-        }
-        assert(nname != NULL);
-        assert(name != NULL);
-
-        MPI_Comm_rank(ncp->comm, &rank);
-
-        /* check if name is consistent among all processes */
-        root_name_len = 1;
-        if (rank == 0 && name != NULL) root_name_len += strlen(name);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-        }
-
-        if (rank == 0)
-            root_name = (char*)name;
-        else
-            root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            if (rank > 0) NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && rank > 0 && strcmp(root_name, name))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
-        if (rank > 0) NCI_Free(root_name);
-
-        /* check if sizes are consistent across all processes */
-        root_size = size;
-        TRACE_COMM(MPI_Bcast)(&root_size, 1, MPI_OFFSET, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (nname != NULL) NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && root_size != size)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_SIZE)
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(nname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            NCI_Free(nname);
-            return status;
-        }
-    }
-
-    if (err != NC_NOERR) {
-        if (nname != NULL) NCI_Free(nname);
-        return err;
-    }
-#else
     /* create a normalized character string */
     nname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)name);
     if (nname == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-#endif
 
     /* create a new dimension object (dimp->name points to nname) */
     dimp = (NC_dim*) NCI_Malloc(sizeof(NC_dim));
@@ -450,11 +275,11 @@ ncmpio_inq_dim(void       *ncdp,
                char       *name,
                MPI_Offset *sizep)
 {
+    NC_dim *dimp;
     NC *ncp=(NC*)ncdp;
-    NC_dim *dimp=NULL;
 
-    dimp = inq_NC_dim(&ncp->dims, dimid);
-    if (dimp == NULL) DEBUG_RETURN_ERROR(NC_EBADDIM)
+    /* sanity check for dimid has been done at dispatchers */
+    dimp = ncp->dims.value[dimid];
 
     if (name != NULL)
         /* in PnetCDF, name is always NULL character terminated */
@@ -485,30 +310,6 @@ ncmpio_rename_dim(void       *ncdp,
     NC *ncp=(NC*)ncdp;
     NC_dim *dimp=NULL;
 
-#if 0
-    /* check file's write permission */
-    if (NC_readonly(ncp)) {
-        DEBUG_ASSIGN_ERROR(err, NC_EPERM)
-        goto err_check;
-    }
-
-    if (newname == NULL || *newname == 0) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADNAME)
-        goto err_check;
-    }
-
-    if (strlen(newname) > NC_MAX_NAME) {
-        DEBUG_ASSIGN_ERROR(err, NC_EMAXNAME)
-        goto err_check;
-    }
-
-    /* check whether newname is legal */
-    err = ncmpii_check_name(newname, ncp->format);
-    if (err != NC_NOERR) {
-        DEBUG_TRACE_ERROR(err)
-        goto err_check;
-    }
-#endif
     /* create a normalized character string */
     nnewname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)newname);
     if (nnewname == NULL) {
@@ -516,21 +317,9 @@ ncmpio_rename_dim(void       *ncdp,
         goto err_check;
     }
     nnewname_len = strlen(nnewname);
-#if 0
-    /* check whether newname is already in use */
-    err = NC_finddim(&ncp->dims, nnewname, NULL);
-    if (err != NC_EBADDIM) { /* expecting NC_EBADDIM */
-        DEBUG_ASSIGN_ERROR(err, NC_ENAMEINUSE)
-        goto err_check;
-    }
-    else err = NC_NOERR;  /* reset err */
-#endif
-    /* retrieve dim object */
-    dimp = inq_NC_dim(&ncp->dims, dimid);
-    if (dimp == NULL) {
-        DEBUG_ASSIGN_ERROR(err, NC_EBADDIM)
-        goto err_check;
-    }
+
+    /* sanity check for dimid has been done at dispatchers */
+    dimp = ncp->dims.value[dimid];
 
     if (! NC_indef(ncp) && dimp->name_len < nnewname_len) {
         /* when in data mode, newname cannot be longer than the old one */
@@ -563,52 +352,6 @@ err_check:
             NCI_Free(nnewname);
             return status;
         }
-#if 0
-        int rank, root_name_len, root_dimid;
-        char *root_name=NULL;
-        assert(nnewname != NULL);
-
-        MPI_Comm_rank(ncp->comm, &rank);
-
-        /* check if newname is consistent among all processes */
-        root_name_len = 1;
-        if (rank == 0 && newname != NULL) root_name_len += strlen(newname);
-        TRACE_COMM(MPI_Bcast)(&root_name_len, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast root_name_len");
-
-        if (rank == 0)
-            root_name = (char*)newname;
-        else
-            root_name = (char*) NCI_Malloc((size_t)root_name_len);
-        TRACE_COMM(MPI_Bcast)(root_name, root_name_len, MPI_CHAR, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            if (rank > 0) NCI_Free(root_name);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        }
-        if (err == NC_NOERR && rank > 0 && strcmp(root_name, newname))
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_DIM_NAME)
-        if (rank > 0) NCI_Free(root_name);
-
-        /* check if dimid is consistent across all processes */
-        root_dimid = dimid;
-        TRACE_COMM(MPI_Bcast)(&root_dimid, 1, MPI_INT, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS)
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
-        if (err == NC_NOERR && root_dimid != dimid)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            NCI_Free(nnewname);
-            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
-        }
-        if (status != NC_NOERR) {
-            NCI_Free(nnewname);
-            return status;
-        }
-#endif
     }
 
     if (err != NC_NOERR) {
