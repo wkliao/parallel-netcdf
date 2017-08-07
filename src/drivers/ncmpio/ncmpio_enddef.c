@@ -634,61 +634,10 @@ ncmpio__enddef(void       *ncdp,
     MPI_Offset all_var_size;
     NC *ncp = (NC*)ncdp;
 
-    if (!NC_indef(ncp)) /* must currently in define mode */
-        DEBUG_RETURN_ERROR(NC_ENOTINDEFINE)
-
-    if (NC_readonly(ncp)) /* must have write permission */
-        DEBUG_RETURN_ERROR(NC_EPERM)
-
-    if (h_minfree < 0 || v_align < 0 || v_minfree < 0 || r_align < 0)
-        DEBUG_ASSIGN_ERROR(status, NC_EINVAL)
-    else {
-        ncp->h_minfree = h_minfree;
-        ncp->v_minfree = v_minfree;
-    }
-
-    if (ncp->safe_mode) {
-        /* find min error code across processes */
-        err = status;
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_error_mpi2nc(mpireturn,"MPI_Allreduce");
-            DEBUG_RETURN_ERROR(err)
-        }
-        if (status != NC_NOERR) return status;
-
-        /* check if h_minfree, v_align, v_minfree, and r_align are consistent
-         * among all processes */
-        MPI_Offset root_args[4];
-
-        root_args[0] = h_minfree;
-        root_args[1] = v_align;
-        root_args[2] = v_minfree;
-        root_args[3] = r_align;
-        TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast"); 
-            DEBUG_RETURN_ERROR(err)
-        }
-
-        if (root_args[0] != h_minfree ||
-            root_args[1] != v_align   ||
-            root_args[2] != v_minfree ||
-            root_args[3] != r_align)
-            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
-        else if (h_minfree < 0 || v_align < 0 || v_minfree < 0 || r_align < 0)
-            DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
-        else
-            err = NC_NOERR;
-
-        /* find min error code across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &status, 1, MPI_INT, MPI_MIN,ncp->comm);
-        if (mpireturn != MPI_SUCCESS) {
-            err = ncmpii_error_mpi2nc(mpireturn,"MPI_Allreduce");
-            DEBUG_RETURN_ERROR(err)
-        }
-        if (status != NC_NOERR) return status;
-    }
+    /* sanity check for NC_ENOTINDEFINE, NC_EINVAL, NC_EMULTIDEFINE_FNC_ARGS
+     * has been done at dispatchers */
+    ncp->h_minfree = h_minfree;
+    ncp->v_minfree = v_minfree;
 
     /* calculate a good align size for PnetCDF level hints:
      * header_align_size and var_align_size based on the MPI-IO hint

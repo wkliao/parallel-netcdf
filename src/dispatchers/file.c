@@ -637,12 +637,23 @@ ncmpi_close(int ncid)
 /* This is a collective subroutine. */
 int
 ncmpi_enddef(int ncid) {
-    int err;
+    int err=NC_NOERR;
     PNC *pncp;
 
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (!(pncp->flag & NC_MODE_DEF)) DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
+
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+        /* check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
 
     /* calling the subroutine that implements ncmpi_enddef() */
     err = pncp->driver->enddef(pncp->ncp);
@@ -662,12 +673,56 @@ ncmpi__enddef(int        ncid,
               MPI_Offset v_minfree,
               MPI_Offset r_align)
 {   
-    int err;
+    int err=NC_NOERR;
     PNC *pncp;
 
     /* check if ncid is valid */
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
+
+    if (!(pncp->flag & NC_MODE_DEF)) {
+        DEBUG_ASSIGN_ERROR(err, NC_ENOTINDEFINE)
+        goto err_check;
+    }
+
+    if (h_minfree < 0 || v_align < 0 || v_minfree < 0 || r_align < 0) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINVAL)
+        goto err_check;
+    }
+
+err_check:
+    if (pncp->flag & NC_MODE_SAFE) {
+        int minE, mpireturn;
+        MPI_Offset root_args[4];
+
+        /* first check the error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+
+        /* check if h_minfree, v_align, v_minfree, and r_align are consistent
+         * among all processes */
+        root_args[0] = h_minfree;
+        root_args[1] = v_align;
+        root_args[2] = v_minfree;
+        root_args[3] = r_align;
+        TRACE_COMM(MPI_Bcast)(&root_args, 4, MPI_OFFSET, 0, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Bcast");
+
+        if (root_args[0] != h_minfree ||
+            root_args[1] != v_align   ||
+            root_args[2] != v_minfree ||
+            root_args[3] != r_align)
+            DEBUG_ASSIGN_ERROR(err, NC_EMULTIDEFINE_FNC_ARGS)
+
+        /* find min error code across processes */
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
+        if (minE != NC_NOERR) return minE;
+    }
 
     /* calling the subroutine that implements ncmpi__enddef() */
     err = pncp->driver->_enddef(pncp->ncp, h_minfree, v_align,
