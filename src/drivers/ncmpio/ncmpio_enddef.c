@@ -79,10 +79,8 @@ move_file_block(NC         *ncp,
             nbytes -= chunk_size*nprocs;
         }
 
-#ifdef _USE_MPI_GET_COUNT
         /* explicitly initialize mpistatus object to 0, see comments below */
         memset(&mpistatus, 0, sizeof(MPI_Status));
-#endif
 
         /* read the original data @ from+nbytes+rank*chunk_size */
         TRACE_IO(MPI_File_read_at_all)(ncp->collective_fh,
@@ -98,14 +96,14 @@ move_file_block(NC         *ncp,
              * object passed to MPI-IO calls. Thus we initialize it above to
              * work around. See MPICH ticket:
              * https://trac.mpich.org/projects/mpich/ticket/2332
+             *
+             * Note we cannot set bufcount to get_size, as the actural size
+             * read from a file may be less than bufcount. Because we are
+             * moving whatever read to a new file offset, we must use the
+             * amount actually read to call MPI_File_write_at_all below.
              */
-#ifdef _USE_MPI_GET_COUNT
             MPI_Get_count(&mpistatus, MPI_BYTE, &get_size);
             ncp->get_size += get_size;
-#else
-            ncp->get_size += bufcount;
-            get_size       = bufcount;
-#endif
         }
 
         /* MPI_Barrier(ncp->comm); */
