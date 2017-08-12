@@ -371,7 +371,14 @@ int ncmpio_x_getn_NC_UINT64(const void *xp, void *ip, MPI_Offset nelems, MPI_Dat
 
 
 /*----< ncmpii_put_cast_swap() >---------------------------------------------*/
-/* type casting and Endianness byte swap if needed */
+/* This subroutine type-casts and byte-swaps ibuf (in the internal data
+ * representation) into xbuf (in the external data representation), if
+ * necessary. xbuf is set to ibuf only if type-casting is not required (i.e.
+ * data types of itype and xtype match) or the put size is bigger than
+ * NC_BYTE_SWAP_BUFFER_SIZE when byte-swap is required. In this case, ibuf is
+ * byte-swapped in-place if running on a little Endian machine. Otherwise,
+ * xbuf is malloc-ed first and type-casted and byte-swapped into xbuf.
+ */
 int
 ncmpii_put_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
                      MPI_Offset     nelems,   /* number of data elements */
@@ -382,54 +389,63 @@ ncmpii_put_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
                      int            isNewBuf, /* whether ibuf != user buf */
                      void         **xbuf)     /* OUT: buffer in external type */
 {
-    int err=NC_NOERR, xsz=0;
+    int err=NC_NOERR, xsz=0, need_cast, need_swap;
     size_t nbytes;
 
-    *xbuf = ibuf;
+    /* check if type casting and Endianness byte swap are needed */
+    need_cast = check_cast(format, xtype, itype);
+    need_swap = check_swap(xtype, itype);
 
     ncmpii_xlen_nc_type(xtype, &xsz);
     nbytes = (size_t)(nelems * xsz);
 
+    /* allocate xbuf if necessary */
+    if (need_cast || (need_swap && !isNewBuf
+#ifndef DISABLE_IN_PLACE_SWAP
+        && nbytes <= NC_BYTE_SWAP_BUFFER_SIZE
+#endif
+        )) {
+        *xbuf = NCI_Malloc(nbytes);
+        if (*xbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    }
+    else
+        *xbuf = ibuf;
+
     /* pack ibuf to xbuf. The contents of xbuf will be in the external
      * representation, ready to be written to file.
      */
-    if (check_cast(format, xtype, itype)) {
-        /* user buf type mismatches NC var type */
-
-        *xbuf = NCI_Malloc(nbytes);
-        if (*xbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
+    if (need_cast) { /* user buf type mismatches NC var type */
         /* datatype conversion + byte-swap from ibuf to xbuf */
         switch(xtype) {
             case NC_BYTE:
                 err = putn_NC_BYTE(format,*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UBYTE:
-                err = putn_NC_UBYTE(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_UBYTE      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_SHORT:
-                err = putn_NC_SHORT(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_SHORT      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_USHORT:
-                err = putn_NC_USHORT(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_USHORT     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_INT:
-                err = putn_NC_INT(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_INT        (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UINT:
-                err = putn_NC_UINT(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_UINT       (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_FLOAT:
-                err = putn_NC_FLOAT(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_FLOAT      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_DOUBLE:
-                err = putn_NC_DOUBLE(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_DOUBLE     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_INT64:
-                err = putn_NC_INT64(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_INT64      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UINT64:
-                err = putn_NC_UINT64(*xbuf,ibuf,nelems,itype,fillp);
+                err = putn_NC_UINT64     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             default:
                 err = NC_EBADTYPE;
@@ -446,19 +462,8 @@ ncmpii_put_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
             return err;
         }
     }
-    else if (check_swap(xtype, itype)) { /* no casting, just byte swap */
-#ifdef DISABLE_IN_PLACE_SWAP
-        if (!isNewBuf)
-#else
-        if (!isNewBuf && nbytes <= NC_BYTE_SWAP_BUFFER_SIZE)
-#endif
-        {
-            /* allocate ibuf and copy buf to xbuf, before byte-swap */
-            *xbuf = NCI_Malloc(nbytes);
-            if (*xbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
-
-            memcpy(*xbuf, ibuf, nbytes);
-        }
+    else if (need_swap) { /* no casting, just byte swap */
+        if (*xbuf != ibuf) memcpy(*xbuf, ibuf, nbytes);
 
         /* perform array in-place byte-swap on xbuf */
         ncmpii_in_swapn(*xbuf, nelems, xsz);
@@ -501,31 +506,31 @@ ncmpii_get_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
                 err = getn_NC_BYTE(format,xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UBYTE:
-                err = getn_NC_UBYTE(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_UBYTE      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_SHORT:
-                err = getn_NC_SHORT(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_SHORT      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_USHORT:
-                err = getn_NC_USHORT(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_USHORT     (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_INT:
-                err = getn_NC_INT(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_INT        (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UINT:
-                err = getn_NC_UINT(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_UINT       (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_FLOAT:
-                err = getn_NC_FLOAT(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_FLOAT      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_DOUBLE:
-                err = getn_NC_DOUBLE(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_DOUBLE     (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_INT64:
-                err = getn_NC_INT64(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_INT64      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UINT64:
-                err = getn_NC_UINT64(xbuf,*ibuf,nelems,itype);
+                err = getn_NC_UINT64     (xbuf,*ibuf,nelems,itype);
                 break;
             default:
                 err = NC_EBADTYPE;
