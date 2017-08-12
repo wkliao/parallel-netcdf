@@ -18,6 +18,14 @@
 #include <common.h>
 
 /*----< ncmpii_pack() >------------------------------------------------------*/
+/* This subroutine packs buf, if it is noncontiguous, into a contiguous
+ * buffer, cbuf. Whether buf is contiguous or not depends on buftype and imap.
+ * If both buftype and imap indicate a contiguous buffer, then cbuf will be
+ * set to buf. Otherwise, cbuf will be malloc-ed and it needs to be freed
+ * later.
+ * buftype is decoded to find the element type, ptype, used to create the type.
+ * bnelems is calculated base don bufcount and buftype.
+ */
 int
 ncmpii_pack(int                ndims,
             const MPI_Offset  *count,
