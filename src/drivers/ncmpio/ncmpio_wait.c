@@ -812,8 +812,8 @@ req_commit(NC  *ncp,
     for (i=0; i<num_w_reqs; i++) {
         /* must byte-swap the user buffer back to its original Endianness
          * only when the buffer itself has been byte-swapped before,
-         * i.e. NOT buftype_is_contig && NOT ncmpio_need_convert() &&
-         * ncmpio_need_swap()
+         * i.e. NOT buftype_is_contig && NOT ncmpii_need_convert() &&
+         * ncmpii_need_swap()
 	 * For requests that write to record variables for more than one
 	 * record, only the request containing the lead record does this (it
 	 * does swap for the entire request)
@@ -865,7 +865,7 @@ req_commit(NC  *ncp,
         if (insize != (int)insize && status == NC_NOERR)
             DEBUG_ASSIGN_ERROR(status, NC_EINTOVERFLOW)
 
-        if (ncmpio_need_convert(ncp->format, varp->xtype, get_list[i].ptype)) {
+        if (ncmpii_need_convert(ncp->format, varp->xtype, get_list[i].ptype)) {
             /* need type conversion from the external type to user buffer
                type */
             if (get_list[i].imaptype != MPI_DATATYPE_NULL ||
@@ -883,7 +883,7 @@ req_commit(NC  *ncp,
                 *get_list[i].status = err;
             if (status == NC_NOERR) status = err;
         } else {
-            if (ncmpio_need_swap(varp->xtype, get_list[i].ptype))
+            if (ncmpii_need_swap(varp->xtype, get_list[i].ptype))
                 ncmpii_in_swapn(get_list[i].xbuf, bnelems, varp->xsz);
             cbuf = get_list[i].xbuf;
         }

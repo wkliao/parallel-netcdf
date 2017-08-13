@@ -116,13 +116,16 @@ put_varm(NC               *ncp,
          MPI_Datatype      buftype,
          int               reqMode)   /* WR/RD/COLL/INDEP */
 {
-    void *cbuf=NULL, *xbuf=NULL;
+    void *xbuf=NULL;
     int mpireturn, err=NC_NOERR, status=NC_NOERR, need_swap_back_buf=0;
+    int el_size, need_convert, need_swap, buftype_is_contig;
     MPI_Offset nelems=0, nbytes=0, offset=0;
     MPI_Status mpistatus;
-    MPI_Datatype etype, filetype=MPI_BYTE;
+    MPI_Datatype etype, imaptype, filetype=MPI_BYTE;
     MPI_File fh;
 
+#if 0
+    void *cbuf=NULL;
     /* pack buf into a contiguous buffer, cbuf -----------------------------*/
     /* If called from a true varm API or a flexible API, ncmpii_pack() packs
      * user buf into a contiguous cbuf (need to be freed later). Otherwise,
@@ -163,6 +166,69 @@ put_varm(NC               *ncp,
     /* check if user buf needs to be swapped back to its original contents
      * after MPI write */
     if (xbuf == buf && varp->xsz > 1) need_swap_back_buf = 1;
+#else
+    if (bufcount != (int)bufcount) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
+        goto err_check;
+    }
+
+    /* decode buftype to obtain the followings:
+     * etype:    element data type (MPI primitive type) in buftype
+     * bufcount: If it is -1, then this is called from a high-level API and in
+     *           this case buftype will be an MPI primitive data type.
+     *           If it is >=0, then this is called from a flexible API.
+     * nelems:   number of etypes in user buffer, buf
+     * nbytes:   number of bytes (in external data representation) to write to
+     *           the file
+     * el_size:  byte size of etype
+     * buftype_is_contig: whether buftype is contiguous
+     */
+    err = ncmpii_buftype_decode(varp->ndims, varp->xtype, count, bufcount,
+                                buftype, &etype, &el_size, &nelems,
+                                &nbytes, &buftype_is_contig);
+    if (err != NC_NOERR) goto err_check;
+
+    if (nbytes == 0) goto err_check;
+
+    /* check if type conversion and Endianness byte swap is needed */
+    need_convert = ncmpii_need_convert(ncp->format, varp->xtype, etype);
+    need_swap    = ncmpii_need_swap(varp->xtype, etype);
+
+    /* check whether this is a true varm call, if yes, imaptype will be a
+     * newly created MPI derived data type, otherwise MPI_DATATYPE_NULL
+     */
+    err = ncmpii_create_imaptype(varp->ndims, count, imap, etype, &imaptype);
+    if (err != NC_NOERR) goto err_check;
+
+    /* when user buf is used as xbuf, we need to byte-swap buf back to its
+     * original contents, after MPI_File_write */
+    xbuf = buf;
+    need_swap_back_buf = 1;
+
+    if (!buftype_is_contig || imaptype != MPI_DATATYPE_NULL || need_convert ||
+#ifdef DISABLE_IN_PLACE_SWAP
+        need_swap
+#else
+        nbytes <= NC_BYTE_SWAP_BUFFER_SIZE
+#endif
+    ) {
+        xbuf = NCI_Malloc((size_t)nbytes);
+        if (xbuf == NULL) {
+            DEBUG_ASSIGN_ERROR(err, NC_ENOMEM)
+            goto err_check;
+        }
+        need_swap_back_buf = 0;
+    }
+
+    /* pack user buffer, buf, to xbuf, which will be used to write to file */
+    err = ncmpio_pack_xbuf(ncp->format, varp, bufcount, buftype,
+                           buftype_is_contig, nelems, etype, imaptype,
+                           need_convert, need_swap, nbytes, buf, xbuf);
+    if (err != NC_NOERR && err != NC_ERANGE) {
+        NCI_Free(xbuf);
+        goto err_check;
+    }
+#endif
 
 err_check:
     status = err;
@@ -361,8 +427,8 @@ get_varm(NC               *ncp,
         goto err_check;
 
     /* check if type conversion and Endianness byte swap is needed */
-    need_convert = ncmpio_need_convert(ncp->format, varp->xtype, etype);
-    need_swap    = ncmpio_need_swap(varp->xtype, etype);
+    need_convert = ncmpii_need_convert(ncp->format, varp->xtype, etype);
+    need_swap    = ncmpii_need_swap(varp->xtype, etype);
 
     /* Check if this is a true varm call. If yes, construct a derived
      * datatype, imaptype.

@@ -414,83 +414,6 @@ extern int
 ncmpio_file_set_view(const NC *ncp, MPI_File fh, MPI_Offset *offset,
                 MPI_Datatype filetype);
 
-/* Begin defined in ncmpio_convert_swap.m4 ----------------------------------*/
-extern int
-ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype mpitype);
-
-extern int
-ncmpio_need_swap(nc_type xtype, MPI_Datatype mpitype);
-
-extern int
-ncmpio_x_putn_NC_CHAR  (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_putn_NC_BYTE  (int cdf_ver,
-                       void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_UBYTE (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_SHORT (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_USHORT(void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_INT   (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_UINT  (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_FLOAT (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_DOUBLE(void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_INT64 (void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-extern int
-ncmpio_x_putn_NC_UINT64(void *xbuf, const void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype, void *fillp);
-
-extern int
-ncmpio_x_getn_NC_CHAR  (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_BYTE  (int cdf_ver,
-                       const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_UBYTE (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_SHORT (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_USHORT(const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_INT   (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_UINT  (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_FLOAT (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_DOUBLE(const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_INT64 (const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-extern int
-ncmpio_x_getn_NC_UINT64(const void *xbuf, void *buf, MPI_Offset nelems,
-                       MPI_Datatype datatype);
-
 /* Begin defined in ncmpio_igetput.m4 ---------------------------------------*/
 extern int
 ncmpio_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
@@ -499,7 +422,6 @@ ncmpio_igetput_varm(NC *ncp, NC_var *varp, const MPI_Offset *start,
                 MPI_Datatype datatype, int *reqid, int reqMode,
                 int isSameGroup);
 
-/* Begin defined in ncmpio_getput.m4 ----------------------------------------*/
 /* Begin defined in ncmpio_hash_func.c --------------------------------------*/
 extern int
 ncmpio_jenkins_one_at_a_time_hash(const char *str_name);
@@ -564,5 +486,11 @@ extern int
 ncmpio_last_offset(const NC *ncp, const NC_var *varp, const MPI_Offset starts[],
                    const MPI_Offset counts[], const MPI_Offset strides[],
                    const int rw_flag, MPI_Offset *offset_ptr);
+
+extern int
+ncmpio_pack_xbuf(int format, NC_var *varp, MPI_Offset bufcount,
+                 MPI_Datatype buftype, int buftype_is_contig, MPI_Offset nelems,
+                 MPI_Datatype etype, MPI_Datatype imaptype, int need_convert,
+                 int need_swap, size_t xbuf_size, void *buf, void *xbuf);
 
 #endif /* _NC_H */
