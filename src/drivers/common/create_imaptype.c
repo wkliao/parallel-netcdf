@@ -36,10 +36,10 @@ ncmpii_create_imaptype(int               ndims,
     /* check if this is a vars call or a true varm call */
     *imaptype = MPI_DATATYPE_NULL;
 
-    if (ndims == 0) /* scalar var, only one value at one fixed place */
+    if (imap == NULL) /* no mapping, same as vars */
         return NC_NOERR;
 
-    if (imap == NULL) /* no mapping, same as vars */
+    if (ndims == 0) /* scalar var, only one value at one fixed place */
         return NC_NOERR;
 
     for (bnelems=1, dim=0; dim<ndims; dim++) bnelems *= count[dim];

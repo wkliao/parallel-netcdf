@@ -77,15 +77,15 @@ dnl
  *
  */
 
-/*----< check_cast() >-------------------------------------------------------*/
+/*----< ncmpii_need_convert() >----------------------------------------------*/
 /* netCDF specification makes a special case for type conversion between
  * uchar and NC_BYTE: do not check for range error. See
  * http://www.unidata.ucar.edu/software/netcdf/docs/data_type.html#type_conversion
  */
-static int
-check_cast(int          format, /* 1, 2, or 5 (CDF format number) */
-           nc_type      xtype,  /* external NC type */
-           MPI_Datatype itype)  /* internal MPI type */
+int
+ncmpii_need_convert(int          format, /* 1, 2, or 5 (CDF format number) */
+                    nc_type      xtype,  /* external NC type */
+                    MPI_Datatype itype)  /* internal MPI type */
 {
     if (xtype == NC_CHAR) { /* NC_ECHAR is already checked before here */
         assert(itype == MPI_CHAR);
@@ -110,10 +110,10 @@ check_cast(int          format, /* 1, 2, or 5 (CDF format number) */
             );
 }
 
-/*----< check_swap() >-------------------------------------------------------*/
-static int
-check_swap(nc_type      xtype,  /* external NC type */
-           MPI_Datatype itype)  /* internal MPI type */
+/*----< ncmpii_need_swap() >-------------------------------------------------*/
+int
+ncmpii_need_swap(nc_type      xtype,  /* external NC type */
+                 MPI_Datatype itype)  /* internal MPI type */
 {
 #ifdef WORDS_BIGENDIAN
     return 0;
@@ -126,20 +126,6 @@ check_swap(nc_type      xtype,  /* external NC type */
     return 1;
 #endif
 }
-
-int
-ncmpio_need_convert(int format, nc_type xtype, MPI_Datatype itype)
-{
-    return check_cast(format, xtype, itype);
-}
-
-/*----< ncmpio_need_swap() >-------------------------------------------------*/
-int
-ncmpio_need_swap(nc_type xtype, MPI_Datatype itype)
-{
-    return check_swap(xtype, itype);
-}
-
 
 /* Other options to in-place byte-swap
 htonl() is for 4-byte swap
@@ -218,17 +204,17 @@ dnl PUTN_XTYPE(xtype)
 dnl
 define(`PUTN_XTYPE',dnl
 `dnl
-/*----< putn_$1() >----------------------------------------------------------*/
+/*----< ncmpii_putn_$1() >---------------------------------------------------*/
 /* Only xtype and itype do not match and type casting is required will call
  * this subroutine.
  */
-static int
-putn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
-        void         *xp,     /* buffer of external type $1 */
-        const void   *buf,    /* user buffer of internal type, itype */
-        MPI_Offset    nelems,
-        MPI_Datatype  itype,  /* internal data type (MPI_Datatype) */
-        void         *fillp)  /* in internal representation */
+int
+ncmpii_putn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
+               void         *xp,     /* buffer of external type $1 */
+               const void   *buf,    /* user buffer of internal type, itype */
+               MPI_Offset    nelems,
+               MPI_Datatype  itype,  /* internal data type (MPI_Datatype) */
+               void         *fillp)  /* in internal representation */
 {
     assert(itype != MPI_CHAR); /* ECHAR should have been checked already */
 
@@ -279,18 +265,6 @@ PUTN_XTYPE(NC_UINT64)
  * http://www.unidata.ucar.edu/software/netcdf/docs/data_type.html#type_conversion
  */
 PUTN_XTYPE(NC_BYTE)
-
-
-int ncmpio_x_putn_NC_BYTE(int cdf_ver, void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_BYTE(cdf_ver, xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_UBYTE(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_UBYTE(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_SHORT(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_SHORT(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_USHORT(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_USHORT(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_INT(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_INT(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_UINT(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_UINT(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_FLOAT(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_FLOAT(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_DOUBLE(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_DOUBLE(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_INT64(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_INT64(xp, buf, nelems, itype, fillp); }
-int ncmpio_x_putn_NC_UINT64(void *xp, const void *buf, MPI_Offset nelems, MPI_Datatype itype, void *fillp) { return putn_NC_UINT64(xp, buf, nelems, itype, fillp); }
 
 
 dnl
@@ -393,8 +367,8 @@ ncmpii_put_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
     size_t nbytes;
 
     /* check if type casting and Endianness byte swap are needed */
-    need_cast = check_cast(format, xtype, itype);
-    need_swap = check_swap(xtype, itype);
+    need_cast = ncmpii_need_convert(format, xtype, itype);
+    need_swap = ncmpii_need_swap(xtype, itype);
 
     ncmpii_xlen_nc_type(xtype, &xsz);
     nbytes = (size_t)(nelems * xsz);
@@ -418,34 +392,34 @@ ncmpii_put_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
         /* datatype conversion + byte-swap from ibuf to xbuf */
         switch(xtype) {
             case NC_BYTE:
-                err = putn_NC_BYTE(format,*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_BYTE(format,*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UBYTE:
-                err = putn_NC_UBYTE      (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_UBYTE      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_SHORT:
-                err = putn_NC_SHORT      (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_SHORT      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_USHORT:
-                err = putn_NC_USHORT     (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_USHORT     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_INT:
-                err = putn_NC_INT        (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_INT        (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UINT:
-                err = putn_NC_UINT       (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_UINT       (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_FLOAT:
-                err = putn_NC_FLOAT      (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_FLOAT      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_DOUBLE:
-                err = putn_NC_DOUBLE     (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_DOUBLE     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_INT64:
-                err = putn_NC_INT64      (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_INT64      (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             case NC_UINT64:
-                err = putn_NC_UINT64     (*xbuf,ibuf,nelems,itype,fillp);
+                err = ncmpii_putn_NC_UINT64     (*xbuf,ibuf,nelems,itype,fillp);
                 break;
             default:
                 err = NC_EBADTYPE;
@@ -489,7 +463,7 @@ ncmpii_get_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
     MPI_Type_size(itype, &xsz);
     nbytes = (size_t)(nelems * xsz);
 
-    if (check_cast(format, xtype, itype)) {
+    if (ncmpii_need_convert(format, xtype, itype)) {
         /* user buf type mismatches NC var type */
 
         /* xbuf cannot be buf, but ibuf can */
@@ -546,8 +520,8 @@ ncmpii_get_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
             return err;
         }
     }
-    else {
-        if (check_swap(xtype, itype)) /* no need to convert, just byte swap */
+    else { /* no need to convert */
+        if (ncmpii_need_swap(xtype, itype)) /* check if need byte swap */
             ncmpii_in_swapn(xbuf, nelems, xsz);
         *ibuf = xbuf;
     }
