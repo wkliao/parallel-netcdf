@@ -272,12 +272,12 @@ dnl GETN_XTYPE(xtype)
 dnl
 define(`GETN_XTYPE',dnl
 `dnl
-/*----< getn_$1() >----------------------------------------------------------*/
+/*----< ncmpii_getn_$1() >---------------------------------------------------*/
 /* Only xtype and itype do not match and type casting is required will call
  * this subroutine.
  */
-static int
-getn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* 1,2,or 5 CDF format */')
+int
+ncmpii_getn_$1(ifelse(`$1',`NC_BYTE',`int cdf_ver,/* NC_FORMAT_CDF5 etc. */')
         const void   *xp,     /* buffer of external type $1 */
         void         *ip,     /* user buffer of internal type, itype */
         MPI_Offset    nelems,
@@ -332,18 +332,7 @@ GETN_XTYPE(NC_UINT64)
  */
 GETN_XTYPE(NC_BYTE)
 
-int ncmpio_x_getn_NC_BYTE(int cdf_ver, const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_BYTE(cdf_ver, xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_UBYTE(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_UBYTE(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_SHORT(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_SHORT(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_USHORT(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_USHORT(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_INT(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_INT(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_UINT(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_UINT(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_FLOAT(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_FLOAT(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_DOUBLE(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_DOUBLE(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_INT64(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_INT64(xp, ip, nelems, itype); }
-int ncmpio_x_getn_NC_UINT64(const void *xp, void *ip, MPI_Offset nelems, MPI_Datatype itype) { return getn_NC_UINT64(xp, ip, nelems, itype); }
-
-
+#if 0
 /*----< ncmpii_put_cast_swap() >---------------------------------------------*/
 /* This subroutine type-casts and byte-swaps ibuf (in the internal data
  * representation) into xbuf (in the external data representation), if
@@ -477,34 +466,34 @@ ncmpii_get_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
         /* type conversion + byte-swap from xbuf to ibuf */
         switch(xtype) {
             case NC_BYTE:
-                err = getn_NC_BYTE(format,xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_BYTE(format,xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UBYTE:
-                err = getn_NC_UBYTE      (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_UBYTE      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_SHORT:
-                err = getn_NC_SHORT      (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_SHORT      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_USHORT:
-                err = getn_NC_USHORT     (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_USHORT     (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_INT:
-                err = getn_NC_INT        (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_INT        (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UINT:
-                err = getn_NC_UINT       (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_UINT       (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_FLOAT:
-                err = getn_NC_FLOAT      (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_FLOAT      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_DOUBLE:
-                err = getn_NC_DOUBLE     (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_DOUBLE     (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_INT64:
-                err = getn_NC_INT64      (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_INT64      (xbuf,*ibuf,nelems,itype);
                 break;
             case NC_UINT64:
-                err = getn_NC_UINT64     (xbuf,*ibuf,nelems,itype);
+                err = ncmpii_getn_NC_UINT64     (xbuf,*ibuf,nelems,itype);
                 break;
             default:
                 err = NC_EBADTYPE;
@@ -528,3 +517,4 @@ ncmpii_get_cast_swap(int            format, /* NC_FORMAT_CDF2/NC_FORMAT_CDF5 */
 
     return err;
 }
+#endif

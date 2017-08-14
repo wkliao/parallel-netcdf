@@ -36,7 +36,6 @@ dnl
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "macro.h"
 
 /*----< abuf_malloc() >------------------------------------------------------*/
 /* allocate memory space from the attached buffer pool */

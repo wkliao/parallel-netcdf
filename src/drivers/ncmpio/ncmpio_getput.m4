@@ -40,7 +40,6 @@ dnl
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "macro.h"
 #ifdef ENABLE_SUBFILING
 #include "subfile.h"
 #endif
@@ -187,6 +186,13 @@ put_varm(NC               *ncp,
                                 buftype, &etype, &el_size, &nelems,
                                 &nbytes, &buftype_is_contig);
     if (err != NC_NOERR) goto err_check;
+
+    /* because nbytes will be used as the argument "count" in MPI-IO
+     * write calls and the argument "count" is of type int */
+    if (nbytes != (int)nbytes) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
+        goto err_check;
+    }
 
     if (nbytes == 0) goto err_check;
 
@@ -394,7 +400,7 @@ get_varm(NC               *ncp,
          MPI_Datatype      buftype,
          int               reqMode)   /* WR/RD/COLL/INDEP */
 {
-    void *lbuf=NULL, *cbuf=NULL, *xbuf=NULL;
+    void *xbuf=NULL;
     int mpireturn, err=NC_NOERR, status=NC_NOERR;
     int el_size, buftype_is_contig, need_swap=0, need_convert=0;
     MPI_Offset nelems=0, nbytes=0, offset=0;
@@ -402,15 +408,20 @@ get_varm(NC               *ncp,
     MPI_Datatype etype, filetype=MPI_BYTE, imaptype=MPI_DATATYPE_NULL;
     MPI_File fh;
 
+    if (bufcount != (int)bufcount) {
+        DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
+        goto err_check;
+    }
+
     /* decode buftype to see if we can use buf to read from file.
-     * etype: element data type (MPI primitive type) in buftype
-     * bufcount: If it is -1, then this is called from a high-level API and
-     * in this case buftype will be an MPI primitive data type. If not,
-     * then this is called from a flexible API.
-     * nelems: number of etypes in user buffer
-     * nbytes: number of bytes (in external data representation) to
-     * read/write from/to the file
-     * el_size: size of etype
+     * etype:    element data type (MPI primitive type) in buftype
+     * bufcount: If it is -1, then this is called from a high-level API and in
+     *           this case buftype will be an MPI primitive data type.
+     *           If it is >=0, then this is called from a flexible API.
+     * nelems:   number of etypes in user buffer
+     * nbytes:   number of bytes (in external data representation) to
+     *           read from the file
+     * el_size:  size of etype
      * buftype_is_contig: whether buftype is contiguous
      */
     err = ncmpii_buftype_decode(varp->ndims, varp->xtype, count, bufcount,
@@ -419,12 +430,12 @@ get_varm(NC               *ncp,
     if (err != NC_NOERR) goto err_check;
 
     /* because nbytes will be used as the argument "count" in MPI-IO
-     * read/write calls and the argument "count" is of type int */
+     * read calls and the argument "count" is of type int */
     if (nbytes != (int)nbytes) {
         DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
         goto err_check;
     }
-    
+
     if (nbytes == 0) /* this process has nothing to read */
         goto err_check;
 
@@ -539,6 +550,16 @@ err_check:
 
     if (nbytes == 0) return status;
 
+    /* unpack xbuf into user buffer, buf */
+    err = ncmpio_unpack_xbuf(ncp->format, varp, bufcount, buftype,
+                             buftype_is_contig, nelems, etype, imaptype,
+                             need_convert, need_swap, buf, xbuf);
+    if (status == NC_NOERR) status = err;
+
+    if (xbuf != buf) NCI_Free(xbuf);
+
+#if 0
+    void *lbuf=NULL, *cbuf=NULL;
     /* xbuf contains the data read from file in external data type.
      * Check if it needs to be type-converted + byte-swapped
      */
@@ -587,6 +608,7 @@ err_check:
     }
     /* done with lbuf */
     if (lbuf != buf) NCI_Free(lbuf);
+#endif
 
     return status;
 }

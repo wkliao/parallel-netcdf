@@ -32,7 +32,6 @@ M4_SRCS   = ncmpio_getput.m4 \
 
 H_SRCS = ncmpio_driver.h \
          nc.h \
-         macro.h \
          subfile.h
 
 C_SRCS = ncmpio_driver.c \

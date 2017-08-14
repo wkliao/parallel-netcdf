@@ -180,7 +180,7 @@ ncmpio_last_offset(const NC         *ncp,
 /*----< ncmpio_pack_xbuf() >-------------------------------------------------*/
 /* Pack user buffer, buf, into xbuf, when buftype is non-contiguous or imap
  * is non-contiguous, or type-casting is needed. The immediate buffers, lbuf
- * and cbuf, may be allocated and freed in this subroutine. We try to reuse
+ * and cbuf, may be allocated and freed within this subroutine. We try to reuse
  * the intermediate buffers as much as possible. Below describe such design.
  *
  * When called from bput APIs: (abuf means attached buffer pool)
@@ -210,9 +210,9 @@ ncmpio_last_offset(const NC         *ncp,
  *                                               abuf
  *
  * When called from put/iput APIs:
- *  if contig && no imap && no convert && nbytes > NC_BYTE_SWAP_BUFFER_SIZE
+ *  if contig && no imap && no convert && xbuf_size > NC_BYTE_SWAP_BUFFER_SIZE
  *         buf   ==   lbuf   ==   cbuf    ==     xbuf
- *  if contig && no imap && no convert && nbytes <= NC_BYTE_SWAP_BUFFER_SIZE
+ *  if contig && no imap && no convert && xbuf_size <= NC_BYTE_SWAP_BUFFER_SIZE
  *         buf   ==   lbuf   ==   cbuf    ==     xbuf
  *                                                   malloc + memcpy
  *  if contig && no imap &&    convert
@@ -375,3 +375,162 @@ ncmpio_pack_xbuf(int           fmt,    /* NC_FORMAT_CDF2 NC_FORMAT_CDF5 etc. */
     }
     return err;
 }
+
+/*----< ncmpio_unpack_xbuf() >-----------------------------------------------*/
+/* Unpack xbuf into user buffer, buf, when type-casting is needed, imap is
+ * non-contiguous, or buftype is non-contiguous. The immediate buffers, cbuf
+ * and lbuf, may be allocated and freed within this subroutine. We try to reuse
+ * the intermediate buffers as much as possible. Below describe such design.
+ *
+ * When called from get/iget APIs:
+ *  if no convert && imap contig    && buftype contig
+ *        xbuf  ==   cbuf   ==       lbuf    ==      buf
+ *  if no convert && imap contig    && buftype noncontig
+ *        xbuf  ==   cbuf   ==       lbuf  unpack->  buf
+ *        malloc
+ *  if no convert && imap noncontig && buftype contig
+ *        xbuf  ==   cbuf  unpack->  lbuf    ==      buf
+ *        malloc
+ *  if no convert && imap noncontig && buftype noncontig
+ *        xbuf  ==   cbuf  unpack->  lbuf  unpack->  buf
+ *        malloc                     malloc
+ *  if    convert && imap contig    && buftype contig
+ *        xbuf  convert->  cbuf   ==       lbuf    ==      buf
+ *        malloc
+ *  if    convert && imap contig    && buftype noncontig
+ *        xbuf  convert->  cbuf   ==       lbuf  unpack->  buf
+ *        malloc           malloc
+ *  if    convert && imap noncontig && buftype contig
+ *        xbuf  convert->  cbuf  unpack->  lbuf    ==      buf
+ *        malloc           malloc
+ *  if    convert && imap noncontig && buftype noncontig
+ *        xbuf  convert->  cbuf  unpack->  lbuf  unpack->  buf
+ *        malloc           malloc          malloc
+ */
+int
+ncmpio_unpack_xbuf(int           fmt,   /* NC_FORMAT_CDF2 NC_FORMAT_CDF5 etc. */
+                   NC_var       *varp,
+                   MPI_Offset    bufcount,
+                   MPI_Datatype  buftype,
+                   int           buftype_is_contig,
+                   MPI_Offset    nelems, /* no. elements in etype in buf */
+                   MPI_Datatype  etype,  /* element type in buftype */
+                   MPI_Datatype  imaptype,
+                   int           need_convert,
+                   int           need_swap,
+                   void         *buf,  /* user buffer */
+                   void         *xbuf) /* already allocated, in external type */
+{
+    int err=NC_NOERR, el_size, position;
+    void *lbuf=NULL, *cbuf=NULL; 
+    MPI_Offset ibuf_size;
+
+    /* check byte size of buf (internal representation) */
+    MPI_Type_size(etype, &el_size);
+    ibuf_size = nelems * el_size;
+    if (ibuf_size != (int)ibuf_size) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+
+    /* Step 1: type-convert and byte-swap xbuf to cbuf, and xbuf contains data
+     * read from file
+     */
+    if (need_convert) {
+        /* user buf type does not match nc var type defined in file */
+
+        if (buftype_is_contig && imaptype == MPI_DATATYPE_NULL)
+            /* both imap and buftype are contiguous */
+            cbuf = buf;
+        else {
+            cbuf = NCI_Malloc(ibuf_size);
+            if (cbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+        }
+
+        /* datatype conversion + byte-swap from xbuf to cbuf */
+        switch(varp->xtype) {
+            case NC_BYTE:
+                err = ncmpii_getn_NC_BYTE(fmt,xbuf,cbuf,nelems,etype);
+                break;
+            case NC_UBYTE:
+                err = ncmpii_getn_NC_UBYTE(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_SHORT:
+                err = ncmpii_getn_NC_SHORT(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_USHORT:
+                err = ncmpii_getn_NC_USHORT(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_INT:
+                err = ncmpii_getn_NC_INT(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_UINT:
+                err = ncmpii_getn_NC_UINT(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_FLOAT:
+                err = ncmpii_getn_NC_FLOAT(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_DOUBLE:
+                err = ncmpii_getn_NC_DOUBLE(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_INT64:
+                err = ncmpii_getn_NC_INT64(xbuf,cbuf,nelems,etype);
+                break;
+            case NC_UINT64:
+                err = ncmpii_getn_NC_UINT64(xbuf,cbuf,nelems,etype);
+                break;
+            default:
+                err = NC_EBADTYPE; /* this never happens */
+                break;
+        }
+        /* The only error codes returned from the above switch block are
+	 * NC_EBADTYPE or NC_ERANGE. Bad varp->xtype and itype have been sanity
+	 * checked at the dispatchers, so NC_EBADTYPE is not possible. Thus,
+	 * the only possible error is NC_ERANGE.  NC_ERANGE can be caused by
+	 * one or more elements of buf that is out of range representable by
+	 * the external data type, it is not considered a fatal error. This
+	 * request must continue to finish.
+         */
+    }
+    else {
+        if (need_swap) /* perform array in-place byte swap on xbuf */
+            ncmpii_in_swapn(xbuf, nelems, varp->xsz);
+        cbuf = xbuf;
+    }
+
+    /* Step 2: if imap is non-contiguous, unpack cbuf to lbuf */
+    /* determine whether we can use cbuf as lbuf */
+    if (imaptype != MPI_DATATYPE_NULL && !buftype_is_contig) {
+        /* a true varm and buftype is not contiguous: we need a separate
+         * buffer, lbuf, to unpack cbuf to lbuf using imaptype, and later
+         * unpack lbuf to buf using buftype.
+         * In this case, cbuf cannot be buf and lbuf cannot be buf.
+         */
+        lbuf = NCI_Malloc((size_t)ibuf_size);
+        if (lbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+    }
+    else if (imaptype == MPI_DATATYPE_NULL) /* not varm */
+        lbuf = cbuf;
+    else /* varm and buftype are contiguous */
+        lbuf = buf;
+
+    /* unpacked cbuf into lbuf based on imap -------------------------------*/
+    if (imaptype != MPI_DATATYPE_NULL) {
+        /* unpack cbuf to lbuf based on imaptype */
+        position = 0;
+        MPI_Unpack(cbuf, (int)ibuf_size, &position, lbuf, 1, imaptype,
+                   MPI_COMM_SELF);
+        MPI_Type_free(&imaptype);
+        /* done with cbuf */
+        if (cbuf != xbuf) NCI_Free(cbuf);
+    }
+
+    /* unpacked lbuf into buf based on buftype -----------------------------*/
+    if (!buftype_is_contig) {
+        position = 0;
+        MPI_Unpack(lbuf, (int)ibuf_size, &position, buf, (int)bufcount,
+                   buftype, MPI_COMM_SELF);
+        /* done with lbuf */
+        if (lbuf != buf && lbuf != xbuf) NCI_Free(lbuf);
+    }
+
+    return err;
+}
+

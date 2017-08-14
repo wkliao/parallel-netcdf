@@ -26,7 +26,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#include "macro.h"
 
 
 /* buffer layers:
@@ -847,17 +846,39 @@ req_commit(NC  *ncp,
     }
 
     for (i=0; i<num_r_reqs; i++) {
+        int need_convert, need_swap;
+        /* non-lead record requests skip type-conversion/byte-swap/unpack */
+        if (get_list[i].num_recs == 0) continue;
+
+        /* now, xbuf contains the data read from the file.
+         * It may need to be type-converted + byte-swapped to cbuf
+         */
+        need_convert = ncmpii_need_convert(ncp->format, get_list[i].varp->xtype,
+                                           get_list[i].ptype);
+        need_swap    = ncmpii_need_swap(get_list[i].varp->xtype,
+                                        get_list[i].ptype);
+
+        err = ncmpio_unpack_xbuf(ncp->format, get_list[i].varp,
+                                 get_list[i].bufcount,
+                                 get_list[i].buftype,
+                                 get_list[i].buftype_is_contig,
+                                 get_list[i].bnelems * get_list[i].num_recs,
+                                 get_list[i].ptype,
+                                 get_list[i].imaptype,
+                                 need_convert, need_swap, get_list[i].buf,
+                                 get_list[i].xbuf);
+        if (get_list[i].status != NULL && *get_list[i].status == NC_NOERR)
+            *get_list[i].status = err;
+        if (status == NC_NOERR) status = err;
+
+        if (!get_list[i].buftype_is_contig)
+            MPI_Type_free(&get_list[i].buftype);
+#if 0
         void *cbuf, *lbuf;
         int el_size, position;
         MPI_Offset insize, bnelems;
         NC_var *varp;
 
-        /* non-lead record requests skip type-conversion/byte-swap/unpack */
-        if (get_list[i].num_recs == 0) continue;
-
-        /* now, xbuf contains the data read from the file.
-         * It needs to be type-converted + byte-swapped to cbuf
-         */
         varp = get_list[i].varp;
         MPI_Type_size(get_list[i].ptype, &el_size);
         bnelems = get_list[i].bnelems * get_list[i].num_recs;
@@ -923,6 +944,7 @@ req_commit(NC  *ncp,
         /* lbuf is no longer needed */
         if (lbuf != get_list[i].buf && lbuf != get_list[i].xbuf)
             NCI_Free(lbuf);
+#endif
     }
 
     for (i=0; i<num_r_reqs; i++) {
