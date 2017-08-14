@@ -654,6 +654,7 @@ ncmpi_enddef(int ncid) {
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         if (minE != NC_NOERR) return minE;
     }
+    else if (err != NC_NOERR) return err; /* fatal error */
 
     /* calling the subroutine that implements ncmpi_enddef() */
     err = pncp->driver->enddef(pncp->ncp);
@@ -723,6 +724,7 @@ err_check:
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         if (minE != NC_NOERR) return minE;
     }
+    else if (err != NC_NOERR) return err; /* fatal error */
 
     /* calling the subroutine that implements ncmpi__enddef() */
     err = pncp->driver->_enddef(pncp->ncp, h_minfree, v_align,
@@ -995,10 +997,22 @@ ncmpi_inq_path(int   ncid,
     err = PNC_check_id(ncid, &pncp);
     if (err != NC_NOERR) return err;
 
+#if 0
     /* calling the subroutine that implements ncmpi_inq_path() */
     return pncp->driver->inq_misc(pncp->ncp, pathlen, path, NULL, NULL,
                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                   NULL, NULL, NULL, NULL, NULL);
+#endif
+    /* Get the file pathname which was used to open/create the ncid's file.
+     * path must already be allocated. Ignored if NULL */
+    if (pncp->path == NULL) {
+        if (pathlen != NULL) *pathlen = 0;
+        if (path    != NULL) *path = '\0';
+    } else {
+        if (pathlen != NULL) *pathlen = (int)strlen(pncp->path);
+        if (path    != NULL) strcpy(path, pncp->path);
+    }
+    return NC_NOERR;
 }
 
 /*----< ncmpi_inq_num_fix_vars() >-------------------------------------------*/

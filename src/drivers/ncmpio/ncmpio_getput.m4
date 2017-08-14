@@ -226,6 +226,7 @@ put_varm(NC               *ncp,
                            need_convert, need_swap, nbytes, buf, xbuf);
     if (err != NC_NOERR && err != NC_ERANGE) {
         NCI_Free(xbuf);
+        xbuf = NULL;
         goto err_check;
     }
 #endif
