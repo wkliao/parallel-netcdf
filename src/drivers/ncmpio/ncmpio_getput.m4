@@ -200,11 +200,6 @@ put_varm(NC               *ncp,
     err = ncmpii_create_imaptype(varp->ndims, count, imap, etype, &imaptype);
     if (err != NC_NOERR) goto err_check;
 
-    /* when user buf is used as xbuf, we need to byte-swap buf back to its
-     * original contents, after MPI_File_write */
-    xbuf = buf;
-    need_swap_back_buf = 1;
-
     if (!buftype_is_contig || imaptype != MPI_DATATYPE_NULL || need_convert ||
 #ifdef DISABLE_IN_PLACE_SWAP
         need_swap
@@ -219,13 +214,19 @@ put_varm(NC               *ncp,
         }
         need_swap_back_buf = 0;
     }
+    else {
+        /* when user buf is used as xbuf, we need to byte-swap buf back to its
+         * original contents, after MPI_File_write */
+        xbuf = buf;
+        need_swap_back_buf = 1;
+    }
 
     /* pack user buffer, buf, to xbuf, which will be used to write to file */
     err = ncmpio_pack_xbuf(ncp->format, varp, bufcount, buftype,
                            buftype_is_contig, nelems, etype, imaptype,
                            need_convert, need_swap, nbytes, buf, xbuf);
     if (err != NC_NOERR && err != NC_ERANGE) {
-        NCI_Free(xbuf);
+        if (xbuf != buf) NCI_Free(xbuf);
         xbuf = NULL;
         goto err_check;
     }
