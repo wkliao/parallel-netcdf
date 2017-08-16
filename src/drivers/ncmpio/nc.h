@@ -363,9 +363,6 @@ struct NC {
 extern void
 ncmpio_free_NC(NC *ncp);
 
-extern NC *
-ncmpio_dup_NC(const NC *ref);
-
 extern int
 ncmpio_NC_check_vlens(NC *ncp);
 

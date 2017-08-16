@@ -35,6 +35,35 @@
 #include "subfile.h"
 #endif
 
+/*----< dup_NC() >-----------------------------------------------------------*/
+static NC *
+dup_NC(const NC *ref)
+{
+    NC *ncp;
+
+    ncp = (NC *) NCI_Calloc(1, sizeof(NC));
+    if (ncp == NULL) return NULL;
+
+    *ncp = *ref;
+
+    if (ncmpio_dup_NC_dimarray(&ncp->dims,   &ref->dims)  != NC_NOERR ||
+        ncmpio_dup_NC_attrarray(&ncp->attrs, &ref->attrs) != NC_NOERR ||
+        ncmpio_dup_NC_vararray(&ncp->vars,   &ref->vars)  != NC_NOERR) {
+        ncmpio_free_NC(ncp);
+        return NULL;
+    }
+
+    /* fields below should not copied from ref */
+    ncp->comm       = MPI_COMM_NULL;
+    ncp->mpiinfo    = MPI_INFO_NULL;
+    ncp->get_list   = NULL;
+    ncp->put_list   = NULL;
+    ncp->abuf       = NULL;
+    ncp->path       = NULL;
+
+    return ncp;
+}
+
 /*----< ncmpio_redef() >-----------------------------------------------------*/
 /* This is a collective subroutine. */
 int
@@ -69,7 +98,7 @@ ncmpio_redef(void *ncdp)
 #endif
 
     /* duplicate a header to be used in enddef() for checking if header grows */
-    ncp->old = ncmpio_dup_NC(ncp);
+    ncp->old = dup_NC(ncp);
     if (ncp->old == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
 
     /* we are now entering define mode */

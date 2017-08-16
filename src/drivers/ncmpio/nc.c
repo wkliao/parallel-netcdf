@@ -41,35 +41,6 @@ ncmpio_free_NC(NC *ncp)
     NCI_Free(ncp);
 }
 
-/*----< ncmpio_dup_NC() >----------------------------------------------------*/
-NC *
-ncmpio_dup_NC(const NC *ref)
-{
-    NC *ncp;
-
-    ncp = (NC *) NCI_Calloc(1, sizeof(NC));
-    if (ncp == NULL) return NULL;
-
-    *ncp = *ref;
-
-    if (ncmpio_dup_NC_dimarray(&ncp->dims,   &ref->dims)  != NC_NOERR ||
-        ncmpio_dup_NC_attrarray(&ncp->attrs, &ref->attrs) != NC_NOERR ||
-        ncmpio_dup_NC_vararray(&ncp->vars,   &ref->vars)  != NC_NOERR) {
-        ncmpio_free_NC(ncp);
-        return NULL;
-    }
-
-    /* fields below should not copied from ref */
-    ncp->comm       = MPI_COMM_NULL;
-    ncp->mpiinfo    = MPI_INFO_NULL;
-    ncp->get_list   = NULL;
-    ncp->put_list   = NULL;
-    ncp->abuf       = NULL;
-    ncp->path       = NULL;
-
-    return ncp;
-}
-
 /*----< NC_check_vlen() >----------------------------------------------------*/
 /* Check whether variable size is less than or equal to vlen_max,
  * without overflowing in arithmetic calculations.  If OK, return 1,
