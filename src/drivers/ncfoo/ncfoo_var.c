@@ -155,7 +155,7 @@ ncfoo_put_var(void             *ncdp,
               MPI_Datatype      buftype,
               int               reqMode)
 {
-    int err;
+    int err=NC_NOERR, status;
     void *cbuf=(void*)buf;
     NC_foo *foo = (NC_foo*)ncdp;
 
@@ -173,23 +173,28 @@ ncfoo_put_var(void             *ncdp,
 
         err = foo->driver->inq_var(foo->ncp, varid, NULL, NULL, &ndims, NULL,
                                    NULL, NULL, NULL, NULL);
-        if (err != NC_NOERR) return err;
+        if (err != NC_NOERR) goto err_check;
 
         err = ncmpii_pack(ndims, count, imap, (void*)buf, bufcount, buftype,
                           &nelems, &etype, &cbuf);
-        if (err != NC_NOERR) return err;
+        if (err != NC_NOERR) goto err_check;
 
         imap     = NULL;
         bufcount = (nelems == 0) ? 0 : -1;  /* make it a high-level API */
         buftype  = etype;                   /* an MPI primitive type */
     }
 
-    err = foo->driver->put_var(foo->ncp, varid, start, count, stride, imap,
-                               cbuf, bufcount, buftype, reqMode);
-    if (cbuf != buf) NCI_Free(cbuf);
-    if (err != NC_NOERR) return err;
+err_check:
+    if (err != NC_NOERR) {
+        if (reqMode & NC_REQ_INDEP) return err;
+        reqMode |= NC_REQ_ZERO; /* participate collective call */
+    }
 
-    return NC_NOERR;
+    status = foo->driver->put_var(foo->ncp, varid, start, count, stride, imap,
+                                  cbuf, bufcount, buftype, reqMode);
+    if (cbuf != buf) NCI_Free(cbuf);
+
+    return (err == NC_NOERR) ? status : err; /* first error encountered */
 }
 
 int
