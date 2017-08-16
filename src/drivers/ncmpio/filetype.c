@@ -474,6 +474,7 @@ filetype_create_vara(const NC         *ncp,
     /* if the request is contiguous in file, no need to create a filetype */
     if (is_request_contiguous(IS_RECVAR(varp), ncp->vars.num_rec_vars,
                               varp->ndims, varp->shape, start, count)) {
+        /* find the starting file offset of this request */
         status = ncmpio_last_offset(ncp, varp, start, NULL, NULL, rw_flag,
                                     &offset);
         *offset_ptr   = offset;
