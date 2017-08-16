@@ -19,7 +19,7 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "subfile.h"
+#include "ncmpio_subfile.h"
 
 enum {ONE, BALANCED};
 #define SUBFILING_MIN_NDIMS 1
@@ -85,6 +85,7 @@ static int ncmpio_itoa(int val, char* buf)
 }
 #endif
 
+/*----< subfile_create() >---------------------------------------------------*/
 static int
 subfile_create(NC *ncp)
 {
@@ -145,6 +146,7 @@ subfile_create(NC *ncp)
     return status;
 }
 
+/*----< ncmpio_subfile_open() >----------------------------------------------*/
 int
 ncmpio_subfile_open(NC *ncp)
 {
@@ -195,6 +197,7 @@ ncmpio_subfile_open(NC *ncp)
     return status;
 }
 
+/*----< ncmpio_subfile_close() >---------------------------------------------*/
 int ncmpio_subfile_close(NC *ncp)
 {
     int status = NC_NOERR;
@@ -211,7 +214,7 @@ int ncmpio_subfile_close(NC *ncp)
     return status;
 }
 
-/*----< ncmpio_subfile_partition() >---------------------------------------*/
+/*----< ncmpio_subfile_partition() >-----------------------------------------*/
 int ncmpio_subfile_partition(NC *ncp)
 {
     int i, j, color, myrank, nprocs, status=NC_NOERR, num_subfiles;

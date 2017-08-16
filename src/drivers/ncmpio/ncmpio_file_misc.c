@@ -31,9 +31,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#ifdef ENABLE_SUBFILING
-#include "subfile.h"
-#endif
 
 /*----< dup_NC() >-----------------------------------------------------------*/
 static NC *

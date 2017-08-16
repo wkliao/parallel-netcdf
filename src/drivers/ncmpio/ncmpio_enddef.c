@@ -28,7 +28,7 @@
 #include "nc.h"
 #include "ncx.h"
 #ifdef ENABLE_SUBFILING
-#include "subfile.h"
+#include "ncmpio_subfile.h"
 #endif
 
 

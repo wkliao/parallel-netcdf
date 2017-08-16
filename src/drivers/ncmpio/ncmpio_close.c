@@ -25,7 +25,7 @@
 #include <common.h>
 #include "nc.h"
 #ifdef ENABLE_SUBFILING
-#include "subfile.h"
+#include "ncmpio_subfile.h"
 #endif
 
 /*----< ncmpio_close_files() >-----------------------------------------------*/

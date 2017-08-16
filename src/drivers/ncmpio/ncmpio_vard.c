@@ -29,9 +29,6 @@
 #include <pnc_debug.h>
 #include <common.h>
 #include "nc.h"
-#ifdef ENABLE_SUBFILING
-#include "subfile.h"
-#endif
 
 /* for write case, buf needs to swapped back if swapped previously */
 #define FINAL_CLEAN_UP {                                                 \

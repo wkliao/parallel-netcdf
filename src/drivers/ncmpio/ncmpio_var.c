@@ -214,6 +214,7 @@ incr_NC_vararray(NC_vararray *ncap,
     return NC_NOERR;
 }
 
+#if 0
 /*----< elem_NC_vararray() >-------------------------------------------------*/
 inline static NC_var *
 elem_NC_vararray(const NC_vararray *ncap,
@@ -228,6 +229,7 @@ elem_NC_vararray(const NC_vararray *ncap,
 
     return ncap->value[varid];
 }
+#endif
 
 /* End vararray per se */
 
@@ -365,6 +367,7 @@ out :
     return NC_NOERR;
 }
 
+#if 0
 /*----< ncmpio_NC_lookupvar() >----------------------------------------------*/
 /* Given valid ncp and varid, return varp */
 int
@@ -381,6 +384,7 @@ ncmpio_NC_lookupvar(NC      *ncp,
 
     return NC_NOERR;
 }
+#endif
 
 /*----< ncmpio_def_var() >---------------------------------------------------*/
 int
@@ -528,8 +532,12 @@ ncmpio_inq_var(void       *ncdp,
         return NC_NOERR;
     }
 
+#if 0
     varp = elem_NC_vararray(&ncp->vars, varid);
     if (varp == NULL) DEBUG_RETURN_ERROR(NC_ENOTVAR)
+#else
+    varp = ncp->vars.value[varid];
+#endif
 
     if (name != NULL)
         /* in PnetCDF, name is always NULL character terminated */

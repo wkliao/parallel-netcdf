@@ -32,7 +32,7 @@ M4_SRCS   = ncmpio_getput.m4 \
 
 H_SRCS = ncmpio_driver.h \
          nc.h \
-         subfile.h
+         ncmpio_subfile.h
 
 C_SRCS = ncmpio_driver.c \
          ncmpio_create.c \
@@ -68,14 +68,14 @@ nodist_libncmpio_la_SOURCES = $(M4_SRCS:.m4=.c)
 BUILT_SOURCES = $(M4_SRCS:.m4=.c)
 
 if ENABLE_SUBFILING
-libncmpio_la_SOURCES += subfile.c
+libncmpio_la_SOURCES += ncmpio_subfile.c
 endif
 
 CLEANFILES = $(M4_SRCS:.m4=.c) *.gcno
 
 EXTRA_DIST = $(M4_HFILES) \
              $(M4_SRCS) \
-             subfile.c
+             ncmpio_subfile.c
 
 tests-local: all
 
