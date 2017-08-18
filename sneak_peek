@@ -78,6 +78,9 @@ This is essentially a placeholder for the next release note ...
     * doc/README.Ubuntu provides build instructions for Ubuntu Linux OS.
 
   o New test program
+    * test/testcases/mix_collectives.c - to test collective get/put APIs that
+      allow different processes to call different kinds of APIs (i.e. var1,
+      vara, vars, varm, etc.) and use different var IDs.
     * test/largefile/high_dim_var.c - tests blocking vars APIs for high-
       dimensional variables. This is to test r3164.
     * test/largefile/large_dims_vars_attrs.c - tests large values of number of

@@ -62,6 +62,7 @@ TESTPROGRAMS = ncmpi_vars_null_stride \
                scalar \
                null_args \
                tst_dimsizes \
+               mix_collectives \
                redef1
 
 M4_SRCS  = put_all_kinds.m4 erange_fill.m4
