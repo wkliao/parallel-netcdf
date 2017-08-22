@@ -555,7 +555,8 @@ err_check:
     if (pncp->flag & NC_MODE_SAFE) {
         int minE, mpireturn;
         /* check error code so far across processes */
-        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);        if (mpireturn != MPI_SUCCESS)
+        TRACE_COMM(MPI_Allreduce)(&err, &minE, 1, MPI_INT, MPI_MIN, pncp->comm);
+        if (mpireturn != MPI_SUCCESS)
             return ncmpii_error_mpi2nc(mpireturn, "MPI_Allreduce");
         if (minE != NC_NOERR) return minE;
     }

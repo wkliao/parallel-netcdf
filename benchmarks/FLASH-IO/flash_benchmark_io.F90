@@ -159,6 +159,35 @@
           enddo
       end subroutine get_file_striping
 
+! ---------------------------------------------------------------------------
+! get all MPI-IO hints used
+! ---------------------------------------------------------------------------
+      subroutine print_info(info_used)
+          use mpi
+          use pnetcdf
+          implicit none
+
+          integer, intent(in) :: info_used
+
+          ! local variables
+          character*(MPI_MAX_INFO_VAL) key, value
+          integer nkeys, i, err
+          logical flag
+
+          call MPI_Info_get_nkeys(info_used, nkeys, err)
+          print *, 'MPI File Info: nkeys =', nkeys
+          do i=0, nkeys-1
+              call MPI_Info_get_nthkey(info_used, i, key, err)
+              call MPI_Info_get(info_used, key, MPI_MAX_INFO_VAL, &
+                                value, flag, err)
+ 123          format('MPI File Info: [',I2,'] key = ',A25, &
+                     ', value =',A)
+              print 123, i, trim(key), trim(value)
+          enddo
+          print *, ''
+
+          return
+      end subroutine print_info
 
 !---------------------------------------------------------------------------
 ! print I/O performance numbers
@@ -253,6 +282,7 @@
           print 1006, NumPEs, nxb, nyb, nzb, time_total, bw
           print *
 
+          call print_info(info_used)
       endif
       call MPI_Info_free(info_used, ierr)
 
