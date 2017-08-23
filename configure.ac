@@ -1443,10 +1443,13 @@ dnl add executable permission to pnetcdf-config and check_install
 AC_CONFIG_FILES([src/utils/pnetcdf-config], [chmod u+x src/utils/pnetcdf-config])
 dnl AC_CONFIG_FILES([src/utils/check_install],  [chmod u+x src/utils/check_install])
 
-AC_CHECK_FILE([${srcdir}/src/drivers/ncfoo/Makefile.am], [build_foo=yes], [build_foo=no])
-if test "x${build_foo}" = xyes ; then
+dnl AC_CHECK_FILE fails when cross-compile
+dnl AC_CHECK_FILE([${srcdir}/src/drivers/ncfoo/Makefile.am], [build_foo=yes], [build_foo=no])
+build_foo=no
+if test -r "${srcdir}/src/drivers/ncfoo/Makefile.am" ; then
     AC_CONFIG_FILES(src/drivers/ncfoo/Makefile)
     AC_DEFINE(BUILD_DRIVER_FOO)
+    build_foo=yes
 fi
 AM_CONDITIONAL(BUILD_DRIVER_FOO, [test x${build_foo} = xyes])
 
