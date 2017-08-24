@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
     char filename[256];
     int i, j, err, nerrs=0, rank, nprocs;
-    int ncid, dimid[2], varid, varids[4], req, status;
+    int ncid, dimid[2], varid, varids[4];
     MPI_Offset start[2], count[2], stride[2], imap[2];
     int   *check_buf, buf[6][4];
     int   g_buf[96] = {
@@ -180,6 +180,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    free(check_buf);
 
     /* now, each of 4 processes makes a call to different kinds of get APIs */
     for (j=0; j<6; j++) for (i=0; i<4; i++) buf[j][i] = -1;
