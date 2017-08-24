@@ -145,6 +145,11 @@ ncmpio_free_NC_attrarray(NC_attrarray *ncap)
         ncap->value = NULL;
     }
     ncap->ndefined = 0;
+
+#ifndef SEARCH_NAME_LINEARLY
+    /* free space allocated for attribute name lookup table */
+    ncmpio_hash_table_free(ncap->nameT);
+#endif
 }
 
 /*----< ncmpio_dup_NC_attrarray() >------------------------------------------*/
@@ -180,16 +185,21 @@ ncmpio_dup_NC_attrarray(NC_attrarray *ncap, const NC_attrarray *ref)
 
     assert(ncap->ndefined == ref->ndefined);
 
+#ifndef SEARCH_NAME_LINEARLY
+    /* duplicate attribute name lookup table */
+    ncmpio_hash_table_copy(ncap->nameT, ref->nameT);
+#endif
+
     return NC_NOERR;
 }
 
 /*----< incr_NC_attrarray() >------------------------------------------------*/
 /* Add a new handle at the end of an array of handles */
 static int
-incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
+incr_NC_attrarray(NC_attrarray *ncap, NC_attr *new_attr)
 {
     assert(ncap != NULL);
-    assert(newelemp != NULL);
+    assert(new_attr != NULL);
 
     if (ncap->ndefined % NC_ARRAY_GROWBY == 0) {
         /* grow the array to accommodate the new handle */
@@ -202,7 +212,7 @@ incr_NC_attrarray(NC_attrarray *ncap, NC_attr *newelemp)
         ncap->value = vp;
     }
 
-    ncap->value[ncap->ndefined++] = newelemp;
+    ncap->value[ncap->ndefined++] = new_attr;
 
     return NC_NOERR;
 }
@@ -233,20 +243,17 @@ int
 ncmpio_NC_findattr(const NC_attrarray *ncap,
                    const char         *name) /* normalized string */
 {
-    int i;
+    int i, key;
     size_t nchars;
 
     assert(ncap != NULL);
 
     if (ncap->ndefined == 0) return -1; /* none created yet */
 
-    /* already checked before entering this API
-    if (name == NULL || *name == 0) return -1;
-    */
-
-    /* for now, we assume the number of attributes is small and use the
+#ifdef SEARCH_NAME_LINEARLY
+    /* we assume the number of attributes is small and use the
      * following linear search. If the number is expected to be large, then
-     * we can use the name hashing used in variables and dimensions.
+     * it is better to use the hashing as for variables and dimensions.
      */
     nchars = strlen(name);
     for (i=0; i<ncap->ndefined; i++) {
@@ -254,8 +261,21 @@ ncmpio_NC_findattr(const NC_attrarray *ncap,
             strcmp(ncap->value[i]->name, name) == 0)
             return i;
     }
+#else
+    /* hash name into a key for name lookup */
+    key = HASH_FUNC(name);
 
-    return -1;
+    /* check the list (all names sharing the same key) using linear search */
+    nchars = strlen(name);
+    for (i=0; i<ncap->nameT[key].num; i++) {
+        int attr_id = ncap->nameT[key].list[i];
+        if (ncap->value[attr_id]->name_len == nchars &&
+            strcmp(name, ncap->value[attr_id]->name) == 0) {
+            return attr_id; /* the name already exists */
+        }
+    }
+#endif
+    return -1; /* the name has never been used */
 }
 
 /*----< NC_lookupattr() >----------------------------------------------------*/
@@ -384,7 +404,7 @@ ncmpio_rename_att(void       *ncdp,
                   const char *name,
                   const char *newname)
 {
-    int indx, err=NC_NOERR;
+    int attr_id, err=NC_NOERR;
     char *nname=NULL;    /* normalized name */
     char *nnewname=NULL; /* normalized newname */
     size_t nnewname_len=0;
@@ -405,14 +425,13 @@ ncmpio_rename_att(void       *ncdp,
         goto err_check;
     }
 
-    indx = ncmpio_NC_findattr(ncap, nname);
-    NCI_Free(nname);
-    if (indx < 0) {
+    attr_id = ncmpio_NC_findattr(ncap, nname);
+    if (attr_id < 0) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTATT)
         goto err_check;
     }
 
-    attrp = ncap->value[indx];
+    attrp = ncap->value[attr_id];
 
     /* create a normalized character string */
     nnewname = (char *)ncmpii_utf8proc_NFC((const unsigned char *)newname);
@@ -435,6 +454,7 @@ ncmpio_rename_att(void       *ncdp,
     }
 
 err_check:
+    if (nname != NULL) NCI_Free(nname);
     if (ncp->safe_mode) {
         int minE, mpireturn;
 
@@ -456,6 +476,10 @@ err_check:
     }
 
     assert(attrp != NULL);
+
+#ifndef SEARCH_NAME_LINEARLY
+    ncmpio_hash_replace(ncap->nameT, attrp->name, nnewname, attr_id);
+#endif
 
     /* replace the old name with new name */
     NCI_Free(attrp->name);
@@ -605,6 +629,10 @@ err_check:
         err = ncmpio_new_NC_attr(nname, iattrp->xtype, iattrp->nelems, &attrp);
         if (err != NC_NOERR) return err;
 
+#ifndef SEARCH_NAME_LINEARLY
+        ncmpio_hash_insert(ncap_out->nameT, nname, ncap_out->ndefined);
+#endif
+
         err = incr_NC_attrarray(ncap_out, attrp);
         if (err != NC_NOERR) return err;
     }
@@ -652,13 +680,19 @@ ncmpio_del_att(void       *ncdp,
     }
 
     attrid = ncmpio_NC_findattr(ncap, nname);
-    NCI_Free(nname);
     if (attrid == -1) {
         DEBUG_ASSIGN_ERROR(err, NC_ENOTATT)
         goto err_check;
     }
 
+#ifndef SEARCH_NAME_LINEARLY
+    /* delete name entry from hash table */
+    err = ncmpio_hash_delete(ncap->nameT, nname, attrid);
+    if (err != NC_NOERR) goto err_check;
+#endif
+
 err_check:
+    if (nname != NULL) NCI_Free(nname);
     if (ncp->safe_mode) {
         int minE, mpireturn;
 
@@ -943,7 +977,7 @@ ncmpio_put_att(void         *ncdp,
             goto err_check;
         }
 
-        /* Only allow for variables defined in initial define mode */
+        /* Only allowed in initial define mode (i.e. variable is newly defined) */
         if (ncp->old != NULL && varid < ncp->old->vars.ndefined) {
             DEBUG_ASSIGN_ERROR(err, NC_ELATEFILL)
             goto err_check;
@@ -1037,6 +1071,10 @@ err_check:
     else { /* attribute does not exit in ncid */
         err = ncmpio_new_NC_attr(nname, xtype, nelems, &attrp);
         if (err != NC_NOERR) return err;
+
+#ifndef SEARCH_NAME_LINEARLY
+        ncmpio_hash_insert(ncap->nameT, nname, ncap->ndefined);
+#endif
 
         err = incr_NC_attrarray(ncap, attrp);
         if (err != NC_NOERR) return err;

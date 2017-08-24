@@ -39,7 +39,7 @@ This is essentially a placeholder for the next release note ...
     * none
 
   o New optimization
-    * none
+    * Use hash function for faster attribute name lookup. See r3335.
 
   o Syntax changes
     * Add C type qualifier "const" to argument fill_value of ncmpi_def_var_fill

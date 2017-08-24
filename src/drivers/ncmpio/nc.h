@@ -155,8 +155,14 @@ typedef struct {
 } NC_attr;
 
 typedef struct NC_attrarray {
-    size_t    ndefined;  /* number of defined attributes */
-    NC_attr **value;
+    size_t         ndefined;  /* number of defined attributes */
+    NC_attr      **value;
+    NC_nametable   nameT[HASH_TABLE_SIZE]; /* table for quick name lookup.
+                    * indices 0, 1, ... HASH_TABLE_SIZE-1 are the hash keys.
+                    * nameT[i].num is the number of hash collisions. The IDs of
+                    * variables with names producing the same hash key i are
+                    * stored in nameT[i].list[*]
+                    */
 } NC_attrarray;
 
 /* Begin defined in attr.c --------------------------------------------------*/
@@ -442,17 +448,27 @@ ncmpio_update_name_lookup_table(NC_nametable *nameT, const int id,
 extern void
 ncmpio_hash_insert(NC_nametable *nameT, const char *name, int id);
 
+extern int
+ncmpio_hash_delete(NC_nametable *nameT, const char *name, int id);
+
+extern int
+ncmpio_hash_replace(NC_nametable *nameT, const char *old_name, const char *new_name,
+                    int id);
+
 extern void
 ncmpio_hash_table_copy(NC_nametable *dest, const NC_nametable *src);
 
 extern void
 ncmpio_hash_table_free(NC_nametable *nameT);
 
-void
+extern void
 ncmpio_hash_table_populate_NC_var(NC_vararray *varsp);
 
-void
+extern void
 ncmpio_hash_table_populate_NC_dim(NC_dimarray *dimsp);
+
+extern void
+ncmpio_hash_table_populate_NC_attr(NC *ncp);
 
 /* Begin defined in ncmpio_fill.c -------------------------------------------*/
 extern int

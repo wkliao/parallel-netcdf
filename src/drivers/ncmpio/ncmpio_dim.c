@@ -131,8 +131,10 @@ ncmpio_free_NC_dimarray(NC_dimarray *ncap)
     ncap->value    = NULL;
     ncap->ndefined = 0;
 
+#ifndef SEARCH_NAME_LINEARLY
     /* free space allocated for dim name lookup table */
     ncmpio_hash_table_free(ncap->nameT);
+#endif
 }
 
 /*----< ncmpio_dup_NC_dimarray() >-------------------------------------------*/
@@ -169,8 +171,10 @@ ncmpio_dup_NC_dimarray(NC_dimarray *ncap, const NC_dimarray *ref)
     }
     assert(ncap->ndefined == ref->ndefined);
 
+#ifndef SEARCH_NAME_LINEARLY
     /* duplicate dim name lookup table */
     ncmpio_hash_table_copy(ncap->nameT, ref->nameT);
+#endif
 
     return NC_NOERR;
 }

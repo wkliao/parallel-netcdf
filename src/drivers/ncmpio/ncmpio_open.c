@@ -207,6 +207,7 @@ ncmpio_open(MPI_Comm     comm,
     /* initialize and populate name lookup tables ---------------------------*/
     ncmpio_hash_table_populate_NC_dim(&ncp->dims);
     ncmpio_hash_table_populate_NC_var(&ncp->vars);
+    ncmpio_hash_table_populate_NC_attr(ncp);
 #endif
 
     *ncpp = (void*)ncp;
