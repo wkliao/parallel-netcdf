@@ -50,7 +50,7 @@ C_SRCS = ncmpio_driver.c \
          ncmpio_wait.c   \
          ncmpio_vard.c \
          ncmpio_fill.c \
-         util.c \
+         ncmpio_util.c \
          ncmpio_hash_func.c
 
 $(M4_SRCS:.m4=.c): Makefile
