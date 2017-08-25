@@ -28,6 +28,27 @@
 #include "ncmpio_subfile.h"
 #endif
 
+/*----< ncmpio_free_NC() >----------------------------------------------------*/
+void
+ncmpio_free_NC(NC *ncp)
+{
+    if (ncp == NULL) return;
+
+    ncmpio_free_NC_dimarray(&ncp->dims);
+    ncmpio_free_NC_attrarray(&ncp->attrs);
+    ncmpio_free_NC_vararray(&ncp->vars);
+
+    if (ncp->comm    != MPI_COMM_NULL) MPI_Comm_free(&ncp->comm);
+    if (ncp->mpiinfo != MPI_INFO_NULL) MPI_Info_free(&ncp->mpiinfo);
+
+    if (ncp->get_list != NULL) NCI_Free(ncp->get_list);
+    if (ncp->put_list != NULL) NCI_Free(ncp->put_list);
+    if (ncp->abuf     != NULL) NCI_Free(ncp->abuf);
+    if (ncp->path     != NULL) NCI_Free(ncp->path);
+
+    NCI_Free(ncp);
+}
+
 /*----< ncmpio_close_files() >-----------------------------------------------*/
 int
 ncmpio_close_files(NC *ncp, int doUnlink) {

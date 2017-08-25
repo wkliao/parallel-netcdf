@@ -44,7 +44,6 @@ C_SRCS = ncmpio_driver.c \
          ncmpio_header_get.c \
          ncmpio_header_put.c \
          ncmpio_dim.c \
-         nc.c \
          ncmpio_var.c \
          ncmpio_bput.c \
          filetype.c \
