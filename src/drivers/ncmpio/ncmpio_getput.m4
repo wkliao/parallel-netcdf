@@ -39,7 +39,7 @@ dnl
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
+#include "ncmpio_NC.h"
 #ifdef ENABLE_SUBFILING
 #include "ncmpio_subfile.h"
 #endif

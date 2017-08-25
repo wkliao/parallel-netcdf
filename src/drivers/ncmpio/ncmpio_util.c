@@ -18,7 +18,7 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
+#include "ncmpio_NC.h"
 
 /*----< ncmpio_set_pnetcdf_hints() >-----------------------------------------*/
 /* this is where the I/O hints designated to pnetcdf are extracted */

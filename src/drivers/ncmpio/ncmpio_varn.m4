@@ -33,8 +33,8 @@ dnl
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
+#include <ncx.h>
+#include "ncmpio_NC.h"
 
 /*----< getput_varn() >------------------------------------------------------*/
 /* The current implementation for varn APIs is to make num calls to iget/iput

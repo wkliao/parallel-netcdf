@@ -10,7 +10,7 @@
 
 #include <dispatch.h>
 #include <ncmpio_driver.h>
-#include <nc.h>
+#include "ncmpio_NC.h"
 
 static PNC_driver ncmpio_driver = {
     /* FILE APIs */

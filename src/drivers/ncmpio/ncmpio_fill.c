@@ -28,8 +28,8 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
+#include <ncx.h>
+#include "ncmpio_NC.h"
 
 #define CHECK_ERROR(status) {                                                \
     if (ncp->safe_mode == 1) {                                               \

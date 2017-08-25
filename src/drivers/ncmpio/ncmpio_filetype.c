@@ -18,8 +18,8 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
+#include <ncx.h>
+#include "ncmpio_NC.h"
 
 
 #if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET

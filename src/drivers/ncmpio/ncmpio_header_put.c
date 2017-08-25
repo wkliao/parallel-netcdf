@@ -19,8 +19,8 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
+#include <ncx.h>
+#include "ncmpio_NC.h"
 
 /*
  * "magic number" at beginning of file: 0x43444601 (big endian)

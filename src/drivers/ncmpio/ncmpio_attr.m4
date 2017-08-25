@@ -38,9 +38,9 @@ dnl
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
-#include "utf8proc.h"
+#include <ncx.h>
+#include <utf8proc.h>
+#include "ncmpio_NC.h"
 
 include(`foreach.m4')dnl
 include(`utils.m4')dnl

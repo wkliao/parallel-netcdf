@@ -29,7 +29,7 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
+#include "ncmpio_NC.h"
 
 /*----< ncmpio_buffer_attach() >---------------------------------------------*/
 int

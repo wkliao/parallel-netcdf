@@ -17,8 +17,8 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "utf8proc.h"
+#include <utf8proc.h>
+#include "ncmpio_NC.h"
 
 /*----< ncmpio_jenkins_one_at_a_time_hash() >--------------------------------*/
 /* borrow Jenkins hash function:

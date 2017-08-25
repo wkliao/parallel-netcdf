@@ -29,9 +29,9 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
-#include "utf8proc.h"
+#include <ncx.h>
+#include <utf8proc.h>
+#include "ncmpio_NC.h"
 
 /*----< ncmpio_free_NC_var() >-----------------------------------------------*/
 /* Free NC_var object */

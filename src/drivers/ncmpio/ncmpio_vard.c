@@ -28,7 +28,7 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
+#include "ncmpio_NC.h"
 
 /* for write case, buf needs to swapped back if swapped previously */
 #define FINAL_CLEAN_UP {                                                 \

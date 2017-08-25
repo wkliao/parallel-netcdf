@@ -6,7 +6,7 @@
 #ifndef _SUBFILE_H
 #define _SUBFILE_H
 
-#include "nc.h"
+#include "ncmpio_NC.h"
 
 /* structure for storing access info of this process's request
    to the subfiles on all other processes, and vice-versa. used

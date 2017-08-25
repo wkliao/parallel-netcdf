@@ -25,7 +25,7 @@
 /* TODO: should not use any PnetCDF source codes, as this CDF format validate
  * utility should run independently from PnetCDF
  */
-#include <nc.h>
+#include <ncmpio_NC.h>
 #include <ncx.h>
 #include <common.h>
 

@@ -24,8 +24,8 @@
 
 #include <pnc_debug.h>
 #include <common.h>
-#include "nc.h"
-#include "ncx.h"
+#include <ncx.h>
+#include "ncmpio_NC.h"
 
 /*----< ncmpio_file_sync() >-------------------------------------------------*/
 /* This function must be called collectively, no matter if it is in collective
