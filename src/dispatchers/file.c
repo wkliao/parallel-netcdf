@@ -148,7 +148,8 @@ combine_env_hints(MPI_Info  user_info,
                 if (NULL != strtok(hint, " \t"))
                     printf("%s: '%s'\n", warn_str, hint_saved);
                 /* else case: ignore white-spaced hints */
-                NCI_Free(hint_saved);
+                //NCI_Free(hint_saved);
+                free(hint_saved);
                 hint = strtok_r(NULL, ";", &env_str_saved); /* get next hint */
                 continue;
             }
@@ -165,7 +166,8 @@ combine_env_hints(MPI_Info  user_info,
             hint = strtok_r(NULL, ";", &env_str_saved);
             NCI_Free(hint_saved);
         }
-        NCI_Free(env_str_cpy);
+        //NCI_Free(env_str_cpy);
+        free(env_str_cpy);
 #else
         char *env_str_cpy, *hint, *next_hint, *key, *val, *deli;
         char *hint_saved=NULL;
@@ -181,13 +183,14 @@ combine_env_hints(MPI_Info  user_info,
                 next_hint = deli + 1;
             }
             else next_hint = "\0";
-            if (hint_saved != NULL) NCI_Free(hint_saved);
+            if (hint_saved != NULL) free(hint_saved); // NCI_Free(hint_saved);
 
             /* skip all-blank hint */
             hint_saved = strdup(hint);
             if (strtok(hint, " \t") == NULL) continue;
 
-            NCI_Free(hint_saved);
+            //NCI_Free(hint_saved);
+            free(hint_saved);
             hint_saved = strdup(hint); /* save hint for error message */
 
             deli = strchr(hint, '=');
@@ -217,8 +220,9 @@ combine_env_hints(MPI_Info  user_info,
 
         } while (*next_hint != '\0');
 
-        if (hint_saved != NULL) NCI_Free(hint_saved);
-        NCI_Free(env_str_cpy);
+        if (hint_saved != NULL) free(hint_saved); //NCI_Free(hint_saved);
+        //NCI_Free(env_str_cpy);
+        free(env_str_cpy);
 #endif
     }
     /* return no error as all hints are advisory */
