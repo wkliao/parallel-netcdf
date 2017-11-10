@@ -143,6 +143,11 @@ void ncmpii_del_mem_entry(void *buf)
         }
         free(tmp);
     }
+    else{
+        printf("Error at line %d file %s: ncmpii_mem_root is NULL\n",
+                   __LINE__,__FILE__);
+        return;
+    }
 }
 #endif
 
